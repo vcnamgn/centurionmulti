@@ -46,7 +46,7 @@ test('règles : repères proches sans recouvrement des cercles et ports bas dist
 });
 
 test('vrai éditeur : saisie complète, erreur réversible, molette immédiate, changement de mesure et glisser arrondi',()=>{
-  const g=graph(),ui=editorSurface('auto',{saved:g});
+  const g=graph();g.nodes.push(A.node('info','info',600,400));const ui=editorSurface('auto',{saved:g});
   ui.receive({type:'centurion-auto-init',graph:g,measurements:catalog,commands:A.actionCatalog(),runtime:A.idle(),values:{},simulationRunning:false});
   ui.event('canvas','click',ui.query('[data-node="rule"]'));
   let input=ui.query('[data-rule-boundary="0"]');input.value='';ui.event('properties','input',input);assert.equal(ui.graph().nodes[0].params.separators[0],15);
@@ -65,6 +65,11 @@ test('vrai éditeur : saisie complète, erreur réversible, molette immédiate, 
   ui.event('canvas','pointermove',marker,{clientX:301.45678,clientY:180,pointerId:1});ui.event('canvas','pointerup',marker);
   const value=ui.graph().nodes[0].params.separators[0];assert.equal(value,A.roundRuleValue(value));
   assert.equal(ui.queryAll('.range-marker circle').length,2);assert.equal(ui.queryAll('[data-output][data-port="no-left"]').length,0);
+  assert.equal(ui.queryAll('.range-value').length,2);
+  assert.equal(ui.query('[data-range-boundary="0"] .range-value').textContent,value.toLocaleString('fr-FR',{maximumSignificantDigits:3}));
+  const ruleBox=ui.query('[data-node="rule"]'),band=ruleBox.querySelector('.band-divider');
+  assert.ok(ruleBox.querySelector('.name-band'));assert.ok(ruleBox.querySelector('.detail').getAttribute('y')>Number(band.getAttribute('y1')));
+  ui.event('canvas','keydown',ui.query('[data-node="info"]'),{key:'Enter'});assert.equal(ui.query('#properties h2').textContent,'Information');
 });
 
 test('vrai éditeur : clôture créée, deux curseurs visibles et surlignage durant deux secondes réelles',()=>{

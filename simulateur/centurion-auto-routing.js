@@ -1,20 +1,38 @@
 /* Connecteurs orthogonaux : visibilité sur une grille de coordonnées des obstacles. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.CenturionAutoRouting=api;})(typeof window!=='undefined'?window:globalThis,function(){
   'use strict';
+  function wrapText(text,limit=35,maxLines=4){
+    const words=String(text??'').trim().split(/\s+/),lines=[];let line='';
+    for(let word of words){
+      if(line&&line.length+word.length+1>limit){lines.push(line);line='';}
+      while(word.length>limit){lines.push(word.slice(0,limit));word=word.slice(limit);}
+      line+=(line?' ':'')+word;
+    }
+    if(line)lines.push(line);
+    return lines.length>maxLines?[...lines.slice(0,maxLines-1),lines[maxLines-1].slice(0,-1)+'…']:lines;
+  }
+  function boxHeader(n){const titleLines=wrapText(n.name,35,3);return {titleLines,headerHeight:18+20*Math.max(1,titleLines.length)};}
   function ruleLayout(n){
-    const w=320,p=n.params,span=p.scale.max-p.scale.min,lanes=[];
+    const w=380,p=n.params,span=p.scale.max-p.scale.min,lanes=[],header=boxHeader(n);
     const markers=p.separators.map((value,index)=>{
       const x=14+(w-28)*(value-p.scale.min)/span;
-      let lane=lanes.findIndex(last=>x-last>=22);if(lane<0)lane=lanes.length;lanes[lane]=x;
-      return {index,x,lane};
+      const width=Math.max(24,String(Number(value.toPrecision(3))).length*8+10);
+      const labelX=Math.max(14+width/2,Math.min(w-14-width/2,x));
+      let lane=lanes.findIndex(last=>labelX-last.x>=(width+last.width)/2+8);if(lane<0)lane=lanes.length;lanes[lane]={x:labelX,width};
+      return {index,x,labelX,lane};
     });
-    const barY=98+Math.max(0,lanes.length-1)*22;
-    return {w,h:barY+70,barY,markers};
+    const barY=header.headerHeight+156+Math.max(0,lanes.length-1)*36;
+    return {w,h:barY+72,barY,markers,...header};
   }
-  function dimensions(n){return n.type==='ranges'?ruleLayout(n):{w:260,h:n.type==='test'||n.type==='parallel'||n.type==='join'?112:92};}
+  function dimensions(n){
+    if(n.type==='ranges')return ruleLayout(n);
+    const header=boxHeader(n),bodyHeight=n.type==='test'?152:n.type==='action'?104:n.type==='parallel'?94:n.type==='join'?108:
+      n.type==='info'?Math.max(74,wrapText(n.params.message,35,6).length*21+40):74;
+    return {w:320,h:header.headerHeight+bodyHeight,...header};
+  }
   function portPoint(n,port){
     const {w,h}=dimensions(n);if(port==='in')return {x:n.x+w/2,y:n.y};
-    if(port==='no-left'||port==='no-right')return {x:n.x+(port==='no-right'?w:0),y:n.y+h/2};
+    if(port==='no-left'||port==='no-right')return {x:n.x+(port==='no-right'?w:0),y:n.y+h-30};
     if(n.type==='parallel'&&port.startsWith('branch:'))return {x:n.x+w*(Number(port.split(':')[1])+1)/(n.params.branches+1),y:n.y+h};
     if(n.type==='ranges'&&port.startsWith('range:'))return {x:n.x+w*(Number(port.split(':')[1])+1)/(n.params.labels.length+1),y:n.y+h};
     return {x:n.x+w/2,y:n.y+h};
@@ -56,5 +74,5 @@
     return {points:[s,a],blocked:true};
   }
   function path(points){return points.map((p,i)=>i===0?`M${p.x} ${p.y}`:p.x===points[i-1].x?`V${p.y}`:`H${p.x}`).join('');}
-  return {dimensions,ruleLayout,portPoint,route,path};
+  return {dimensions,boxHeader,wrapText,ruleLayout,portPoint,route,path};
 });

@@ -50,20 +50,20 @@
         +(rw>=19?`<text class="range-label" text-anchor="middle" x="${x+rw/2}" y="${n.y+barY+16}">P${i+1}</text>`:'')
         +`<text class="range-label" text-anchor="middle" x="${n.x+w*(i+1)/(p.labels.length+1)}" y="${n.y+barY+61}">P${i+1}</text>`;
     }).join('');
-    return segments+markers.map(({index,x,lane})=>{
-      const cy=n.y+barY-16-lane*22,value=p.separators[index];
-      return `<g class="range-marker" data-range-boundary="${index}" role="slider" tabindex="0" aria-label="Repère ${index+1}" aria-valuenow="${value}" aria-valuemin="${index?p.separators[index-1]:p.scale.min}" aria-valuemax="${index<p.separators.length-1?p.separators[index+1]:p.scale.max}"><title>Repère ${index+1} : ${esc(ruleFmt(value))}</title><line class="range-divider-hit" x1="${n.x+x}" x2="${n.x+x}" y1="${cy}" y2="${n.y+barY+25}"/><line class="range-divider" x1="${n.x+x}" x2="${n.x+x}" y1="${cy+8}" y2="${n.y+barY+25}"/><circle cx="${n.x+x}" cy="${cy}" r="8"/><text text-anchor="middle" x="${n.x+x}" y="${cy+3.5}">${index+1}</text></g>`;
+    return segments+markers.map(({index,x,labelX,lane})=>{
+      const cy=n.y+barY-18-lane*36,value=p.separators[index];
+      return `<g class="range-marker" data-range-boundary="${index}" role="slider" tabindex="0" aria-label="Repère ${index+1}" aria-valuenow="${value}" aria-valuemin="${index?p.separators[index-1]:p.scale.min}" aria-valuemax="${index<p.separators.length-1?p.separators[index+1]:p.scale.max}"><title>Repère ${index+1} : ${esc(ruleFmt(value))}</title><line class="range-divider-hit" x1="${n.x+x}" x2="${n.x+x}" y1="${cy-20}" y2="${n.y+barY+25}"/><line class="range-divider" x1="${n.x+x}" x2="${n.x+x}" y1="${cy+8}" y2="${n.y+barY+25}"/><text class="range-value" text-anchor="middle" x="${n.x+labelX}" y="${cy-18}">${esc(ruleFmt(value))}</text><circle cx="${n.x+x}" cy="${cy}" r="9"/><text text-anchor="middle" x="${n.x+x}" y="${cy+4}">${index+1}</text></g>`;
     }).join('')+`<text class="range-scale" x="${n.x+14}" y="${n.y+barY+42}">${esc(ruleFmt(p.scale.min))}</text><text class="range-scale" text-anchor="end" x="${n.x+w-14}" y="${n.y+barY+42}">${esc(ruleFmt(p.scale.max))}</text>`;
   }
   function draw(){
     $('canvas').setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);
     $('zoomValue').textContent=Math.round(1200/view.w*100)+' %';
     $('emptyHint').hidden=Boolean(graph.nodes.length);
-    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.params.scale,n.params.separators,n.params.labels,n.params.branches]));
+    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.name,n.params.message,n.params.scale,n.params.separators,n.params.labels,n.params.branches]));
     if(routeSignature!==routesSignature){routes.clear();routesSignature=routeSignature;}
     const portMarkup=[];
     $('boxes').innerHTML=graph.nodes.map(n=>{
-      const {w,h}=dimensions(n),p=n.params,color={start:['#e6f5ed','#72b095'],end:['#e6f5ed','#72b095'],test:['#fff4df','#d7a861'],ranges:['#fff4df','#d7a861'],
+      const {w,h,headerHeight,titleLines}=dimensions(n),p=n.params,color={start:['#e6f5ed','#72b095'],end:['#e6f5ed','#72b095'],test:['#fff4df','#d7a861'],ranges:['#fff4df','#d7a861'],
         action:['#f1e9f7','#af87c3'],parallel:['#f1e9f7','#af87c3'],join:['#f1e9f7','#af87c3'],info:['#e7f2fd','#87b7d8'],wait:['#ebf1f6','#9db2c4']}[n.type];
       const active=(runtime.activeNodes||[runtime.current]).includes(n.id)&&['running','paused','error'].includes(runtime.status);
       const highlighted=!active&&recent.has(n.id);
@@ -72,13 +72,17 @@
         return `<circle class="port ${pending?.node===n.id&&pending?.port===kind?'pending':''}" cx="${point.x}" cy="${point.y}" r="6" ${incoming?'data-input':'data-output'}="${esc(n.id)}" data-port="${kind}" role="button" tabindex="0" aria-label="${esc(n.name+' · '+label)}"><title>${esc(label)}</title></circle>`;
       };
       const range=n.type==='ranges'?rangeDrawing(n):'';
+      const radius=n.type==='start'||n.type==='end'?20:8;
+      const instructions=subtitle(n).flatMap(t=>R.wrapText(t,n.type==='ranges'?42:35,n.type==='info'?6:2));
       portMarkup.push((n.type!=='start'?port('in',true):'')+A.ports(n).map(p=>port(p)).join(''));
       return `<g class="box ${highlighted?'recent':''} ${selected===n.id?'selected':''} ${active?(runtime.status==='error'?'failed':'executing'):''}" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="${esc(n.name)}">
-        <title>${esc(n.name)}</title><rect class="body" x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${n.type==='start'||n.type==='end'?20:8}" fill="${color[0]}" stroke="${color[1]}"/>
-        <text class="title" x="${n.x+12}" y="${n.y+24}">${esc(short(n.name,29))}</text>
+        <title>${esc(n.name+'\n'+subtitle(n).join('\n'))}</title><rect class="body" x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${radius}" fill="${color[0]}" stroke="${color[1]}"/>
+        <path class="name-band" d="M${n.x+radius} ${n.y}H${n.x+w-radius}Q${n.x+w} ${n.y} ${n.x+w} ${n.y+radius}V${n.y+headerHeight}H${n.x}V${n.y+radius}Q${n.x} ${n.y} ${n.x+radius} ${n.y}Z" fill="${color[1]}35"/>
+        <line class="band-divider" x1="${n.x}" x2="${n.x+w}" y1="${n.y+headerHeight}" y2="${n.y+headerHeight}" stroke="${color[1]}"/>
+        ${titleLines.map((t,i)=>`<text class="title" x="${n.x+14}" y="${n.y+25+i*20}">${esc(t)}</text>`).join('')}
         ${(runtime.tokens||[]).filter(t=>t.current===n.id).length>1?`<text class="cursor-count" text-anchor="end" x="${n.x+w-10}" y="${n.y+h-12}">${(runtime.tokens||[]).filter(t=>t.current===n.id).length} curseurs</text>`:''}
-        ${subtitle(n).map((t,i)=>`<text class="detail" x="${n.x+12}" y="${n.y+47+i*17}">${esc(short(t))}</text>`).join('')}${range}
-        ${n.type==='test'?`<text class="port-label" x="${n.x+w/2+10}" y="${n.y+h-8}">Vrai</text><text class="port-label" x="${n.x+10}" y="${n.y+h/2-7}">Faux</text><text class="port-label" text-anchor="end" x="${n.x+w-10}" y="${n.y+h/2-7}">Faux</text>`:''}
+        ${instructions.map((t,i)=>`<text class="detail" x="${n.x+14}" y="${n.y+headerHeight+25+i*21}">${esc(t)}</text>`).join('')}${range}
+        ${n.type==='test'?`<text class="port-label" x="${n.x+w/2+10}" y="${n.y+h-8}">Vrai</text><text class="port-label" x="${n.x+10}" y="${n.y+h-37}">Faux</text><text class="port-label" text-anchor="end" x="${n.x+w-10}" y="${n.y+h-37}">Faux</text>`:''}
       </g>`;
     }).join('');
     $('ports').innerHTML=portMarkup.join('');
@@ -250,7 +254,7 @@
     });pending=null;draw();
   }
   function canvasClick(e){
-    if(suppressClick){suppressClick=false;return;}
+    if(suppressClick){suppressClick=false;if(e.type==='click')return;}
     const out=e.target.closest('[data-output]'),input=e.target.closest('[data-input]');
     if(out&&!locked()){pending={node:out.dataset.output,port:out.dataset.port};draw();status('Cliquez l’entrée haute de la boîte suivante.');return;}
     if(input){connectInput(input.dataset.input);return;}
@@ -263,7 +267,7 @@
       graph.links=graph.links.filter(l=>l.id!==selected&&!removed.has(l.from)&&!removed.has(l.to));});selected=null;draw();properties();
   }
   document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{
-    const n=A.node(b.dataset.add,id('box'),view.x+70+(graph.nodes.length%3)*260,view.y+65+Math.floor(graph.nodes.length/3)*160);
+    const n=A.node(b.dataset.add,id('box'),view.x+70+(graph.nodes.length%3)*430,view.y+65+Math.floor(graph.nodes.length/3)*320);
     if(n.type==='start'){let i=1;while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name='Séquence '+ ++i;}
     if(edit(()=>{graph.nodes.push(n);if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+320);j.params.fork=n.id;n.params.join=j.id;graph.nodes.push(j);}}))select(n.id);
   }));
@@ -291,7 +295,8 @@
     if(e.key==='Enter')canvasClick(e);
   });
   $('canvas').addEventListener('pointerdown',e=>{
-    if(e.button!==0||e.target.closest('[data-output],[data-input]'))return;
+    if(e.button!==0)return;suppressClick=false;
+    if(e.target.closest('[data-output],[data-input]'))return;
     const point=coordinate(e),n=graph.nodes.find(n=>n.id===e.target.closest('[data-node]')?.dataset.node);
     const boundary=e.target.closest('[data-range-boundary]');
     if(n){if(!select(n.id))return;if(locked())return;drag={node:n.id,x:point.x,y:point.y,bx:n.x,by:n.y,before:JSON.stringify(graph),moved:false,
@@ -330,7 +335,7 @@
   $('fit').addEventListener('click',fit);$('zoomIn').addEventListener('click',()=>zoom(1/1.2));$('zoomOut').addEventListener('click',()=>zoom(1.2));
   $('delete').addEventListener('click',remove);
   $('duplicate').addEventListener('click',()=>{const n=cloneNode(current());if(!n)return;
-    n.id=id('box');n.x+=40;n.y+=130;n.name=short(n.name,85)+' · copie';
+    n.id=id('box');n.x+=40;n.y+=dimensions(n).h+60;n.name=short(n.name,85)+' · copie';
     while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name+='2';
     if(edit(()=>{graph.nodes.push(n);if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+320);j.params.fork=n.id;n.params.join=j.id;graph.nodes.push(j);}}))select(n.id);
   });

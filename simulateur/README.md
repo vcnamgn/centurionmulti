@@ -32,6 +32,8 @@ L'atelier **Conduite Auto**, après CC-Protec., permet de relier des départs no
 
 Une **règle à plages** utilise une échelle adaptée à la mesure et des repères partagés, numérotés dans un cercle. Les repères se déplacent à la souris, se règlent à la molette (trois chiffres significatifs) ou se saisissent dans les champs, avec validation par Entrée ou sortie du champ. Les deux plages voisines partagent toujours la même séparation. Toutes les sorties sont en bas ; les valeurs hors de l'échelle suivent la première ou la dernière plage. Une sortie non raccordée attend. Les fichiers de conduite version 3 conservent l'import des versions 1 et 2.
 
+Les valeurs des repères sont affichées sur la règle. Le nom de chaque boîte possède son propre bandeau, au-dessus des instructions agrandies et réparties sur plusieurs lignes. La taille des boîtes et le tracé des connecteurs s'adaptent à cet affichage.
+
 La liste de lancement reprend les départs du canevas. Tous les curseurs actifs sont surlignés. Chaque passage garde aussi un contour vert pointillé pendant 2 secondes réelles, même à ×200. Les attentes suivent le temps simulé, y compris en ×200. Pause / Reprendre suspend seulement la conduite ; Interrompre laisse les dernières commandes appliquées. Les protections et limites physiques gardent leur priorité. Pour un actionneur piloté par CC, placer son passage en manuel dans une boîte précédente.
 
 L'action **Désactiver les protections** coupe explicitement la surveillance CC-Protec., comme le bouton du pupitre. **Activer les protections CC** permet de la rétablir. Un ordre AAR ou IS déjà déclenché reste mémorisé.

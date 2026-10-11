@@ -60,7 +60,7 @@ function editorSurface(mode='regul',{saved=null}={}){
     closest(s){let n=this;while(n&&!matches(n,s))n=n.parentElement;return n;}
     matches(s){return matches(this,s);}
     addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);}
-    fire(k,extra={}){for(const fn of this.listeners[k]||[])fn({target:this,preventDefault(){},...extra});}
+    fire(k,extra={}){for(const fn of this.listeners[k]||[])fn({type:k,target:this,preventDefault(){},...extra});}
     focus(){}select(){}click(){this.fire('click');}setPointerCapture(){}releasePointerCapture(){}
     showModal(){this.setAttribute('open','');}close(){this.removeAttribute('open');}
     getBoundingClientRect(){return {left:0,top:0,right:1200,bottom:700,width:1200,height:700};}
