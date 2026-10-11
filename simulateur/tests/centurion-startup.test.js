@@ -9,7 +9,7 @@ const app=fs.readFileSync(path.join(__dirname,'../centurion-app.js'),'utf8');
 
 // Exécution de l'application entière : vrais événements et vrais pas physiques.
 // Seule la surface DOM/Canvas est remplacée ; aucune fonction applicative n'est extraite.
-function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {svgUpdates=true}={}){
+function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {svgUpdates=true,autoModule=null}={}){
   const ids=new Map(),nodes=[],frames=[],windowEvents={},messages=[],downloads=[];
   let now=0,currentSvg=svgSurface('synoptique-RCP-1300.svg');
   const attributes=tag=>Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(([,k,v])=>[k,v]));
@@ -60,7 +60,7 @@ function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {s
   const document={getElementById:id=>ids.get(id)||null,activeElement:null,createElement:()=>({click(){}}),
     querySelectorAll:selector=>nodes.filter(n=>matches(n,selector)),
     querySelector(selector){return this.querySelectorAll(selector)[0]||null;}};
-  const context=vm.createContext({window:{CenturionEngine:engine,CenturionHistory:H,CenturionState:State,devicePixelRatio:1,
+  const context=vm.createContext({window:{CenturionEngine:engine,CenturionHistory:H,CenturionState:State,CenturionAuto:autoModule,devicePixelRatio:1,
     addEventListener:(name,fn)=>(windowEvents[name]??=[]).push(fn)},document,
     performance:{now:()=>now},requestAnimationFrame:fn=>frames.push(fn),
     setInterval:()=>1,clearInterval(){},setTimeout:()=>1,clearTimeout(){},Blob,

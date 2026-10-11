@@ -26,6 +26,14 @@ Les trois étages de **soupapes PZR** restent accessibles avec les régulations 
 
 ## Vérifier
 
+### Conduite Auto
+
+L'atelier **Conduite Auto**, après CC-Protec., permet de relier des départs nommés, des tests avec tolérance, des règles horizontales à plages, des actions du pupitre, des informations, des attentes et des lots parallèles. La mesure ou la commande se choisit dans une liste avec recherche. Les séparateurs des plages sont déplaçables. Cliquer une sortie puis l'entrée haute de la boîte suivante crée une liaison ; un test faux sans liaison négative attend que la condition soit respectée.
+
+La liste de lancement reprend les départs du canevas. La boîte active est surlignée. Les attentes suivent le temps simulé, y compris en ×200. Pause / Reprendre suspend seulement la conduite ; Interrompre laisse les dernières commandes appliquées. Les protections et limites physiques gardent leur priorité. Pour un actionneur piloté par CC, placer son passage en manuel dans une boîte précédente.
+
+**Enregistrer sous…** / **Ouvrir…** conserve le diagramme au format JSON. L'état complet conserve aussi sa progression ; une reprise se fait en pause. L'atelier démarre vide, sans conduite prédéfinie. La pente GCT-A propose désormais **0,25 bar/min**, en plus des valeurs existantes ; la consigne est une pression en bars.
+
 ### Synoptiques retouchés intégrés le 4 octobre 2026
 
 RCP général, GV et pressuriseur utilisent les propositions v3 modifiées par l'utilisateur. Les propositions restent intactes ; une copie des fichiers actifs précédents est conservée dans `support/versions-originales/avant-integration-svg-2026-10-04/`.

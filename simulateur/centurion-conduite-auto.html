@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Centurion · Conduite Auto</title>
+  <link rel="stylesheet" href="centurion-conduite-auto.css?v=20261011-auto">
+</head>
+<body>
+  <header class="toolbar">
+    <strong>Conduite Auto</strong>
+    <label>Diagramme <input id="graphName" value="Ma conduite" maxlength="100" aria-label="Nom du diagramme"></label>
+    <button id="saveGraph">Enregistrer sous…</button><button id="openGraph">Ouvrir…</button>
+    <input id="graphFile" type="file" accept=".json,application/json" hidden>
+    <button id="undo" title="Annuler la dernière modification">↶ Annuler</button>
+    <button id="clearGraph">Nouveau</button>
+  </header>
+  <div class="execution-bar">
+    <label>Séquence <select id="sequenceSelect" aria-label="Séquence à débuter"><option value="">Créer une boîte Départ</option></select></label>
+    <button id="startSequence" class="primary" disabled>▶ Activer une séquence</button>
+    <button id="pauseSequence" disabled>⏸ Pause</button><button id="resumeSequence" disabled>▶ Reprendre</button><button id="stopSequence" disabled>■ Interrompre</button>
+    <output id="runStatus" role="status">Aucune séquence active</output>
+  </div>
+  <main>
+    <section class="library" aria-label="Bibliothèque de conduite">
+      <button data-add="start" class="start">● Départ nommé</button>
+      <button data-add="test" class="test">◇ Comparaison</button>
+      <button data-add="ranges" class="test">▰ Règle à plages</button>
+      <button data-add="action" class="action">→ Action du pupitre</button>
+      <button data-add="info" class="info">ⓘ Information</button>
+      <button data-add="wait" class="wait">◷ Attendre</button>
+      <button data-add="parallel" class="action">⇉ Actions parallèles</button>
+      <button data-add="end" class="start">■ Fin de séquence</button>
+    </section>
+    <div class="canvas-tools">
+      <span>Relier : cliquer une sortie, puis l’entrée haute d’une boîte. Glisser une boîte pour la déplacer.</span>
+      <div><button id="zoomOut" aria-label="Dézoomer le canevas">−</button><output id="zoomValue">100 %</output><button id="zoomIn" aria-label="Zoomer le canevas">+</button><button id="fit">Cadrer</button><button id="duplicate" disabled>Dupliquer</button><button id="delete" disabled>Supprimer</button></div>
+    </div>
+    <section class="work-area">
+      <div class="canvas-wrap">
+        <svg id="canvas" viewBox="0 0 1200 700" role="application" aria-label="Canevas des séquences de conduite" tabindex="0">
+          <defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#bed0dc"/></pattern><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#6188a4"/></marker></defs>
+          <rect id="paper" x="-20000" y="-20000" width="40000" height="40000" fill="url(#dots)"/>
+          <g id="links"></g><g id="boxes"></g>
+        </svg>
+        <p id="emptyHint">Ajoutez un départ nommé, des tests et des actions, puis reliez leurs connecteurs.</p>
+      </div>
+      <aside id="properties" aria-label="Propriétés de la boîte"><h2>Propriétés</h2><p>Sélectionnez une boîte ou une liaison.</p></aside>
+    </section>
+    <output id="editStatus" role="status"></output>
+    <details class="help"><summary>Utilisation et journal de conduite</summary>
+      <p>Un test vrai sort en bas. Un test faux sort à gauche ou à droite selon la liaison choisie ; sans liaison négative, la boîte attend que le test soit vrai. Une règle répartit la mesure entre ses plages, avec une sortie basse par plage. Les bornes communes appartiennent à la plage suivante ; la dernière borne est incluse. La tolérance élargit seulement les deux bornes externes.</p>
+      <p>Pour « = », la tolérance est l’écart absolu accepté, dans l’unité de la mesure. Pour &gt; / &lt;, il faut dépasser le seuil de plus que la tolérance ; ≥ / ≤ l’acceptent. Les actions sont exécutées une seule fois à l’entrée de la boîte. Les attentes utilisent le temps simulé. Une boîte parallèle lance son lot puis attend la plus longue attente avant de sortir.</p>
+      <p>Les commandes suivent le pupitre. Un actionneur déjà piloté par CC-RÉGUL nécessite le même passage en manuel. Configurez ces modes dans une boîte précédente, avant un lot parallèle. AAR, limites hydrauliques et conditions de connexion du RRA restent prioritaires. Interrompre une séquence laisse les dernières commandes appliquées.</p>
+      <ol id="runLog"></ol>
+    </details>
+  </main>
+  <script src="centurion-auto.js?v=20261011-auto"></script>
+  <script src="centurion-conduite-auto.js?v=20261011-auto"></script>
+</body>
+</html>

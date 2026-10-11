@@ -35,6 +35,17 @@ test('consignes : rampes physiques indépendantes en bar/min et %/min, instantan
   assert.equal(E.setManualSetpoint(m,'pressure',NaN),false);
 });
 
+test('GCT-A : pente lente 0,25 bar/min, application et sauvegarde de la rampe',()=>{
+  const m=E.make();m.controls.protectionsEnabled=false;
+  m.controls.setpointRamps.gcta.rate=0.25;E.setManualSetpoint(m,'gcta',70);
+  E.advance(m,60);
+  assert.ok(Math.abs(m.controls.gctAOpeningPressureBar-88.35)<1e-8);
+  const saved=State.write(E,m,editors(),ui,null);
+  const restored=State.read(E,saved).model;
+  assert.equal(restored.controls.setpointRamps.gcta.rate,0.25);
+  assert.equal(restored.controls.setpointRamps.gcta.target,70);
+});
+
 test('RCI du vrai graphe : référence manuelle dans les sommateurs, sorties physiques et retour auto',()=>{
   const m=E.make(),cc=editorSurface('regul',{saved:reference('regul')});
   const page=ctx.application(app,null,{...E,make:()=>m},{regulationEditor:cc.bridge});

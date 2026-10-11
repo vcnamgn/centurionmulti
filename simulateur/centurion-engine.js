@@ -891,7 +891,7 @@
     return clamp(model.state.demandPct,0,limit);
   }
   const TURBINE_MANUAL_RATES=[0.5,1,2,5,10,200,null];
-  const SETPOINT_RATES=[0.5,1,2,5,10,200,null];
+  const SETPOINT_RATES=[0.25,0.5,1,2,5,10,200,null];
   const SETPOINT_CONTROLS={gcta:{key:"gctAOpeningPressureBar",min:1,max:100},
     pressure:{key:"pressureSetpointBar",min:1,max:180,manual:"pressureSetpointManual"},
     level:{key:"pzrLevelSetpointPct",min:0,max:100,manual:"pzrLevelSetpointManual"}};

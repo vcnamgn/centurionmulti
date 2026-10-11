@@ -43,6 +43,10 @@
   let diagram="rcp",selectedGv=1,activeView="synoptiques",svgDoc=null;
   const historyView=window.CenturionHistory.create({E,$,document,clipboard:window.navigator?.clipboard,
     getModel:()=>model,onGv:gv=>{selectedGv=gv;$("gvSelect").value=String(gv);}});
+  const Auto=window.CenturionAuto;
+  const autoMeasurements=Auto?.measurementCatalog(E,window.CenturionHistory,model)||[];
+  const autoVariables=new Set(autoMeasurements.map(d=>d.id));
+  let autoGraph=Auto?.emptyGraph(),autoRuntime=Auto?.idle(),autoReady=false,autoHasGraph=false;
   let pendingInitiator=null,initiatorTimer=null;
   let regulationActive=false,protectionActive=false;
   let pendingCcStep=null,ccTickId=0;
@@ -79,6 +83,63 @@
       drawHistory();
     }
     if(name==="transitoires") drawLoadProgramChart();
+    if(name==="conduiteAuto")publishAutoState();
+  }
+  function autoValues(){
+    const point=E.historyPoint(model);
+    return Object.fromEntries(autoMeasurements.map(d=>{
+      const value=d.value(point,model);return [d.id,Number.isFinite(value)?value:null];
+    }));
+  }
+  function dispatchAuto(data){
+    const frame=$("autoEditor");if(!frame)return;
+    try{const bridge=frame.contentWindow?.CenturionAutoEditor;if(bridge)return bridge.receive(data);}catch(_){}
+    frame.contentWindow?.postMessage(data,"*");
+  }
+  function publishAutoState(init=false){
+    if(!Auto||!autoReady)return;
+    dispatchAuto({type:init?"centurion-auto-init":"centurion-auto-state",runtime:autoRuntime,
+      values:autoValues(),simulationRunning:running,
+      ...(init?{graph:autoGraph,measurements:autoMeasurements.map(({id,label,tag,unit,group})=>({id,label,tag,unit,group})),
+        commands:Auto.actionCatalog()}:{} )});
+  }
+  function handleAutoMessage(data,source){
+    if(!Auto||source!==$("autoEditor")?.contentWindow||typeof data?.type!=="string"||!data.type.startsWith("centurion-auto-"))return;
+    try{
+      if(data.type==="centurion-auto-ready"){
+        if(!autoHasGraph){autoGraph=Auto.validate(data.graph,autoVariables);autoHasGraph=true;}
+        autoReady=true;publishAutoState(true);return;
+      }
+      if(data.type==="centurion-auto-graph"){
+        if(["running","paused"].includes(autoRuntime.status))throw Error("Interrompez la séquence avant de modifier le diagramme.");
+        autoGraph=Auto.validate(data.graph,autoVariables);autoRuntime=Auto.idle();autoHasGraph=true;publishAutoState();return;
+      }
+      if(data.type==="centurion-auto-command"){
+        if(stateBusy)throw Error("Une sauvegarde ou un chargement est en cours.");
+        if(model.state.endState)throw Error("Réinitialisez la simulation avant de lancer une séquence.");
+        if(data.action==="start"){
+          if(["running","paused"].includes(autoRuntime.status))throw Error("Une séquence est déjà active.");
+          autoRuntime=Auto.start(autoGraph,data.sequence,autoVariables);running=true;
+        }else if(data.action==="pause"&&autoRuntime.status==="running"){
+          autoRuntime.status="paused";autoRuntime.message="Séquence en pause · commandes conservées";
+        }else if(data.action==="resume"&&autoRuntime.status==="paused"){
+          autoRuntime.status="running";running=true;
+        }else if(data.action==="stop"){
+          autoRuntime.status="stopped";autoRuntime.message="Séquence interrompue · commandes conservées";
+        }
+        render();
+      }
+    }catch(error){dispatchAuto({type:"centurion-auto-error",message:error.message});}
+  }
+  function connectAuto(){
+    if(!Auto)return;const response=dispatchAuto({type:"centurion-auto-connect"});
+    if(response)handleAutoMessage(response,$("autoEditor").contentWindow);
+  }
+  function advanceAutoStep(){
+    if(!Auto||autoRuntime.status!=="running")return;
+    const values=autoValues();
+    Auto.tick(autoRuntime,autoGraph,0.1,id=>values[id],(id,value,checkOnly)=>Auto.executeCommand({E,model,regulationActive,
+      setRegulationActive,setProtectionActive,setRManualOverride:changeManualROverride},id,value,checkOnly));
   }
   function renderInitiatorCountdown(now=performance.now()) {
     const banner=$("initiatorCountdown");
@@ -645,7 +706,12 @@
     const s=model.state,u=model.controls;
     certificate?.observe(model);
     const v=E.instrumentSnapshot(model,selectedGv);
-    if(s.endState){running=false;if(pendingInitiator)cancelInitiator();}
+    if(s.endState){running=false;if(pendingInitiator)cancelInitiator();
+      if(autoRuntime?.status==="running"){
+        autoRuntime.status=s.endState==="safe"?"complete":"stopped";autoRuntime.message=s.endReason;
+      }
+    }
+    publishAutoState();
     renderInitiatorCountdown();
     $("scenarioEnd").hidden=!s.endState;
     $("scenarioEnd").classList.toggle("safe",s.endState==="safe");
@@ -952,6 +1018,7 @@
   }
   function advanceControlledStep() {
     if(pendingCcStep)return false;
+    advanceAutoStep();
     const modes=[...(regulationActive?["regul"]:[]),...(protectionActive?["protect"]:[])]
       .filter(mode=>editorReady[mode]);
     E.step(model,0.1);certificate?.observe(model);carry-=0.1;
@@ -1130,7 +1197,7 @@
     return {speed,diagram,selectedGv,activeView,historyFollowing:chart.following,historyEndS:chart.end,chart,
       historyWindow:$("historyWindow").value,traceSet:$("traceSet").value,
       coreTrailWindow:$("coreTrailWindow").value,ptTrailWindow:$("ptTrailWindow").value,
-      alarmLimits};
+      alarmLimits,...(Auto?{autoConduite:{graph:autoGraph,runtime:autoRuntime}}:{})};
   }
   async function saveSimulationState(){
     if(stateBusy)return;
@@ -1190,6 +1257,14 @@
     for(const id of ["historyWindow","traceSet","coreTrailWindow","ptTrailWindow"])
       $(id).value=ui[id];
     for(const key of Object.keys(alarmLimits))if(ui.alarmLimits[key])alarmLimits[key]=[...ui.alarmLimits[key]];
+    if(Auto){
+      const restored=ui.autoConduite?Auto.validateSaved(ui.autoConduite,autoVariables):{graph:autoGraph,runtime:Auto.idle()};
+      autoGraph=restored.graph;autoRuntime=restored.runtime;autoHasGraph=true;
+      if(autoRuntime.status==="running"){
+        autoRuntime.status="paused";autoRuntime.message="Conduite restaurée en pause · cliquer Reprendre";
+      }
+      publishAutoState(true);
+    }
     renderAlarmTable();
   }
   const SETPOINT_INPUTS={gcta:"gctaOpeningPressure",pressure:"primaryPressureSetpoint",level:"pzrLevelSetpoint"};
@@ -1338,7 +1413,9 @@
     });
     for(const [mode,id] of [["regul","regulationEditor"],["protect","protectionEditor"]])
       $(id).addEventListener("load",()=>connectEditor(mode,id));
+    $("autoEditor")?.addEventListener("load",connectAuto);
     window.addEventListener("message",e=>{
+      handleAutoMessage(e.data,e.source);
       if(e.data?.type==="centurion-editor-state-result"){
         const request=stateRequests.get(e.data.requestId);
         if(request&&e.source===$(editorFrames[request.mode]).contentWindow)request.finish(e.data);
@@ -1358,6 +1435,7 @@
     });
     $("runButton").addEventListener("click",()=>{if(model.state.endState)return;running=!running;render();});
     $("resetButton").addEventListener("click",()=>{cancelInitiator();running=false;pendingCcStep=null;model=E.make();
+      if(Auto){autoRuntime=Auto.idle();publishAutoState(true);}
       releasePtProbe();
       historyView.reset();
       model.controls.protectionGraphMode=true;
@@ -1513,5 +1591,6 @@
   model.controls.protectionsEnabled=protectionActive;
   renderAlarmTable();bindControls();syncInputs();render();
   for(const [mode,id] of [["regul","regulationEditor"],["protect","protectionEditor"]])connectEditor(mode,id);
+  connectAuto();
   requestAnimationFrame(frame);
 })();

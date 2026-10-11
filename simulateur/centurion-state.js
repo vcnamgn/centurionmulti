@@ -7,6 +7,7 @@
   "use strict";
   const History=typeof module==='object'&&module.exports?require('./centurion-history.js'):window.CenturionHistory;
   const PzrCommands=typeof module==='object'&&module.exports?require('./centurion-cc-pzr.js'):window.CenturionPzrCommands;
+  const Auto=typeof module==='object'&&module.exports?require('./centurion-auto.js'):window.CenturionAuto;
   const FORMAT="Centurion-State",VERSION=1,REVISION="20261009-charge-v10";
   const MAX_STATE_BYTES=160*1024*1024;
   const COMPATIBLE_REVISIONS=["20261008-pzr-v2","20261008-pzr-v3","20261008-breche-v4","20261008-gv-breches-v5","20261008-ris-inertie-v6","20261008-gmpp-niveau-v7","20261009-pzr-breche-v8","20261009-consignes-v9"];
@@ -215,7 +216,7 @@
       throw new Error("Réglages d'affichage invalides.");
     if(!["rcp","core","pt","inventory","pzr","rods","gv"].includes(raw.ui.diagram))
       throw new Error("Synoptique invalide.");
-    if(!["synoptiques","graphiques","regulation","protection","initiateurs","transitoires","modele"].includes(raw.ui.activeView)
+    if(!["synoptiques","graphiques","regulation","protection","initiateurs","transitoires","conduiteAuto","modele"].includes(raw.ui.activeView)
       ||typeof raw.ui.historyFollowing!=="boolean"
       ||raw.ui.historyEndS!==null&&typeof raw.ui.historyEndS!=="number"
       ||!raw.ui.alarmLimits||typeof raw.ui.alarmLimits!=="object")throw new Error("Vue ou alarmes invalides.");
@@ -227,6 +228,10 @@
       History.validate(raw.ui.chart,new Set(History.catalog(E,raw.model).map(d=>d.id)));
       if(raw.ui.chart.pinned?.time>raw.model.state.time+1e-6)throw new Error("Instant de lecture futur.");
     }else if(raw.ui.traceSet==='custom'||raw.ui.historyWindow==='custom')throw new Error("Sélection personnalisée absente.");
+    if(raw.ui.autoConduite){
+      if(!Auto)throw new Error("Module Conduite Auto absent.");
+      Auto.validateSaved(raw.ui.autoConduite,new Set(Auto.measurementCatalog(E,History,raw.model).map(d=>d.id)));
+    }
     for(const values of Object.values(raw.ui.alarmLimits))
       if(!Array.isArray(values)||values.length!==4||values.some(v=>v!==null&&typeof v!=="number"))
         throw new Error("Seuils d'alarme invalides.");

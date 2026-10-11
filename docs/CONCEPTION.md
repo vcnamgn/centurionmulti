@@ -1,6 +1,6 @@
 # Centurion — note de conception
 
-Version documentaire du 9 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
+Version documentaire du 11 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
 
 ## 1. Objet et périmètre
 
@@ -15,12 +15,13 @@ La simulation combine une cinétique neutronique globale, une forme axiale à 32
 | Ensemble | Contenu |
 | --- | --- |
 | Synoptiques | RCP général, Cœur, Diagramme P–T, Inventaire CPP, Pressuriseur, Grappes, GV sélectionné de 1 à 4 |
-| Graphique | Historiques avec unités physiques, fenêtres de 5 min, 30 min, 1 h ou 4 h et navigation temporelle |
-| CC-RÉGUL | Construction et exécution des chaînes de température, GCP, niveaux GV, pression et charge RCV |
-| CC-PROTECT | Construction des logigrammes AAR, IS et démarrage ASG |
+| Graphiques | Historiques avec unités physiques, fenêtres de 5 min, 30 min, 1 h ou 4 h et navigation temporelle |
 | Initiateurs | Brèche, éjection, retrait intempestif et perte de tension, après un décompte réel de 5 s |
 | Transitoires | Programmes de charge, pause/reprise/interruption ; seul le suivi de charge boucle |
-| Modèle | Détails par chapitres (cette note), seuils d'alarme et paramètres physiques modifiables |
+| CC-Régul. | Construction et exécution des chaînes de température, GCP, niveaux GV, pression et charge RCV |
+| CC-Protec. | Construction des logigrammes AAR, IS et démarrage ASG |
+| Conduite Auto | Séquences à départ nommé, comparaisons, plages, commandes du pupitre, informations et attentes |
+| Modèles | Détails par chapitres (cette note), seuils d'alarme et paramètres physiques modifiables |
 
 ## 2. Architecture logicielle
 
@@ -34,6 +35,10 @@ flowchart TD
   App -->|tick et mesures| Protect[Éditeur CC-PROTECT]
   Regul -->|sorties de régulation| App
   Protect -->|ordres prioritaires| App
+  App -->|mesures et temps simulé| Auto[Atelier Conduite Auto]
+  Auto -->|graphe de séquences| App
+  App --> AutoEngine[centurion-auto.js]
+  AutoEngine -->|commandes du pupitre| App
   App -->|instrumentSnapshot| Bridge[centurion-svg-bridge.js dans les SVG]
   Bridge -->|navigation| App
   App --> Canvas[Graphiques Canvas et tableau de bord]
@@ -48,6 +53,8 @@ flowchart TD
 | `centurion-history.js` | Catalogue des mesures, courbes libres, axes, sélection temporelle et lectures figées | Moteur en lecture seule, DOM et Canvas ; fonctions pures exportées pour les tests |
 | `centurion-cc-regul.html` | Palette de blocs, graphes, évaluation, édition et sauvegarde | DOM, stockage local, messages du parent ; deux instances selon `mode` |
 | `centurion-cc-pzr.js` | Relais de consigne RCI et extension des chaînes PZR reconnues | Partagé entre l'éditeur, la migration JSON et l'assemblage des corrections |
+| `centurion-auto.js` | Validation des diagrammes, catalogue des commandes, exécution des séquences et adaptateur du pupitre | JavaScript seul ; moteur en paramètre pour les actions ; export CommonJS ou `window.CenturionAuto` |
+| `centurion-conduite-auto.html` / `.css` / `.js` | Canevas de conduite, bibliothèque, propriétés, liaisons, imports et suivi d'exécution | DOM SVG, stockage local et raccordement au parent |
 | `centurion-svg-bridge.js` | Application des mesures aux objets SVG, animations et renvois | DOM SVG et messages du parent |
 | `centurion.html` / `centurion.css` | Structure des onglets, pupitre commun et présentation adaptative | Les trois scripts applicatifs et les fichiers SVG |
 | `synoptiques/liaisons.json` | Inventaire des liaisons graphiques, utilisé pour vérification | Tests et documentation ; pas un moteur de calcul |
@@ -61,6 +68,8 @@ Le RCP général, le pressuriseur, les grappes, le GV, l'inventaire et le diagra
 `index.html` redirige vers `simulateur/centurion.html`. Le moteur est chargé avant l'application. Celle-ci crée `model = CenturionEngine.make()`, raccorde les commandes, ouvre les vues et démarre sa boucle `requestAnimationFrame`.
 
 Les deux éditeurs sont des iframes de la même page, respectivement `?mode=regul` et `?mode=protect`. La connexion est renouvelée à leur événement `load`. Les échanges `connect` / `ready` permettent aussi le raccordement si l'un des documents était déjà prêt. Chaque SVG contient le script de liaison et annonce son chargement au parent.
+
+L'atelier Conduite Auto est une troisième iframe. Il édite le graphe et reçoit les mesures, mais son exécution se déroule dans l'application, avant chaque pas physique de 0,1 s. Changer d'onglet ne suspend donc pas une séquence. Aucun diagramme de conduite n'est fourni au démarrage.
 
 Au départ, l'horloge est en pause, CC-RÉGUL est désactivé et CC-PROTECT est activé. L'absence de régulation ne coupe pas la physique des équipements ni les manœuvres explicitement automatiques de l'exercice.
 
@@ -452,7 +461,7 @@ Le volet Pressuriseur contient la consigne de pression primaire (1–180 bar abs
 
 Les deux blocs **RCI** (relais de commande intermédiaire) sont placés entre la référence automatique et le sommateur : `K(155 bar) → RCI pression → écart MP1−PREF`, et `programme NREF → RCI niveau → NREF → écart NREF−MN1`. E1 porte la référence automatique ; le relais lit la consigne manuelle après rampe et son mode dans les signaux du pupitre. Les valeurs affichées par l'atelier et NREF du synoptique sont celles sélectionnées par ces blocs. Une consigne de pupitre seule ne commande aucun actionneur : il faut relier la chaîne dans CC-RÉGUL et l'activer.
 
-Les consignes de pression GCT-A, pression primaire et niveau PZR ont des rampes indépendantes : 0,5 ; 1 ; 2 ; 5 ; 10 ; 200 unités/minute, ou Instantanée. L'unité est **bar/min** pour les pressions, **% de niveau/min** pour le PZR ; le défaut est 5. La cible et la consigne appliquée sont distinguées à l'écran. La rampe utilise le temps simulé, reste figée en pause et est conservée dans la sauvegarde. Instantanée change seulement la référence ; la pression et le niveau physiques évoluent avec les actionneurs et les bilans existants.
+Les consignes de pression GCT-A, pression primaire et niveau PZR ont des rampes indépendantes : 0,5 ; 1 ; 2 ; 5 ; 10 ; 200 unités/minute, ou Instantanée. Le GCT-A propose aussi **0,25 bar/min**. L'unité est **bar/min** pour les pressions, **% de niveau/min** pour le PZR ; le défaut est 5. La cible et la consigne appliquée sont distinguées à l'écran. La rampe utilise le temps simulé, reste figée en pause et est conservée dans la sauvegarde. Instantanée change seulement la référence ; la pression et le niveau physiques évoluent avec les actionneurs et les bilans existants.
 
 #### Correction du niveau PZR et saturation de la charge
 
@@ -519,6 +528,22 @@ Le zoom au pointeur utilise **Ctrl + molette** ; la molette seule conserve le d�
 
 Les alarmes du tableau de bord et les clignotements de domaine ne déclenchent pas d'ordres. Les limitations physiques, la temporisation des effets, le GCT-A et la coupure ASG haut niveau demeurent dans le moteur. Un mode de protection interne par seuils existe pour utiliser le moteur seul ; l'application fixe `protectionGraphMode=true` pour faire provenir les ordres automatiques du graphe CC-PROTECT.
 
+### Atelier Conduite Auto
+
+Un diagramme contient plusieurs **départs nommés**, des boîtes et des liaisons orientées. La liste de lancement suit immédiatement les créations et changements de noms. Chaque boîte, sauf le départ, possède une entrée haute. Les commandes, informations, attentes et lots parallèles sortent en bas. Une comparaison sort en bas si elle est vraie, et sur le côté négatif raccordé si elle est fausse. Sans liaison négative, elle attend que le test soit vrai. La boîte en cours est surlignée ; une erreur est indiquée en rouge.
+
+Le catalogue de mesures est celui des graphiques et des instruments, complété par l'horloge, l'état RP / AN/GV / CIA et la disponibilité RRA. Les recherches portent sur le nom, le repère et l'unité. Les valeurs sont calculées depuis `historyPoint` sur l'état courant, sans attendre un échantillon archivé. Une mesure absente provoque une erreur explicite ; elle n'est pas remplacée par zéro.
+
+Les tests proposent `=`, `!=`, `>`, `>=`, `<`, `<=`. La tolérance est absolue, dans l'unité de la mesure : l'égalité accepte un écart inférieur ou égal à cette tolérance ; les inégalités strictes nécessitent un dépassement au-delà de celle-ci ; les inégalités larges l'acceptent. La règle horizontale possède une à huit plages avec une sortie basse par plage. Les séparateurs sont déplaçables ; les bornes peuvent aussi être saisies. Les plages ne se chevauchent pas. Une borne commune appartient à la plage suivante ; la dernière borne supérieure est incluse. La tolérance élargit seulement les extrémités externes. Une valeur trop basse sort à gauche, trop haute ou dans un intervalle non couvert à droite ; sans liaison correspondante, la règle attend.
+
+Une commande est appliquée **une fois à l'entrée** de sa boîte. Elle passe par le même adaptateur que le pupitre : positions, décalibrage, consignes et rampes, modes CC / manuel, chauffe, aspersion, RCV, ARE/VVP, ASG, RIS, GMPP et connexion RRA. Elle ne crée pas une régulation interne. Les actionneurs déjà pilotés par CC nécessitent le même passage en manuel que leur glissière. Les changements de mode se placent dans une boîte précédente. Les demandes turbine sont refusées pendant un programme de charge actif. Les conditions RRA, les priorités AAR et les limitations physiques restent applicables.
+
+Une attente est exprimée en secondes, minutes ou heures **simulées** et suit l'accélérateur. Un lot parallèle vérifie d'abord toutes ses commandes ; si l'une est interdite, aucune n'est appliquée. Sinon, il applique les commandes ensemble, journalise les informations, puis attend la plus longue de ses attentes. Il ne crée pas de branches concurrentes indépendantes. Les transitions sont limitées à une par pas physique, pour empêcher une boucle de boîtes instantanées de bloquer l'horloge.
+
+Activer une séquence lance aussi la simulation. Pause / Reprendre agit sur la conduite ; la physique peut continuer. Interrompre conserve les dernières commandes appliquées. Une fin de partie arrête la conduite. L'édition est bloquée pendant une séquence active ou en pause ; elle redevient disponible après interruption. Le journal conserve les cent derniers passages et messages.
+
+**Enregistrer sous** / **Ouvrir** utilise `Centurion-Conduite-Auto`, version 1 : nom, positions des boîtes, paramètres et liaisons. L'import valide identifiants, départs uniques, variables, commandes, valeurs et ports avant remplacement. Il accepte au plus 500 boîtes, 1 500 liaisons et 2 Mo. Aucun code importé n'est exécuté. Le diagramme est aussi conservé localement sous `centurion.conduite-auto.v1`, sans lancement automatique. Réinitialiser la physique garde le diagramme, mais remet son exécution au repos.
+
 ## 7. Contrats entre documents et synoptiques
 
 ### Messages `postMessage`
@@ -532,6 +557,12 @@ Les alarmes du tableau de bord et les clignotements de domaine ne déclenchent p
 | `centurion-editor-tick` | Parent → éditeur | `dt`, `signals`, `rManualOverride`, `tickId` pour le calcul ; `displayOnly` pour l'affichage, `refresh` |
 | `centurion-editor-outputs` | Éditeur → parent | `mode`, `enabled`, `outputs`, `fluxRatePctS`, `diagnostics`, `tickId` repris de la demande |
 | `centurion-editor-reset` | Parent → éditeur | Mesures initiales et état d'activation |
+| `centurion-auto-connect` / `centurion-auto-ready` | Parent ↔ conduite | Raccordement et diagramme local |
+| `centurion-auto-init` | Parent → conduite | Graphe, catalogue des mesures/commandes et état d'exécution |
+| `centurion-auto-state` | Parent → conduite | Mesures courantes, boîte active, journal et état de l'horloge |
+| `centurion-auto-graph` | Conduite → parent | Graphe modifié et validé |
+| `centurion-auto-command` | Conduite → parent | Départ à activer, pause, reprise ou interruption |
+| `centurion-auto-error` | Parent → conduite | Refus de modification ou de lancement |
 | `centurion-state` | Parent → SVG | Projection instrumentale, courbes/trace P–T si nécessaires |
 | `centurion-svg-ready` | SVG → parent | Vue chargée, demande de rafraîchissement |
 | `centurion-svg-navigate` | SVG → parent | Nom de vue et numéro GV éventuel |
@@ -588,6 +619,8 @@ La sauvegarde conserve `state` et `controls` intégralement : précurseurs, iode
 L'application fige le temps et attend la fin du pas CC en cours pour obtenir un état cohérent. Le dialogue `centurion-editor-save` / `validate` / `restore` utilise le même raccordement direct ou par messages que les pas physiques. Les deux graphes sont validés avant restauration ; une ancienne réponse de calcul ne peut pas commander la partie rechargée. Un fichier incompatible conserve la partie courante. Un fichier valide est **toujours chargé en pause**, même si les régulations et protections enregistrées étaient actives ; Démarrer poursuit la simulation. Les graphes restaurés remplacent les graphes des ateliers et leur autosauvegarde. Un initiateur dont le compte à rebours réel est en cours doit être lancé ou annulé avant l'enregistrement.
 
 Le fichier reste local et peut être joint pour déboguer une situation. Il n'est pas un certificat infalsifiable : les données JSON sont modifiables. Une évolution incompatible du moteur doit changer la révision et être accompagnée d'une migration explicite.
+
+L'état complet conserve également le diagramme Conduite Auto, son départ actif, la boîte courante, le temps restant et le journal. Une séquence enregistrée en exécution est reprise **en pause**, et nécessite Reprendre. Les commandes déjà réalisées ne sont pas rejouées à l'entrée de la boîte restaurée. Les anciens fichiers, sans conduite, restent acceptés et gardent le diagramme courant au repos.
 
 La révision `20261008-gv-breches-v5` ajoute les brèches vapeur des GV. Les sauvegardes v1, v2, v3 et v4 reçoivent des brèches secondaires fermées et leurs nouvelles mesures ; leurs stocks, tuyaux, historiques et instantanés de certificat sont conservés. Un arrêt GMPP déjà enregistré dans une ancienne partie reste mémorisé : le chargement ne redémarre pas les pompes. La nouvelle règle IS s'applique aux demandes futures. Les nouveaux chemins d'historique sont ajoutés à la fin du tableau stable, sans déplacer les mesures anciennes.
 
