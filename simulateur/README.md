@@ -32,6 +32,8 @@ L'atelier **Conduite Auto**, après CC-Protec., permet de relier des départs no
 
 La liste de lancement reprend les départs du canevas. La boîte active est surlignée. Les attentes suivent le temps simulé, y compris en ×200. Pause / Reprendre suspend seulement la conduite ; Interrompre laisse les dernières commandes appliquées. Les protections et limites physiques gardent leur priorité. Pour un actionneur piloté par CC, placer son passage en manuel dans une boîte précédente.
 
+L'action **Désactiver les protections** coupe explicitement la surveillance CC-Protec., comme le bouton du pupitre. **Activer les protections CC** permet de la rétablir. Un ordre AAR ou IS déjà déclenché reste mémorisé.
+
 **Enregistrer sous…** / **Ouvrir…** conserve le diagramme au format JSON. L'état complet conserve aussi sa progression ; une reprise se fait en pause. L'atelier démarre vide, sans conduite prédéfinie. La pente GCT-A propose désormais **0,25 bar/min**, en plus des valeurs existantes ; la consigne est une pression en bars.
 
 ### Synoptiques retouchés intégrés le 4 octobre 2026

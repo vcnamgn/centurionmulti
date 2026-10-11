@@ -74,8 +74,12 @@ test('pause, arrêt et reprise : aucune action répétée, même avec des trames
   assert.equal(r.status,'complete');assert.deepEqual(calls,['turbine.target']);
 });
 test('commandes réelles : priorités CC, surcharge R, RRA et brèche conservée lors d’un arrêt RIS',()=>{
-  const model=E.make(),ctx={E,model,regulationActive:true,setRegulationActive(){},setProtectionActive(){},
+  const model=E.make(),ctx={E,model,regulationActive:true,setRegulationActive(){},setProtectionActive:v=>{model.controls.protectionsEnabled=v;},
     setRManualOverride:v=>E.setRManualOverride(model,v)};
+  model.controls.protectionsEnabled=true;
+  A.executeCommand(ctx,'protection.disable',1,true);assert.equal(model.controls.protectionsEnabled,true);
+  A.executeCommand(ctx,'protection.disable',1);assert.equal(model.controls.protectionsEnabled,false);
+  A.executeCommand(ctx,'protection.enabled',1);assert.equal(model.controls.protectionsEnabled,true);
   assert.throws(()=>A.executeCommand(ctx,'heater',500),/CC-RÉGUL/);
   assert.throws(()=>A.executeCommand(ctx,'rods.R',220),/manuel/);
   A.executeCommand(ctx,'rods.manual',1);A.executeCommand(ctx,'rods.R',220);assert.equal(model.controls.rManualPas,220);

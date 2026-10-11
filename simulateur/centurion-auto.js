@@ -36,6 +36,7 @@
       [...(gcta?[0.25]:[]),0.5,1,2,5,10,200].map(v=>[v,String(v).replace('.',',')+' '+unit]).concat([[null,'Instantanée']]));
     add('turbine.target','PTUR · puissance turbine demandée','%',0,110);rate('turbine.rate','PTUR · pente');
     bool('regulation.enabled','Activer les régulations CC');bool('protection.enabled','Activer les protections CC');
+    add('protection.disable','Désactiver les protections','',0,0,[[1,'Désactiver']]);
     bool('rods.manual','Groupe R en manuel');add('rods.R','Position du groupe R','pas extraits',0,260);
     add('gcp.calibration','Décalibrage GCP','% PN',0,8);
     add('rods.all','Tous les groupes, y compris arrêt','pas',0,260,[[0,'Descendre à 0 pas'],[260,'Lever à 260 pas'],[null,'Retour à la conduite']]);
@@ -225,6 +226,7 @@
     if(checkOnly)return;
     if(id==='regulation.enabled')return ctx.setRegulationActive(Boolean(value));
     if(id==='protection.enabled')return ctx.setProtectionActive(Boolean(value));
+    if(id==='protection.disable')return ctx.setProtectionActive(false);
     if(id==='turbine.target')return E.setManualTurbineDemand(model,value);
     if(id==='turbine.rate'){u.manualTurbineRatePctMin=value;return;}
     if(id==='rods.manual')return ctx.setRManualOverride(Boolean(value));
