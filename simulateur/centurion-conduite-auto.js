@@ -1,12 +1,13 @@
 (function(){
   'use strict';
-  const A=window.CenturionAuto,$=id=>document.getElementById(id),STORAGE='centurion.conduite-auto.v1';
+  const A=window.CenturionAuto,R=window.CenturionAutoRouting,$=id=>document.getElementById(id),STORAGE='centurion.conduite-auto.v1';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const fmt=v=>Number.isFinite(v)?v.toLocaleString('fr-FR',{maximumFractionDigits:3}):'—';
   let graph=A.emptyGraph(),runtime=A.idle(),measurements=[],values={},commands=A.actionCatalog(),connected=false,simulationRunning=false;
   let selected=null,pending=null,drag=null,undo=[],view={x:0,y:0,w:1200,h:700},suppressClick=false;
-  let sequenceListSignature=null,runtimeDrawingSignature=null;
+  let sequenceListSignature=null,runtimeDrawingSignature=null,seenSerial=0;
+  const recent=new Map();let routesSignature=null;const routes=new Map();
   const locked=()=>['running','paused'].includes(runtime.status);
   const post=data=>parent.postMessage(data,'*');
   const current=()=>graph.nodes.find(n=>n.id===selected);
@@ -24,19 +25,7 @@
       if(redrawProperties)properties();status('Diagramme enregistré dans ce navigateur.');return true;
     }catch(error){graph=JSON.parse(before);status(error.message,true);return false;}
   }
-  function dimensions(n){return {w:230,h:n.type==='ranges'?142:n.type==='test'?112:n.type==='parallel'?112:92};}
-  function portPoint(n,port){
-    const {w,h}=dimensions(n);
-    if(port==='in')return {x:n.x+w/2,y:n.y};
-    if(port==='no-left')return {x:n.x,y:n.y+h/2};
-    if(port==='no-right')return {x:n.x+w,y:n.y+h/2};
-    if(n.type==='ranges'&&port.startsWith('range:')){
-      const ranges=n.params.ranges,r=ranges[Number(port.split(':')[1])],min=ranges[0].min,span=ranges.at(-1).max-min;
-      return {x:n.x+12+(w-24)*((r.min+r.max)/2-min)/span,y:n.y+h};
-    }
-    const count=1,index=0;
-    return {x:n.x+w*(index+1)/(count+1),y:n.y+h};
-  }
+  const dimensions=R.dimensions,portPoint=R.portPoint;
   function subtitle(n){
     const p=n.params,m=measurements.find(m=>m.id===p.variable),c=commands.find(c=>c.id===p.command);
     if(n.type==='test')return [m?.label||p.variable,`${p.operator} ${fmt(p.value)} ${m?.unit||''} · tol. ${fmt(p.tolerance)}`];
@@ -44,7 +33,11 @@
     if(n.type==='action')return [c?.label||p.command,c?.options?.find(([v])=>v===p.value)?.[1]||`${fmt(p.value)} ${c?.unit||''}`];
     if(n.type==='wait')return [`${fmt(p.duration)} ${{seconds:'secondes',minutes:'minutes',hours:'heures'}[p.unit]}`];
     if(n.type==='info')return [p.message];
-    if(n.type==='parallel')return [`${p.actions.length} actions simultanées`];
+    if(n.type==='parallel')return [`${p.branches} branches indépendantes`,'Clôture obligatoire'];
+    if(n.type==='join'){
+      const groups=(runtime.groups||[]).filter(g=>g.join===n.id);
+      return [groups.length?groups.map(g=>`${g.arrived.length}/${g.expected} branches terminées`).join(' · '):'Réunit tous les curseurs','Reprise après la dernière branche'];
+    }
     return [n.type==='start'?'Point de départ de la séquence':'Termine la séquence'];
   }
   function short(value,max=33){return value.length>max?value.slice(0,max-1)+'…':value;}
@@ -52,12 +45,16 @@
     $('canvas').setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);
     $('zoomValue').textContent=Math.round(1200/view.w*100)+' %';
     $('emptyHint').hidden=Boolean(graph.nodes.length);
+    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.params.ranges,n.params.branches]));
+    if(routeSignature!==routesSignature){routes.clear();routesSignature=routeSignature;}
+    const portMarkup=[];
     $('boxes').innerHTML=graph.nodes.map(n=>{
       const {w,h}=dimensions(n),p=n.params,color={start:['#e6f5ed','#72b095'],end:['#e6f5ed','#72b095'],test:['#fff4df','#d7a861'],ranges:['#fff4df','#d7a861'],
-        action:['#f1e9f7','#af87c3'],parallel:['#f1e9f7','#af87c3'],info:['#e7f2fd','#87b7d8'],wait:['#ebf1f6','#9db2c4']}[n.type];
-      const active=runtime.current===n.id&&['running','paused','error'].includes(runtime.status);
+        action:['#f1e9f7','#af87c3'],parallel:['#f1e9f7','#af87c3'],join:['#f1e9f7','#af87c3'],info:['#e7f2fd','#87b7d8'],wait:['#ebf1f6','#9db2c4']}[n.type];
+      const active=(runtime.activeNodes||[runtime.current]).includes(n.id)&&['running','paused','error'].includes(runtime.status);
+      const highlighted=!active&&recent.has(n.id);
       const port=(kind,incoming=false)=>{
-        const point=portPoint(n,kind),label=incoming?'Entrée':kind==='yes'?'Vrai':kind.startsWith('no-')?'Faux':kind.startsWith('range:')?p.ranges[Number(kind.split(':')[1])].label:'Suite';
+        const point=portPoint(n,kind),label=incoming?'Entrée':kind==='yes'?'Vrai':kind.startsWith('no-')?'Faux':kind.startsWith('range:')?p.ranges[Number(kind.split(':')[1])].label:kind.startsWith('branch:')?'Branche '+(Number(kind.split(':')[1])+1):'Suite';
         return `<circle class="port ${pending?.node===n.id&&pending?.port===kind?'pending':''}" cx="${point.x}" cy="${point.y}" r="6" ${incoming?'data-input':'data-output'}="${esc(n.id)}" data-port="${kind}" role="button" tabindex="0" aria-label="${esc(n.name+' · '+label)}"><title>${esc(label)}</title></circle>`;
       };
       const range=n.type==='ranges'?p.ranges.map((r,i)=>{
@@ -65,23 +62,26 @@
         return `<rect class="range-segment" x="${x}" y="${n.y+77}" width="${rw}" height="22" fill="${['#cde6f0','#cfead7','#f2d9b5','#e2d3ed'][i%4]}"/><text class="range-label" text-anchor="middle" x="${x+rw/2}" y="${n.y+91}">${esc(short(r.label,Math.max(1,Math.floor(rw/6))))}</text><text class="range-label" text-anchor="middle" x="${x+rw/2}" y="${n.y+116}">${esc(fmt(r.min)+'–'+fmt(r.max))}</text>`
           +(i<p.ranges.length-1?`<path class="range-divider" data-range-boundary="${i}" d="M${x+rw} ${n.y+74}V${n.y+102}"/>`:'');
       }).join(''):'';
-      return `<g class="box ${selected===n.id?'selected':''} ${active?(runtime.status==='error'?'failed':'executing'):''}" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="${esc(n.name)}">
-        <rect class="body" x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${n.type==='start'||n.type==='end'?20:8}" fill="${color[0]}" stroke="${color[1]}"/>
+      portMarkup.push((n.type!=='start'?port('in',true):'')+A.ports(n).map(p=>port(p)).join(''));
+      return `<g class="box ${highlighted?'recent':''} ${selected===n.id?'selected':''} ${active?(runtime.status==='error'?'failed':'executing'):''}" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="${esc(n.name)}">
+        <title>${esc(n.name)}</title><rect class="body" x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${n.type==='start'||n.type==='end'?20:8}" fill="${color[0]}" stroke="${color[1]}"/>
         <text class="title" x="${n.x+12}" y="${n.y+24}">${esc(short(n.name,29))}</text>
+        ${(runtime.tokens||[]).filter(t=>t.current===n.id).length>1?`<text class="cursor-count" text-anchor="end" x="${n.x+w-10}" y="${n.y+h-12}">${(runtime.tokens||[]).filter(t=>t.current===n.id).length} curseurs</text>`:''}
         ${subtitle(n).map((t,i)=>`<text class="detail" x="${n.x+12}" y="${n.y+47+i*17}">${esc(short(t))}</text>`).join('')}${range}
-        ${n.type!=='start'?port('in',true):''}${A.ports(n).map(p=>port(p)).join('')}
         ${n.type==='test'?`<text class="port-label" x="${n.x+w/2+10}" y="${n.y+h-8}">Vrai</text><text class="port-label" x="${n.x+10}" y="${n.y+h/2-7}">Faux</text><text class="port-label" text-anchor="end" x="${n.x+w-10}" y="${n.y+h/2-7}">Faux</text>`:''}
       </g>`;
     }).join('');
+    $('ports').innerHTML=portMarkup.join('');
+    let blocked=0;
     $('links').innerHTML=graph.links.map(l=>{
-      const a=graph.nodes.find(n=>n.id===l.from),b=graph.nodes.find(n=>n.id===l.to);
-      if(!a||!b)return '';const s=portPoint(a,l.port),e=portPoint(b,'in');
-      const side=l.port==='no-left'?-1:l.port==='no-right'?1:0,bend=Math.max(35,Math.abs(e.y-s.y)/2);
-      const d=side?`M${s.x} ${s.y}C${s.x+side*70} ${s.y} ${e.x} ${e.y-bend} ${e.x} ${e.y}`
-        :`M${s.x} ${s.y}C${s.x} ${s.y+bend} ${e.x} ${e.y-bend} ${e.x} ${e.y}`;
-      return `<g data-link="${esc(l.id)}" role="button" tabindex="0" aria-label="Liaison ${esc(a.name+' vers '+b.name)}"><path class="edge ${selected===l.id?'selected':''}" d="${d}"/><path class="edge-hit" d="${d}"/></g>`;
+      const a=graph.nodes.find(n=>n.id===l.from),b=graph.nodes.find(n=>n.id===l.to);if(!a||!b)return '';
+      const cacheKey=l.from+'/'+l.port+'/'+l.to;
+      if(!routes.has(cacheKey))routes.set(cacheKey,R.route(graph,l));
+      const route=routes.get(cacheKey),d=R.path(route.points);if(route.blocked)blocked++;
+      return `<g data-link="${esc(l.id)}" role="button" tabindex="0" aria-label="Liaison ${esc(a.name+' vers '+b.name)}"><title>${route.blocked?'Tracé impossible : écartez les boîtes.':'Connecteur à angle droit'}</title><path class="edge ${route.blocked?'blocked':''} ${selected===l.id?'selected':''}" d="${d}"/><path class="edge-hit" d="${d}"/></g>`;
     }).join('');
-    $('delete').disabled=locked()||!selected;$('duplicate').disabled=locked()||!current();$('undo').disabled=locked()||!undo.length;
+    $('routeWarning').textContent=blocked?`${blocked} liaison(s) sans passage libre : écartez les boîtes.`:'';
+    $('delete').disabled=locked()||!selected;$('duplicate').disabled=locked()||!current()||current()?.type==='join';$('undo').disabled=locked()||!undo.length;
   }
   function select(value){selected=value;draw();properties();}
   function refreshSequences(){
@@ -112,7 +112,8 @@
     const n=current();
     if(!n){$('properties').innerHTML=graph.links.some(l=>l.id===selected)?'<h2>Liaison</h2><p>Supprimer retire cette liaison, sans effacer les boîtes.</p>':'<h2>Propriétés</h2><p>Sélectionnez une boîte ou une liaison.</p>';return;}
     const p=n.params;
-    let content=`<h2>${esc({start:'Départ',test:'Comparaison',ranges:'Règle à plages',action:'Action',info:'Information',wait:'Attente',parallel:'Actions parallèles',end:'Fin'}[n.type])}</h2><label>Nom<input data-name="true" maxlength="100" value="${esc(n.name)}"></label>`;
+    let content=`<h2>${esc({start:'Départ',test:'Comparaison',ranges:'Règle à plages',action:'Action',info:'Information',wait:'Attente',parallel:'Effectuer les X actions en parallèle',join:'Attendre la fin de toutes les actions simultanées',end:'Fin'}[n.type])}</h2><label>Nom<input data-name="true" maxlength="100" value="${esc(n.name)}"></label>`;
+    content+=`<label>Durée minimale de cette étape<select data-field="stepDelayS" data-option-value="true">${options([[null,'Réglage commun ('+graph.stepDelayS+' s simulées)'],...A.STEP_DELAYS.map(v=>[v,v+' s simulées'])],p.stepDelayS??null)}</select></label>`;
     if(['test','ranges'].includes(n.type)){
       content+=picker(measurements,p.variable,'variable','une mesure')+'<p class="reading" id="selectedReading"></p>';
       if(n.type==='test')content+=`<div class="row"><label>Test<select data-field="operator">${A.OPERATORS.map(v=>`<option${v===p.operator?' selected':''}>${esc(v)}</option>`).join('')}</select></label><label>Seuil<input type="number" step="any" data-field="value" value="${p.value}"></label></div>`;
@@ -125,9 +126,8 @@
     else if(n.type==='wait')content+=waitFields(p);
     else if(n.type==='info')content+=`<label>Texte<textarea data-field="message" maxlength="2000">${esc(p.message)}</textarea></label>`;
     else if(n.type==='parallel'){
-      content+=p.actions.map((a,i)=>`<section class="parallel-row"><label>Action ${i+1}<select data-action-type="${i}">${['action','info','wait'].map(t=>`<option value="${t}"${a.type===t?' selected':''}>${{action:'Commande',info:'Information',wait:'Attente'}[t]}</option>`).join('')}</select></label>${a.type==='action'?actionFields(a,i):a.type==='wait'?waitFields(a,i):`<label>Texte<textarea data-field="message" data-index="${i}" maxlength="2000">${esc(a.message)}</textarea></label>`}<button class="remove-row" data-remove-action="${i}">Retirer</button></section>`).join('');
-      content+='<button id="addParallelAction">Ajouter une action au lot</button>';
-    }
+      content+=`<label>Nombre de branches<select data-field="branches" data-option-value="true">${options(Array.from({length:7},(_,i)=>[i+2,String(i+2)]),p.branches)}</select></label><p>Chaque sortie basse lance un curseur indépendant. Reliez toutes les branches à la clôture associée.</p><p>Clôture : <strong>${esc(graph.nodes.find(b=>b.id===p.join)?.name||'absente')}</strong></p>`;
+    }else if(n.type==='join')content+='<p>Cette boîte attend tous les curseurs lancés par son ouverture. Une seule suite repart ensuite. Supprimez l’ouverture pour retirer sa clôture.</p>';
     content+='<p class="property-note">Les changements sont appliqués dès la saisie. Pour modifier une conduite active, interrompez-la.</p>';
     $('properties').innerHTML=content;setEditingLock();updateReading();
   }
@@ -135,17 +135,23 @@
     if($('selectedReading'))$('selectedReading').textContent=`Valeur actuelle : ${fmt(values[n.params.variable])} ${m?.unit||''}`;}
   function setEditingLock(){
     for(const el of document.querySelectorAll('#properties input,#properties select,#properties textarea,#properties button,.library button'))el.disabled=locked();
-    for(const id of ['graphName','openGraph','clearGraph'])$(id).disabled=locked();
+    for(const id of ['graphName','stepDelay','openGraph','clearGraph'])$(id).disabled=locked();
   }
   function refreshRuntime(){
     const active=runtime.status==='running',paused=runtime.status==='paused';
+    const now=performance.now();
+    if(runtime.eventSerial<seenSerial){recent.clear();seenSerial=0;}
+    for(const e of runtime.history||[])if((e.serial||0)>seenSerial&&e.event==='entrée')recent.set(e.node,now+2000);
+    seenSerial=runtime.eventSerial||0;
+    for(const [id,expires] of recent)if(expires<=now)recent.delete(id);
+    $('stepDelay').value=String(graph.stepDelayS);
     $('runStatus').textContent=runtime.message+(active&&!simulationRunning?' · simulation en pause':'')
-      +(active&&runtime.remaining>0?' · '+fmt(runtime.remaining)+' s restantes':'');
+      +(active&&runtime.remaining>0?' · '+fmt(runtime.remaining)+' s simulées restantes':'');
     $('runStatus').dataset.error=String(runtime.status==='error');
     $('pauseSequence').disabled=!active;$('resumeSequence').disabled=!paused;$('stopSequence').disabled=!active&&!paused;
     $('runLog').innerHTML=runtime.history.slice(-25).map(h=>`<li>${fmt(h.time)} s · ${esc(h.name)} : ${esc(h.event)}</li>`).join('');
     setEditingLock();refreshSequences();
-    const drawing=runtime.status+' / '+runtime.current;
+    const drawing=runtime.status+' / '+(runtime.activeNodes||[runtime.current]).join(',')+' / '+[...recent.keys()].join(',')+' / '+JSON.stringify((runtime.groups||[]).map(g=>[g.id,g.arrived]));
     if(drawing!==runtimeDrawingSignature){runtimeDrawingSignature=drawing;draw();}
     updateReading();
   }
@@ -153,7 +159,7 @@
     if(data?.type==='centurion-auto-init'){
       try{graph=A.validate(data.graph,new Set(data.measurements.map(d=>d.id)));measurements=data.measurements;commands=data.commands;
         runtime=data.runtime;values=data.values||{};connected=true;simulationRunning=data.simulationRunning;
-        $('graphName').value=graph.name;pending=null;undo=[];
+        $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);pending=null;undo=[];
         if(!graph.nodes.some(n=>n.id===selected))selected=null;
         try{localStorage.setItem(STORAGE,JSON.stringify(graph));}catch(_error){}
         draw();properties();refreshRuntime();
@@ -180,16 +186,14 @@
       const field=el.dataset.rangeField,value=field==='label'?el.value:Number(el.value);
       if(el.value==='')return;edit(()=>{n.params.ranges[Number(el.dataset.range)][field]=value;},false);return;
     }
-    if(el.dataset.actionType!==undefined){
-      const i=Number(el.dataset.actionType),sample=A.node(el.value,'sample');edit(()=>{n.params.actions[i]={type:el.value,...sample.params};});return;
-    }
     const field=el.dataset.field;if(!field)return;
-    const p=el.dataset.index!==undefined&&el.dataset.index!==''?n.params.actions[Number(el.dataset.index)]:n.params;
+    const p=n.params;
     const value=el.dataset.optionValue?JSON.parse(el.value):el.type==='number'?Number(el.value):el.value;
     if(el.type==='number'&&el.value==='')return;
     edit(()=>{p[field]=value;
       if(field==='command'){const c=commands.find(c=>c.id===value);p.value=c.options?c.options[0][0]:c.min;}
-    },field==='command'||field==='variable');
+      if(field==='branches')graph.links=graph.links.filter(l=>!(l.from===n.id&&l.port.startsWith('branch:')&&Number(l.port.split(':')[1])>=value));
+    },field==='command'||field==='variable'||field==='branches');
   }
   function coordinate(e){const p=$('canvas').createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform($('canvas').getScreenCTM().inverse());}
   function fit(){
@@ -220,13 +224,14 @@
     if(!n&&!l){pending=null;draw();}
   }
   function remove(){
-    if(!selected||locked())return;edit(()=>{graph.nodes=graph.nodes.filter(n=>n.id!==selected);
-      graph.links=graph.links.filter(l=>l.id!==selected&&l.from!==selected&&l.to!==selected);});selected=null;draw();properties();
+    if(!selected||locked())return;if(current()?.type==='join'){status('La clôture est obligatoire. Supprimez son ouverture pour la retirer.',true);return;}
+    const removed=new Set([selected,...(current()?.type==='parallel'?[current().params.join]:[])]);edit(()=>{graph.nodes=graph.nodes.filter(n=>!removed.has(n.id));
+      graph.links=graph.links.filter(l=>l.id!==selected&&!removed.has(l.from)&&!removed.has(l.to));});selected=null;draw();properties();
   }
   document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{
     const n=A.node(b.dataset.add,id('box'),view.x+70+(graph.nodes.length%3)*260,view.y+65+Math.floor(graph.nodes.length/3)*160);
     if(n.type==='start'){let i=1;while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name='Séquence '+ ++i;}
-    if(edit(()=>graph.nodes.push(n)))select(n.id);
+    if(edit(()=>{graph.nodes.push(n);if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+320);j.params.fork=n.id;n.params.join=j.id;graph.nodes.push(j);}}))select(n.id);
   }));
   $('properties').addEventListener('input',e=>{if(e.target.localName!=='select')eventField(e);});
   $('properties').addEventListener('change',e=>{if(e.target.localName==='select')eventField(e);});
@@ -241,9 +246,8 @@
     });
     if(e.target.dataset.removeRange!==undefined)edit(()=>{const index=Number(e.target.dataset.removeRange);n.params.ranges.splice(index,1);
       graph.links=graph.links.filter(l=>!(l.from===n.id&&l.port.startsWith('range:')));});
-    if(e.target.id==='addParallelAction')edit(()=>n.params.actions.push({type:'info',message:'Information de conduite'}));
-    if(e.target.dataset.removeAction!==undefined)edit(()=>n.params.actions.splice(Number(e.target.dataset.removeAction),1));
   });
+  $('stepDelay').addEventListener('change',e=>edit(()=>{graph.stepDelayS=Number(e.target.value);}));
   $('graphName').addEventListener('input',e=>edit(()=>{graph.name=e.target.value;},false));
   $('canvas').addEventListener('click',canvasClick);
   $('canvas').addEventListener('keydown',e=>{
@@ -292,15 +296,15 @@
   $('duplicate').addEventListener('click',()=>{const n=cloneNode(current());if(!n)return;
     n.id=id('box');n.x+=40;n.y+=130;n.name=short(n.name,85)+' · copie';
     while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name+='2';
-    if(edit(()=>graph.nodes.push(n)))select(n.id);
+    if(edit(()=>{graph.nodes.push(n);if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+320);j.params.fork=n.id;n.params.join=j.id;graph.nodes.push(j);}}))select(n.id);
   });
   function cloneNode(n){return n?JSON.parse(JSON.stringify(n)):null;}
   $('undo').addEventListener('click',()=>{
-    if(locked()||!undo.length)return;graph=JSON.parse(undo.pop());selected=null;pending=null;$('graphName').value=graph.name;persist();draw();properties();refreshSequences();
+    if(locked()||!undo.length)return;graph=JSON.parse(undo.pop());selected=null;pending=null;$('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);persist();draw();properties();refreshSequences();
   });
   $('clearGraph').addEventListener('click',()=>{if(locked())return;
     if(graph.nodes.length&&!confirm('Créer un diagramme vide ? La dernière modification pourra être annulée.'))return;
-    edit(()=>{graph=A.emptyGraph();});$('graphName').value=graph.name;selected=null;properties();
+    edit(()=>{graph=A.emptyGraph();});$('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);selected=null;properties();
   });
   $('saveGraph').addEventListener('click',()=>{
     try{const valid=A.validate(graph,measurements.length?known():null),url=URL.createObjectURL(new Blob([JSON.stringify(valid,null,2)],{type:'application/json'}));
@@ -314,7 +318,7 @@
     try{if(file.size>2e6)throw Error('Fichier trop volumineux (2 Mo maximum).');
       const loaded=A.validate(await file.text(),measurements.length?known():null);
       if(graph.nodes.length&&!confirm('Remplacer le diagramme courant par ce fichier ?'))return;
-      if(edit(()=>{graph=loaded;})){selected=null;pending=null;$('graphName').value=graph.name;properties();fit();status('Conduite chargée · aucune séquence lancée.');}
+      if(edit(()=>{graph=loaded;})){selected=null;pending=null;$('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);properties();fit();status('Conduite chargée · aucune séquence lancée.');}
     }catch(error){status('Ouverture impossible : '+error.message,true);}finally{e.target.value='';}
   });
   for(const [button,action] of [['startSequence','start'],['pauseSequence','pause'],['resumeSequence','resume'],['stopSequence','stop']])
@@ -322,6 +326,7 @@
   window.addEventListener('message',e=>{if(e.source===parent)receive(e.data);});
   window.CenturionAutoEditor={receive};
   try{const saved=localStorage.getItem(STORAGE);if(saved)graph=A.validate(saved);}catch(error){status('Conduite locale non chargée : '+error.message,true);}
-  $('graphName').value=graph.name;draw();properties();refreshSequences();
+  $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);draw();properties();refreshSequences();
+  setInterval(()=>{if(recent.size)refreshRuntime();},100);
   post({type:'centurion-auto-ready',graph});
 })();

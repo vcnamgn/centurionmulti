@@ -28,13 +28,17 @@ Les trois étages de **soupapes PZR** restent accessibles avec les régulations 
 
 ### Conduite Auto
 
-L'atelier **Conduite Auto**, après CC-Protec., permet de relier des départs nommés, des tests avec tolérance, des règles horizontales à plages, des actions du pupitre, des informations, des attentes et des lots parallèles. La mesure ou la commande se choisit dans une liste avec recherche. Les séparateurs des plages sont déplaçables. Cliquer une sortie puis l'entrée haute de la boîte suivante crée une liaison ; un test faux sans liaison négative attend que la condition soit respectée.
+L'atelier **Conduite Auto**, après CC-Protec., permet de relier des départs nommés, des tests avec tolérance, des règles horizontales à plages, des actions du pupitre, des informations, des attentes et des ouvertures parallèles. La bibliothèque est à gauche du canevas ; les connecteurs à angle droit contournent les boîtes. La mesure ou la commande se choisit dans une liste avec recherche. Les séparateurs des plages sont déplaçables. Cliquer une sortie puis l'entrée haute de la boîte suivante crée une liaison ; un test faux sans liaison négative attend que la condition soit respectée.
 
-La liste de lancement reprend les départs du canevas. La boîte active est surlignée. Les attentes suivent le temps simulé, y compris en ×200. Pause / Reprendre suspend seulement la conduite ; Interrompre laisse les dernières commandes appliquées. Les protections et limites physiques gardent leur priorité. Pour un actionneur piloté par CC, placer son passage en manuel dans une boîte précédente.
+La liste de lancement reprend les départs du canevas. Tous les curseurs actifs sont surlignés. Chaque passage garde aussi un contour vert pointillé pendant 2 secondes réelles, même à ×200. Les attentes suivent le temps simulé, y compris en ×200. Pause / Reprendre suspend seulement la conduite ; Interrompre laisse les dernières commandes appliquées. Les protections et limites physiques gardent leur priorité. Pour un actionneur piloté par CC, placer son passage en manuel dans une boîte précédente.
 
 L'action **Désactiver les protections** coupe explicitement la surveillance CC-Protec., comme le bouton du pupitre. **Activer les protections CC** permet de la rétablir. Un ordre AAR ou IS déjà déclenché reste mémorisé.
 
-**Enregistrer sous…** / **Ouvrir…** conserve le diagramme au format JSON. L'état complet conserve aussi sa progression ; une reprise se fait en pause. L'atelier démarre vide, sans conduite prédéfinie. La pente GCT-A propose désormais **0,25 bar/min**, en plus des valeurs existantes ; la consigne est une pression en bars.
+**Effectuer les X actions en parallèle** ouvre 2 à 8 branches indépendantes et crée sa clôture obligatoire **Attendre la fin de toutes les actions simultanées**. Relier toutes les branches à cette clôture permet de poursuivre une seule fois après la dernière arrivée. Les parallèles peuvent être imbriqués.
+
+La durée minimale par étape est de **2 secondes simulées**, réglable à **0, 1, 2 ou 5 secondes** dans le bandeau, avec une surcharge possible dans les propriétés de chaque boîte. Une attente explicite reste au moins aussi longue que sa durée configurée.
+
+**Enregistrer sous…** / **Ouvrir…** conserve le diagramme au format JSON version 2. Les anciens lots version 1 sont convertis en branches et clôtures. L'état complet conserve aussi sa progression ; une reprise se fait en pause. L'atelier démarre vide, sans conduite prédéfinie. La pente GCT-A propose désormais **0,25 bar/min**, en plus des valeurs existantes ; la consigne est une pression en bars.
 
 ### Synoptiques retouchés intégrés le 4 octobre 2026
 

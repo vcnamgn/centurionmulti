@@ -43,6 +43,7 @@ const modules=[
   ,{file:'simulateur/centurion-cc-pzr.js',title:'Consignes PZR',description:'Sélection RCI, limites réalisables du PI et extension des chaînes PZR reconnues.'}
   ,{file:'simulateur/centurion-auto.js',title:'Séquences de conduite',description:'Validation des diagrammes, mesures, commandes du pupitre et progression en temps simulé.'}
   ,{file:'simulateur/centurion-conduite-auto.js',title:'Canevas de conduite',description:'Édition, connecteurs, plages, propriétés, import/export et suivi de la boîte active.'}
+  ,{file:'simulateur/centurion-auto-routing.js',title:'Connecteurs de conduite',description:'Tracé orthogonal, accès aux ports, évitement des boîtes et détection des passages obstrués.'}
 ];
 const notes={
   executeCommand:'Conduite : valide ou applique une commande du pupitre, avec vérification des modes manuels, des programmes turbine et des conditions physiques. checkOnly ne modifie rien.',

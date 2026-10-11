@@ -1,14 +1,14 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const A=require('../centurion-auto'),E=require('../centurion-engine'),H=require('../centurion-history'),State=require('../centurion-state');
 const {editorSurface}=require('./helpers/editor-surface'),{svgSurface}=require('./helpers/svg-surface');
-const make=(types)=>{const g=A.emptyGraph();g.nodes=types.map((t,i)=>A.node(t,'n'+i,50+i*240,80));return g;};
+const make=(types)=>{const g=A.emptyGraph();g.stepDelayS=0;g.nodes=types.map((t,i)=>A.node(t,'n'+i,50+i*280,80));return g;};
 const link=(g,from,to,port='next')=>g.links.push({id:'e'+g.links.length,from:'n'+from,to:'n'+to,port});
 const variables=new Set(A.measurementCatalog(E,H,E.make()).map(d=>d.id));
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
 
 test('conduite : graphe vide, départs nommés, types et fichiers validés sans code exécutable',()=>{
   assert.deepEqual(A.validate(JSON.stringify(A.emptyGraph())),A.emptyGraph());
-  const g=make(A.TYPES);assert.equal(A.validate(g,variables).nodes.length,8);
+  const g=make(A.TYPES);assert.equal(A.validate(g,variables).nodes.length,9);
   assert.deepEqual(A.sequences(g),[{id:'n0',name:'Nouvelle séquence'}]);
   const bad=structuredClone(g);bad.nodes.push(A.node('start','another'));
   assert.throws(()=>A.validate(bad),/noms distincts/);
@@ -55,18 +55,20 @@ test('exécution : test sans branche négative attend, commande une seule fois e
   assert.ok(r.history.find(h=>h.node==='n3'&&h.event==='next').time-r.history.find(h=>h.node==='n3'&&h.event==='entrée').time>=.9-1e-8);
 });
 test('parallèle : commandes lancées ensemble, attente maximale, rejet avant toute application',()=>{
-  const g=make(['start','parallel','end']);link(g,0,1);link(g,1,2);
+  let g=make(['start','parallel','end']);link(g,0,1);link(g,1,2);
   g.nodes[1].params.actions=[{type:'action',command:'turbine.target',value:80},{type:'action',command:'rcv.boron',value:1500},
     {type:'wait',duration:.02,unit:'minutes'},{type:'wait',duration:.0001,unit:'hours'}];
+  g.version=1;g=A.validate(g);
   const r=A.start(g,'n0'),calls=[];
   for(let i=0;i<20;i++)A.tick(r,g,.1,()=>0,(id,value,check)=>{if(!check)calls.push(id);});
   assert.equal(r.status,'complete');assert.deepEqual(calls,['turbine.target','rcv.boron']);
   const broken=A.start(g,'n0'),applied=[];
   for(let i=0;i<3;i++)A.tick(broken,g,.1,()=>0,(id,v,check)=>{if(check&&id==='rcv.boron')throw Error('Essai bloqué');if(!check)applied.push(id);});
-  assert.equal(broken.status,'error');assert.equal(broken.current,'n1');assert.deepEqual(applied,[]);
+  assert.equal(broken.status,'error');assert.equal(broken.current,'n1:branch:0');assert.deepEqual(applied,[]);
 });
 test('pause, arrêt et reprise : aucune action répétée, même avec des trames regroupées ×200',()=>{
-  const g=make(['start','parallel','end']);link(g,0,1);link(g,1,2);const calls=[];
+  let g=make(['start','parallel','end']);link(g,0,1);link(g,1,2);const calls=[];
+  g.version=1;g.nodes[1].params.actions=[{type:'action',command:'turbine.target',value:100},{type:'wait',duration:10,unit:'seconds'}];g=A.validate(g);
   const r=A.start(g,'n0');for(let i=0;i<5;i++)A.tick(r,g,.1,()=>0,(id,v,check)=>{if(!check)calls.push(id);});
   const elapsed=r.elapsed;r.status='paused';for(let i=0;i<200;i++)A.tick(r,g,.1,()=>0,()=>{throw Error('ne doit pas exécuter');});
   assert.equal(r.elapsed,elapsed);r.status='running';

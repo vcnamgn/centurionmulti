@@ -5,27 +5,28 @@
   else root.CenturionAuto=api;
 })(typeof window!=='undefined'?window:globalThis,function(){
   'use strict';
-  const FORMAT='Centurion-Conduite-Auto',VERSION=1;
-  const TYPES=['start','test','ranges','action','info','wait','parallel','end'];
+  const FORMAT='Centurion-Conduite-Auto',VERSION=2;
+  const STEP_DELAYS=[0,1,2,5];
+  const TYPES=['start','test','ranges','action','info','wait','parallel','join','end'];
   const OPERATORS=['=','!=','>','>=','<','<='];
   const clone=value=>JSON.parse(JSON.stringify(value));
   const finite=value=>typeof value==='number'&&Number.isFinite(value);
   const text=(value,max=240)=>typeof value==='string'&&value.length<=max;
-  const identifier=value=>text(value,100)&&/^[\w.:-]+$/.test(value)&&!['__proto__','constructor','prototype'].includes(value);
+  const identifier=value=>text(value,240)&&/^[\w.:-]+$/.test(value)&&!['__proto__','constructor','prototype'].includes(value);
   const DURATION_UNITS={seconds:1,minutes:60,hours:3600};
-  function emptyGraph(){return {format:FORMAT,version:VERSION,name:'Ma conduite',nodes:[],links:[]};}
+  function emptyGraph(){return {format:FORMAT,version:VERSION,name:'Ma conduite',stepDelayS:2,nodes:[],links:[]};}
   function node(type,id,x=180,y=80){
     const params=type==='test'?{variable:'pressure',operator:'<=',value:31,tolerance:0.1}
       :type==='ranges'?{variable:'pzrLevel',tolerance:0,ranges:[{label:'Bas',min:0,max:15},{label:'Normal',min:15,max:70},{label:'Haut',min:70,max:100}]}
       :type==='action'?{command:'turbine.target',value:100}
       :type==='info'?{message:'Information de conduite'}
       :type==='wait'?{duration:10,unit:'seconds'}
-      :type==='parallel'?{actions:[{type:'action',command:'turbine.target',value:100},{type:'wait',duration:10,unit:'seconds'}]}:{};
+      :type==='parallel'?{branches:2,join:null}:type==='join'?{fork:null}:{};
     return {id,type,x,y,name:{start:'Nouvelle séquence',test:'Comparaison',ranges:'Plages de mesure',action:'Action',
-      info:'Information',wait:'Attente',parallel:'Actions en parallèle',end:'Fin de séquence'}[type],params};
+      info:'Information',wait:'Attente',parallel:'Effectuer les X actions en parallèle',join:'Attendre la fin de toutes les actions simultanées',end:'Fin de séquence'}[type],params:{...params,stepDelayS:null}};
   }
   function ports(n){
-    return n.type==='end'?[]:n.type==='test'?['yes','no-left','no-right']
+    return n.type==='end'?[]:n.type==='parallel'?Array.from({length:n.params.branches},(_,i)=>`branch:${i}`):n.type==='test'?['yes','no-left','no-right']
       :n.type==='ranges'?[...n.params.ranges.map((_,i)=>`range:${i}`),'no-left','no-right']:['next'];
   }
   function actionCatalog(){
@@ -86,14 +87,16 @@
       if(raw.length>2e6)throw Error('Conduite trop volumineuse (2 Mo maximum).');
       raw=JSON.parse(raw);
     }
-    if(!raw||raw.format!==FORMAT||raw.version!==VERSION||!text(raw.name,100)
+    if(!raw||raw.format!==FORMAT||![1,VERSION].includes(raw.version)||!text(raw.name,100)
       ||!Array.isArray(raw.nodes)||raw.nodes.length>500||!Array.isArray(raw.links)||raw.links.length>1500)
       throw Error('Fichier de conduite incompatible.');
-    const graph=clone(raw),nodes=new Map(),starts=new Set(),commands=new Map(actionCatalog().map(d=>[d.id,d]));
+    const graph=migrateGraph(raw),nodes=new Map(),starts=new Set(),commands=new Map(actionCatalog().map(d=>[d.id,d]));
+    if(!STEP_DELAYS.includes(graph.stepDelayS))throw Error('Durée minimale d’étape invalide.');
     for(const n of graph.nodes){
       if(!identifier(n.id)||nodes.has(n.id)||!TYPES.includes(n.type)||!text(n.name,100)||!n.name.trim()
         ||!finite(n.x)||!finite(n.y)||Math.abs(n.x)>20000||Math.abs(n.y)>20000||!n.params||typeof n.params!=='object')throw Error('Boîte de conduite invalide.');
       nodes.set(n.id,n);const p=n.params;
+      if(p.stepDelayS!==undefined&&p.stepDelayS!==null&&!STEP_DELAYS.includes(p.stepDelayS))throw Error('Durée minimale de boîte invalide.');
       if(n.type==='start'){
         if(starts.has(n.name.trim().toLowerCase()))throw Error('Les départs doivent avoir des noms distincts.');
         starts.add(n.name.trim().toLowerCase());
@@ -109,13 +112,9 @@
         }
       }
       if(['action','info','wait'].includes(n.type))validateAction({...p,type:n.type},commands);
-      if(n.type==='parallel'){
-        if(!Array.isArray(p.actions)||!p.actions.length||p.actions.length>24)throw Error('Une boîte parallèle doit contenir de 1 à 24 actions.');
-        p.actions.forEach(a=>validateAction(a,commands));
-        const seen=new Set();for(const a of p.actions.filter(a=>a.type==='action')){
-          if(seen.has(a.command))throw Error('Deux ordres parallèles ciblent la même commande.');seen.add(a.command);
-        }
-      }
+      if(n.type==='parallel'&&(!Number.isInteger(p.branches)||p.branches<2||p.branches>8||p.join!==null&&!identifier(p.join)))
+        throw Error('Une ouverture parallèle doit avoir 2 à 8 branches et une clôture associée.');
+      if(n.type==='join'&&p.fork!==null&&!identifier(p.fork))throw Error('Ouverture associée à la clôture invalide.');
     }
     const used=new Set(),ids=new Set();
     for(const link of graph.links){
@@ -144,69 +143,204 @@
     }
     return 'no-right';
   }
-  function idle(){return {status:'idle',sequence:null,current:null,entered:false,elapsed:0,totalElapsed:0,remaining:0,
-    message:'Aucune séquence active',error:null,lastValue:null,lastPort:null,history:[]};}
-  function start(graph,id,variables=null){
-    validate(graph,variables);const n=graph.nodes.find(n=>n.id===id&&n.type==='start');
-    if(!n)throw Error('Sélectionnez un départ nommé.');
-    return {...idle(),status:'running',sequence:id,current:id,message:n.name};
-  }
-  function record(runtime,n,event){
-    runtime.history.push({node:n.id,name:n.name,event,time:runtime.totalElapsed});
-    if(runtime.history.length>100)runtime.history.shift();
-  }
-  function tick(runtime,graph,dt,read,execute){
-    if(runtime.status!=='running'||!finite(dt)||dt<=0)return runtime;
-    const n=graph.nodes.find(n=>n.id===runtime.current);
-    if(!n){runtime.status='error';runtime.error='Boîte active absente.';return runtime;}
-    runtime.totalElapsed+=dt;runtime.message=n.name;
-    try{
-      if(!runtime.entered){
-        runtime.entered=true;runtime.elapsed=0;record(runtime,n,'entrée');
-        const actions=n.type==='parallel'?n.params.actions:['action','info','wait'].includes(n.type)?[{...n.params,type:n.type}]:[];
-        // Les commandes sont validées ensemble avant application du lot.
-        for(const a of actions.filter(a=>a.type==='action'))execute(a.command,a.value,true);
-        for(const a of actions){
-          if(a.type==='action')execute(a.command,a.value,false);
-          if(a.type==='info'){runtime.message=a.message;record(runtime,n,a.message);}
+  function migrateGraph(raw){
+    const g=clone(raw);g.stepDelayS??=2;
+    if(g.version===1){
+      function expand(n,actions){
+        if(!actions.length||actions.length>24)throw Error('Ancien lot parallèle invalide.');
+        const chunks=actions.length>8?Array.from({length:Math.ceil(actions.length/8)},(_,i)=>actions.slice(i*8,i*8+8)):null;
+        const join=node('join',n.id+':join',n.x,n.y+(chunks?680:320));join.params.fork=n.id;
+        n.params={branches:Math.max(2,chunks?chunks.length:actions.length),join:join.id,stepDelayS:n.params.stepDelayS??null};
+        for(const l of g.links)if(l.from===n.id){l.from=join.id;l.port='next';}
+        for(let i=0;i<n.params.branches;i++){
+          const a=actions[i]||{type:'info',message:'Branche libre'},child=node(chunks?'parallel':a.type,n.id+':branch:'+i,n.x+i*(chunks?2400:300),n.y+160);
+          if(!chunks){child.params={...a,stepDelayS:null};delete child.params.type;}g.nodes.push(child);
+          g.links.push({id:n.id+':split:'+i,from:n.id,port:'branch:'+i,to:child.id},
+            {id:n.id+':close:'+i,from:child.id,port:'next',to:join.id});
+          if(chunks)expand(child,chunks[i]);
         }
-        runtime.remaining=Math.max(0,...actions.filter(a=>a.type==='wait').map(a=>a.duration*DURATION_UNITS[a.unit]));
+        g.nodes.push(join);
       }
-      runtime.elapsed+=dt;
-      let port='next';
-      if(n.type==='end'){runtime.status='complete';runtime.message=n.name;record(runtime,n,'fin');return runtime;}
-      if(n.type==='test'){
-        runtime.lastValue=read(n.params.variable);
-        const yes=compare(runtime.lastValue,n.params.operator,n.params.value,n.params.tolerance);
-        port=yes?'yes':graph.links.some(l=>l.from===n.id&&l.port==='no-left')?'no-left':'no-right';
-        if(!yes&&!graph.links.some(l=>l.from===n.id&&l.port===port))return runtime;
-      }else if(n.type==='ranges'){
-        runtime.lastValue=read(n.params.variable);port=classify(runtime.lastValue,n.params.ranges,n.params.tolerance);
-        if(!graph.links.some(l=>l.from===n.id&&l.port===port))return runtime;
-      }else if(n.type==='wait'||n.type==='parallel'){
-        const duration=n.type==='wait'?n.params.duration*DURATION_UNITS[n.params.unit]
-          :Math.max(0,...n.params.actions.filter(a=>a.type==='wait').map(a=>a.duration*DURATION_UNITS[a.unit]));
-        runtime.remaining=Math.max(0,duration-runtime.elapsed);if(runtime.remaining>1e-8)return runtime;
+      for(const n of [...g.nodes].filter(n=>n.type==='parallel')){
+        if(!Array.isArray(n.params.actions))throw Error('Ancien lot parallèle invalide.');
+        const commands=new Map(actionCatalog().map(d=>[d.id,d]));n.params.actions.forEach(a=>validateAction(a,commands));
+        expand(n,n.params.actions);
       }
-      runtime.lastPort=port;const link=graph.links.find(l=>l.from===n.id&&l.port===port);
-      record(runtime,n,port);
-      if(link){runtime.current=link.to;runtime.entered=false;runtime.elapsed=0;runtime.lastValue=null;}
-      else {runtime.status='complete';runtime.message='Séquence terminée';}
-    }catch(error){runtime.status='error';runtime.error=error.message;runtime.message=error.message;record(runtime,n,'erreur');}
-    return runtime;
+      g.version=VERSION;
+    }
+    return g;
+  }
+  function validateExecution(graph,startId){
+    const nodes=new Map(graph.nodes.map(n=>[n.id,n])),out=id=>graph.links.filter(l=>l.from===id),checked=new Set();
+    function forkCheck(n,ancestors=[]){
+      if(ancestors.includes(n.id))throw Error('Ouvertures parallèles cycliques sans clôture.');
+      if(checked.has(n.id))return;
+      const j=nodes.get(n.params.join);
+      if(j?.type!=='join'||j.params.fork!==n.id)throw Error('Clôture obligatoire pour « '+n.name+' ».');
+      const shared=new Set();
+      for(const port of ports(n)){
+        const first=out(n.id).find(l=>l.port===port);if(!first)throw Error('Reliez toutes les branches de « '+n.name+' ».');
+        const seen=new Set(),pending=[first.to];let reaches=false;
+        while(pending.length){
+          const id=pending.pop();if(id===j.id){reaches=true;continue;}if(seen.has(id))continue;seen.add(id);
+          const b=nodes.get(id);if(!b||['start','end','join'].includes(b.type))throw Error('Chaque branche doit rejoindre sa clôture, sans fin intermédiaire.');
+          if(b.type==='parallel'){
+            forkCheck(b,[...ancestors,n.id]);const following=out(b.params.join);
+            if(!following.length)throw Error('Clôture imbriquée sans suite vers la clôture extérieure.');
+            pending.push(...following.map(l=>l.to));continue;
+          }
+          const links=out(id);if(!links.length||b.type==='test'&&!links.some(l=>l.port==='yes'))throw Error('Branche sans chemin complet vers sa clôture : '+b.name);
+          pending.push(...links.map(l=>l.to));
+        }
+        if(!reaches)throw Error('Une branche ne rejoint pas la clôture.');
+        for(const id of seen){if(shared.has(id))throw Error('Les branches doivent rester distinctes jusqu’à leur clôture.');shared.add(id);}
+      }
+      checked.add(n.id);
+    }
+    const pending=[startId],seen=new Set();
+    while(pending.length){const id=pending.pop();if(seen.has(id))continue;seen.add(id);const n=nodes.get(id);
+      if(n.type==='join')throw Error('Une clôture doit être atteinte depuis son ouverture parallèle.');
+      if(n.type==='parallel'){forkCheck(n);pending.push(...out(n.params.join).map(l=>l.to));}
+      else pending.push(...out(id).map(l=>l.to));
+    }
+  }
+  function token(id,current,stack=[]){return {id,current,stack,entered:false,elapsed:0,remaining:0,lastValue:null,lastPort:null,joined:false};}
+  function idle(){return {status:'idle',sequence:null,current:null,entered:false,elapsed:0,totalElapsed:0,remaining:0,
+    message:'Aucune séquence active',error:null,lastValue:null,lastPort:null,history:[],eventSerial:0,
+    tokens:[],groups:[],nextToken:1,nextGroup:1,activeNodes:[]};}
+  function start(graph,id,variables=null){
+    graph=validate(graph,variables);const n=graph.nodes.find(n=>n.id===id&&n.type==='start');
+    if(!n)throw Error('Sélectionnez un départ nommé.');validateExecution(graph,id);
+    return {...idle(),tokens:[token('t1',id)],nextToken:2,status:'running',sequence:id,current:id,activeNodes:[id],message:n.name};
+  }
+  function record(r,n,event,t=null){
+    r.history.push({node:n.id,name:n.name,event,time:r.totalElapsed,serial:++r.eventSerial,...(t?{token:t.id}:{})});
+    if(r.history.length>200)r.history.shift();
+  }
+  function syncRuntime(r){
+    const t=r.tokens[0];r.current=t?.current??r.current;r.entered=t?.entered??r.entered;r.elapsed=t?.elapsed??r.elapsed;
+    r.remaining=Math.max(0,...r.tokens.map(t=>t.remaining));r.lastValue=t?.lastValue??null;r.lastPort=t?.lastPort??null;
+    r.activeNodes=[...new Set(r.tokens.map(t=>t.current))];
+  }
+  function tick(r,graph,dt,read,execute){
+    if(r.status!=='running'||!finite(dt)||dt<=0)return r;
+    const nodes=new Map(graph.nodes.map(n=>[n.id,n])),links=new Map(graph.links.map(l=>[l.from+'/'+l.port,l]));
+    r.totalElapsed+=dt;
+    try{
+      // Vérifier ensemble les commandes entrant dans le même pas, avant d’en appliquer une.
+      const commands=r.tokens.filter(t=>!t.entered&&nodes.get(t.current)?.type==='action').map(t=>nodes.get(t.current).params),used=new Set();
+      for(const p of commands){if(used.has(p.command))throw Error('Deux branches simultanées ciblent la même commande.');used.add(p.command);execute(p.command,p.value,true);}
+      for(const t of [...r.tokens]){
+        const n=nodes.get(t.current);if(!n)throw Error('Boîte active absente.');
+        const entered=t.entered;
+        if(!entered){t.entered=true;t.elapsed=0;record(r,n,'entrée',t);
+          if(n.type==='action')execute(n.params.command,n.params.value,false);
+          if(n.type==='info')record(r,n,n.params.message,t);
+        }else t.elapsed+=dt;
+        const minimum=n.params.stepDelayS??graph.stepDelayS??2;
+        const duration=Math.max(minimum,n.type==='wait'?n.params.duration*DURATION_UNITS[n.params.unit]:0);
+        t.remaining=Math.max(0,duration-t.elapsed);r.message=n.type==='info'?n.params.message:n.name;
+        if(t.remaining>1e-8)continue;
+        if(n.type==='join'&&!t.joined){
+          const frame=t.stack.at(-1),group=r.groups.find(g=>g.id===frame?.group);
+          if(!group||group.join!==n.id)throw Error('Clôture atteinte sans ouverture correspondante.');
+          if(!group.arrived.includes(frame.branch))group.arrived.push(frame.branch);
+          continue;
+        }
+        if(n.type==='parallel'){
+          if(r.tokens.length-1+n.params.branches>256||r.groups.length>=128)throw Error('Trop de branches simultanées (256 curseurs maximum).');
+          const group={id:'g'+r.nextGroup++,fork:n.id,join:n.params.join,parentStack:clone(t.stack),expected:n.params.branches,arrived:[]};
+          r.groups.push(group);r.tokens=r.tokens.filter(b=>b.id!==t.id);record(r,n,'ouverture',t);
+          for(let i=0;i<n.params.branches;i++){
+            const l=links.get(n.id+'/branch:'+i);if(!l)throw Error('Branche parallèle non reliée.');
+            r.tokens.push(token('t'+r.nextToken++,l.to,[...t.stack,{group:group.id,branch:i}]));
+          }
+          continue;
+        }
+        if(n.type==='end'){
+          if(t.stack.length)throw Error('Fin de branche avant la clôture obligatoire.');
+          record(r,n,'fin',t);r.tokens=r.tokens.filter(b=>b.id!==t.id);continue;
+        }
+        let port='next';
+        if(n.type==='test'){
+          t.lastValue=read(n.params.variable);const yes=compare(t.lastValue,n.params.operator,n.params.value,n.params.tolerance);
+          port=yes?'yes':links.has(n.id+'/no-left')?'no-left':'no-right';
+          if(!yes&&!links.has(n.id+'/'+port))continue;
+        }else if(n.type==='ranges'){
+          t.lastValue=read(n.params.variable);port=classify(t.lastValue,n.params.ranges,n.params.tolerance);
+          if(!links.has(n.id+'/'+port))continue;
+        }
+        const l=links.get(n.id+'/'+port);t.lastPort=port;record(r,n,port,t);
+        if(l){t.current=l.to;t.entered=false;t.elapsed=0;t.remaining=0;t.lastValue=null;t.joined=false;}
+        else {if(t.stack.length)throw Error('Branche terminée avant sa clôture.');r.tokens=r.tokens.filter(b=>b.id!==t.id);}
+      }
+      for(const g of [...r.groups])if(g.arrived.length===g.expected){
+        const elapsed=Math.min(...r.tokens.filter(t=>t.stack.at(-1)?.group===g.id).map(t=>t.elapsed));
+        r.tokens=r.tokens.filter(t=>t.stack.at(-1)?.group!==g.id);
+        const t=token('t'+r.nextToken++,g.join,g.parentStack);t.joined=true;t.entered=true;t.elapsed=elapsed;
+        r.tokens.push(t);r.groups=r.groups.filter(b=>b.id!==g.id);record(r,nodes.get(g.join),'toutes les branches terminées',t);
+      }
+      syncRuntime(r);
+      if(!r.tokens.length){r.status='complete';r.message='Séquence terminée';}
+    }catch(error){r.status='error';r.error=error.message;r.message=error.message;
+      const n=nodes.get(r.tokens[0]?.current);if(n)record(r,n,'erreur');syncRuntime(r);}
+    return r;
   }
   function validateSaved(saved,variables=null){
     if(!saved||typeof saved!=='object')throw Error('État de conduite absent.');
-    const graph=validate(saved.graph,variables),r=saved.runtime;
+    if(!saved.runtime||typeof saved.runtime!=='object')throw Error('Mémoire de conduite invalide.');
+    const graph=validate(saved.graph,variables),r=clone(saved.runtime);
     if(!r||!['idle','running','paused','stopped','complete','error'].includes(r.status)
       ||typeof r.entered!=='boolean'||!finite(r.elapsed)||r.elapsed<0||!finite(r.totalElapsed)||r.totalElapsed<0
       ||!finite(r.remaining)||r.remaining<0||!text(r.message,2000)||r.error!==null&&!text(r.error,2000)
-      ||r.lastValue!==null&&!finite(r.lastValue)||r.lastPort!==null&&!text(r.lastPort,40)||!Array.isArray(r.history)||r.history.length>100)
+      ||r.lastValue!==null&&!finite(r.lastValue)||r.lastPort!==null&&!text(r.lastPort,40)||!Array.isArray(r.history)||r.history.length>200)
       throw Error('Mémoire de conduite invalide.');
     if(r.sequence!==null&&!graph.nodes.some(n=>n.id===r.sequence&&n.type==='start')
       ||r.current!==null&&!graph.nodes.some(n=>n.id===r.current)||['running','paused'].includes(r.status)&&(r.current===null||r.sequence===null))throw Error('Séquence de conduite absente.');
-    for(const h of r.history)if(!text(h.node,100)||!text(h.name,100)||!text(h.event,2000)||!finite(h.time)||h.time<0||h.time>r.totalElapsed+1e-8)throw Error('Journal de conduite invalide.');
-    return clone({graph,runtime:r});
+    for(const h of r.history)if(!identifier(h.node)||!text(h.name,100)||!text(h.event,2000)||!finite(h.time)||h.time<0||h.time>r.totalElapsed+1e-8)throw Error('Journal de conduite invalide.');
+    if(!r.tokens){
+      const old=saved.graph.nodes.find(n=>n.id===r.current);
+      r.tokens=['running','paused'].includes(r.status)?[Object.assign(token('t1',r.current),{entered:r.entered,elapsed:r.elapsed,remaining:r.remaining})]:[];
+      r.groups=[];r.nextToken=2;r.nextGroup=1;r.eventSerial=r.history.length;
+      // Les ordres d’un ancien lot déjà entré ont été exécutés : ne pas les rejouer.
+      if(old?.type==='parallel'&&r.entered&&Array.isArray(old.params.actions)){
+        r.groups=[];r.tokens=[];r.nextGroup=1;
+        function resumeLegacy(n,items,parentStack){
+          const g={id:'g'+r.nextGroup++,fork:n.id,join:n.params.join,parentStack,expected:n.params.branches,arrived:[]};r.groups.push(g);
+          const chunks=items.length>8?Array.from({length:Math.ceil(items.length/8)},(_,i)=>items.slice(i*8,i*8+8)):null;
+          for(let i=0;i<n.params.branches;i++){
+            const stack=[...parentStack,{group:g.id,branch:i}],child=graph.nodes.find(b=>b.id===n.id+':branch:'+i);
+            if(chunks){resumeLegacy(child,chunks[i],stack);continue;}
+            const a=items[i],t=token('t'+r.nextToken++,a?.type==='wait'?child.id:g.join,stack);
+            t.entered=true;t.elapsed=r.elapsed;t.remaining=a?.type==='wait'?Math.max(0,a.duration*DURATION_UNITS[a.unit]-r.elapsed):0;r.tokens.push(t);
+          }
+        }
+        resumeLegacy(graph.nodes.find(n=>n.id===r.current),old.params.actions,[]);
+      }
+      syncRuntime(r);
+    }
+    if(!Array.isArray(r.tokens)||r.tokens.length>256||!Array.isArray(r.groups)||r.groups.length>128
+      ||![r.nextToken,r.nextGroup,r.eventSerial].every(v=>Number.isSafeInteger(v)&&v>=0))throw Error('Curseurs de conduite invalides.');
+    const ids=new Set(),groups=new Map(r.groups.map(g=>[g.id,g]));
+    if(groups.size!==r.groups.length)throw Error('Synchronisations parallèles dupliquées.');
+    for(const g of r.groups){const n=graph.nodes.find(n=>n.id===g.fork);
+      if(!identifier(g.id)||n?.type!=='parallel'||n.params.join!==g.join||g.expected!==n.params.branches
+        ||!Array.isArray(g.arrived)||new Set(g.arrived).size!==g.arrived.length||g.arrived.some(v=>!Number.isInteger(v)||v<0||v>=g.expected)||!Array.isArray(g.parentStack))throw Error('Synchronisation parallèle invalide.');
+    }
+    function stackValid(stack){return Array.isArray(stack)&&stack.length<=128&&stack.every(f=>groups.has(f.group)&&Number.isInteger(f.branch)&&f.branch>=0&&f.branch<groups.get(f.group).expected);}
+    for(const t of r.tokens){
+      if(!identifier(t.id)||ids.has(t.id)||!graph.nodes.some(n=>n.id===t.current)||typeof t.entered!=='boolean'||typeof t.joined!=='boolean'
+        ||!finite(t.elapsed)||t.elapsed<0||!finite(t.remaining)||t.remaining<0||t.lastValue!==null&&!finite(t.lastValue)||!stackValid(t.stack))throw Error('Curseur de conduite invalide.');ids.add(t.id);
+    }
+    if(r.tokens.some(t=>!/^t\d+$/.test(t.id)||Number(t.id.slice(1))>=r.nextToken)
+      ||r.groups.some(g=>!/^g\d+$/.test(g.id)||Number(g.id.slice(1))>=r.nextGroup))throw Error('Compteurs de curseurs incompatibles.');
+    const branches=new Set();
+    for(const t of r.tokens){const f=t.stack.at(-1);if(!f)continue;const key=f.group+'/'+f.branch;
+      if(branches.has(key))throw Error('Curseurs de branche dupliqués.');branches.add(key);}
+    for(const g of r.groups)for(const branch of g.arrived)
+      if(!r.tokens.some(t=>t.current===g.join&&t.stack.at(-1)?.group===g.id&&t.stack.at(-1)?.branch===branch))throw Error('Arrivée à la clôture incohérente.');
+    if(r.groups.some(g=>!stackValid(g.parentStack))||['running','paused'].includes(r.status)&&!r.tokens.length)throw Error('Curseurs de conduite absents.');
+    syncRuntime(r);return {graph,runtime:r};
   }
   function executeCommand(ctx,id,value,checkOnly=false){
     const {E,model}=ctx,u=model.controls,s=model.state,def=actionCatalog().find(d=>d.id===id);
@@ -264,5 +398,5 @@
     throw Error('Commande non raccordée : '+id);
   }
   return {FORMAT,VERSION,TYPES,OPERATORS,DURATION_UNITS,emptyGraph,node,ports,actionCatalog,measurementCatalog,validate,sequences,
-    compare,classify,idle,start,tick,validateSaved,executeCommand};
+    compare,classify,STEP_DELAYS,migrateGraph,validateExecution,idle,start,tick,validateSaved,executeCommand};
 });
