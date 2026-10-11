@@ -685,6 +685,8 @@
     .logic-links { position: absolute; left: 0; top: 0; z-index: 5; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
     .logic-links > path { fill: none; stroke: #4e80b4; stroke-width: 2; stroke-linejoin: round; marker-end: url(#regArrow); }
     .logic-links > path.selected-link { stroke: #c84f2e; stroke-width: 3; marker-end: url(#regArrowSelected); }
+    .logic-links > path.blocked { stroke: #c83949; stroke-dasharray: 5 4; marker-end: none; }
+    #regRoutingStatus { color: #b93645; font-size: 11px; }
     .logic-links marker path { fill: #4e80b4; stroke: none; }
     .logic-links #regArrowSelected path { fill: #c84f2e; }
     .logic-links text { fill: #274f75; font-weight: 850; paint-order: stroke; stroke: #f9fbfc; stroke-linejoin: round; pointer-events: none; }
@@ -1590,6 +1592,7 @@
               <span class="status" id="regStatus" aria-live="polite">Maj+glisser : sélection · Maj+clic : ajouter/retirer · Ctrl+C/V/Z/Y · molette : zoom.</span>
             </div>
             <div class="reg-save-row"><span class="reg-save-state" id="regSaveStatus" aria-live="polite">Sauvegarde locale prête</span></div>
+            <output id="regRoutingStatus" role="status"></output>
             <div class="logic-canvas" id="logicCanvas">
               <div class="logic-selection-rect" id="logicSelectionRect" aria-hidden="true"></div>
               <div class="logic-world" id="logicWorld">
@@ -1825,6 +1828,7 @@
   <script type="application/json" id="solutionDataProtectComplete">{"format":"SimuREP-Regulation","version":1,"name":"Protection AAR et IS","savedAt":"2026-10-06T16:45:52.234Z","nodes":[{"id":"N41","type":"mp1Signal","x":-249.19062717013892,"y":-275.5878352864584,"label":"002MP","params":{}},{"id":"N42","type":"compare","x":224.35216403537328,"y":-108.84442155626085,"label":"P primaire \u003c 130","params":{"relation":"\u003c","threshold":130,"whenTrue":1,"whenFalse":0}},{"id":"N43","type":"pow1","x":-540.5793142361113,"y":-164.4333691840278,"label":"POW1","params":{}},{"id":"N44","type":"compare","x":167.06622986111108,"y":40.81357309027776,"label":"POW1 ≥ 109","params":{"relation":"≥","threshold":109,"whenTrue":1,"whenFalse":0}},{"id":"N45","type":"derivative","x":-271.80956909722227,"y":125.20951775173612,"label":"dPOW1/dt filtré","params":{"tau":0.5}},{"id":"N46","type":"compare","x":138.65021458333328,"y":172.68691718749997,"label":"Hausse ≥ 5 % PN/s","params":{"relation":"≥","threshold":5,"whenTrue":1,"whenFalse":0}},{"id":"N47","type":"compare","x":28.800057986111028,"y":288.1153142361111,"label":"Baisse ≤ −5 % PN/s","params":{"relation":"≤","threshold":-5,"whenTrue":1,"whenFalse":0}},{"id":"N48","type":"voltageSignal","x":-260.7679362847223,"y":380.5110805121527,"label":"Manque de tension","params":{}},{"id":"N49","type":"or","x":797.6981993055556,"y":323.83307065972224,"label":"Demande AAR","params":{}},{"id":"N50","type":"aarOut","x":1092.5054326388888,"y":468.3729729166667,"label":"AAR","params":{}},{"id":"N51","type":"compare","x":523.1005872395834,"y":727.7539913628473,"label":"P primaire \u003c 120","params":{"relation":"\u003c","threshold":120,"whenTrue":1,"whenFalse":0}},{"id":"N52","type":"risOut","x":1015.8997173611111,"y":668.0515555555555,"label":"IS","params":{}},{"id":"N53","type":"aarSignal","x":638.322021701389,"y":909.79520078125,"label":"État AAR","params":{}},{"id":"N54","type":"asgOut","x":898.8808854166667,"y":968.5077408854166,"label":"Démarrer ASG","params":{}},{"id":"N55","type":"plinSignal","x":-269.3791673611112,"y":560.287039236111,"label":"PLIN max · 32 cotes","params":{}},{"id":"N56","type":"compare","x":52.87968385416663,"y":490.4809331597222,"label":"PLIN > 435 W/cm","params":{"relation":">","threshold":435,"whenTrue":1,"whenFalse":0}},{"id":"N57","type":"mp1Signal","x":142.8323986979167,"y":828.509944032118,"label":"002MP","params":{}}],"links":[{"from":"N41","to":"N42","toPort":0},{"from":"N43","to":"N44","toPort":0},{"from":"N43","to":"N45","toPort":0},{"from":"N45","to":"N46","toPort":0},{"from":"N45","to":"N47","toPort":0},{"from":"N42","to":"N49","toPort":0},{"from":"N44","to":"N49","toPort":1},{"from":"N46","to":"N49","toPort":2},{"from":"N47","to":"N49","toPort":3},{"from":"N48","to":"N49","toPort":4},{"from":"N49","to":"N50","toPort":0},{"from":"N51","to":"N52","toPort":0},{"from":"N53","to":"N54","toPort":0},{"from":"N55","to":"N56","toPort":0},{"from":"N56","to":"N49","toPort":5},{"from":"N57","to":"N51","toPort":0},{"from":"N51","to":"N49","toPort":6}],"nodeCounter":57,"viewport":{"x":551.1688834022711,"y":61.616186934629695,"zoom":0.5124817784256559}}</script>
   <script type="application/json" id="solutionCatalog">{"regul":{"temperature":{"dataId":"solutionDataTemperature","reverseCode":"0031","label":"1 · Température simplifiée","description":"Commande du groupe R en pas extraits, sans correcteur de puissance G1/G2."},"level":{"dataId":"solutionDataLevel","reverseCode":"6804","label":"2 · Température + niveau PZR","description":"Programme NREF, RCI de consigne manuelle, charge QCHARGE et fermeture des orifices sous 15 %."},"pressure":{"dataId":"solutionDataPressure","reverseCode":"0661","label":"3 · Température + niveau + pression PZR","description":"Ajoute le RCI de pression, les chaufferettes PCHF et les vannes d’aspersion QASP."},"gv":{"dataId":"solutionDataGv","reverseCode":"4044","label":"4 · Niveaux des quatre GV","description":"Solution ciblée : quatre boucles de niveau avec correction par le débit vapeur et commande ARE."},"gcp":{"dataId":"solutionDataGcp","reverseCode":"0087","label":"5 · GCP · programme G3","description":"Solution ciblée : puissance recalée par le décalibrage manuel → courbe G3 → pas de chevauchement."},"complete":{"dataId":"solutionDataComplete","reverseCode":"0057","label":"6 · Complet · R, PZR, GV et GCP","description":"Toutes les chaînes : température avec correcteurs G1/G2, niveau et pression PZR, niveaux GV et G3."}},"protect":{"aar":{"dataId":"solutionDataProtectAar","reverseCode":"1031","label":"1 · Les principaux AAR","description":"Pression primaire, puissance nucléaire, dérivée filtrée, manque de tension et PLIN élevée."},"aarIs":{"dataId":"solutionDataProtectIs","reverseCode":"2031","label":"2 · AAR + IS","description":"Ajoute l’injection de sécurité sur basse pression et sa demande associée d’AAR."},"complete":{"dataId":"solutionDataProtectComplete","reverseCode":"3031","label":"3 · AAR + IS + ASG complet","description":"Protection complète : ensemble AAR et IS, avec démarrage ASG sur l’état AAR."}}}</script>
   <script src="centurion-cc-pzr.js?v=20261009-charge-v10"></script>
+  <script src="centurion-orthogonal-routing.js?v=20261011-routing1"></script>
   <script>
     "use strict";
 
@@ -3457,6 +3461,8 @@
     };
     let regViewport = { x: 50, y: 50, zoom: 1 };
     let regViewInitialized = false;
+    const regConnectorRouter = window.CenturionOrthogonalRouting.createRouter({ padding: 4, stub: 12 });
+    let regLinkFrame = null;
 
     const escapeHtml = value => String(value)
       .replaceAll("&", "&amp;")
@@ -4683,36 +4689,46 @@
       updateRegViewport();
     }
 
+    function requestRegLinks() {
+      if (regLinkFrame !== null) return;
+      regLinkFrame = requestAnimationFrame(() => { regLinkFrame = null; renderRegLinks(); });
+    }
+
     function renderRegLinks() {
+      if (regLinkFrame !== null) { cancelAnimationFrame(regLinkFrame); regLinkFrame = null; }
       const svg = $("logicLinks");
       svg.setAttribute("width", "1");
       svg.setAttribute("height", "1");
       svg.innerHTML = `<defs><marker id="regArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z"></path></marker><marker id="regArrowSelected" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path fill="#c84f2e" d="M0 0 L8 4 L0 8 Z"></path></marker></defs>`;
+      const nodesById = new Map(regNodes.map(node => [node.id, node]));
+      const scene = regConnectorRouter.prepare(regNodes.map(node => ({ id: node.id, x: node.x, y: node.y, w: REG_NODE_W, h: regNodeHeight(node) })));
+      let blocked = 0;
       regLinks.forEach((link, linkIndex) => {
-        const from = regNodes.find(n => n.id === link.from);
-        const to = regNodes.find(n => n.id === link.to);
+        const from = nodesById.get(link.from);
+        const to = nodesById.get(link.to);
         if (!from || !to) return;
         const toPort = Number.isInteger(link.toPort) ? link.toPort : 0;
         const x1 = from.x + REG_NODE_W, y1 = from.y + regNodeHeight(from) / 2;
         const x2 = to.x, y2 = to.y + regInputPortY(to, toPort);
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         if (selectedRegNodeIds.has(from.id) && selectedRegNodeIds.has(to.id)) path.classList.add("selected-link");
-        const bendX = x2 > x1 ? (x1 + x2) / 2 : x2 - 24;
-        path.setAttribute("d", `M${x1} ${y1} H${bendX} V${y2} H${x2}`);
+        const route = scene.route({ from: from.id, to: to.id, start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, startDirection: "right", endDirection: "left" });
+        if (route.blocked) { blocked++; path.classList.add("blocked"); }
+        path.dataset.regRouteIndex = String(linkIndex);
+        path.setAttribute("d", window.CenturionOrthogonalRouting.path(route.points));
         svg.appendChild(path);
-        const firstSegment = Math.abs(bendX - x1);
-        const labelX = firstSegment >= 62 ? (x1 + bendX) / 2 : (bendX + x2) / 2;
-        const labelBaseY = firstSegment >= 62 ? y1 : y2;
+        const anchor = window.CenturionOrthogonalRouting.labelAnchor(route.points, scene.rects, { width: 74 / regViewport.zoom, height: 12 / regViewport.zoom, offset: 7 / regViewport.zoom, belowOffset: 13 / regViewport.zoom });
         const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
         label.dataset.regLinkIndex = String(linkIndex);
-        label.dataset.regLabelBaseY = String(labelBaseY);
-        label.dataset.regLabelLane = linkIndex % 2 ? "below" : "above";
-        label.setAttribute("x", String(labelX));
-        label.setAttribute("y", String(labelBaseY));
+        label.dataset.regLabelBaseY = String(anchor.baseY);
+        label.dataset.regLabelLane = anchor.below ? "below" : "above";
+        label.setAttribute("x", String(anchor.x));
+        label.setAttribute("y", String(anchor.baseY));
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("dominant-baseline", "auto");
         svg.appendChild(label);
       });
+      $("regRoutingStatus").textContent = blocked ? `${blocked} liaison(s) sans passage libre : écartez les boîtes.` : "";
       updateRegLinkLabels();
       updateRegLinkLabelScale();
     }
@@ -5409,12 +5425,13 @@
               itemElement.style.left = `${item.x}px`;
               itemElement.style.top = `${item.y}px`;
             });
-            renderRegLinks();
+            requestRegLinks();
           };
           const up = () => {
             el.removeEventListener("pointermove", move);
             el.removeEventListener("pointerup", up);
             el.removeEventListener("pointercancel", up);
+            renderRegLinks();
             if (moved) recordRegMutation(before, "Sélection déplacée");
           };
           el.addEventListener("pointermove", move);

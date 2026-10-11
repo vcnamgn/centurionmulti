@@ -8,7 +8,7 @@
   let graph=A.emptyGraph(),runtime=A.idle(),measurements=[],values={},commands=A.actionCatalog(),connected=false,simulationRunning=false;
   let selected=null,selection=new Set(),pending=null,drag=null,undo=[],redo=[],clipboard=null,importGraph=null,view={x:0,y:0,w:1200,h:700},suppressClick=false;
   let sequenceListSignature=null,runtimeDrawingSignature=null,seenSerial=0;
-  const recent=new Map();let routesSignature=null;const routes=new Map();
+  const recent=new Map(),layoutCache=new Map();let dragFrame=null;
   const locked=()=>['running','paused'].includes(runtime.status);
   const post=data=>parent.postMessage(data,'*');
   const current=()=>selection.size<=1?graph.nodes.find(n=>n.id===selected):null;
@@ -43,10 +43,17 @@
   }
   const textCanvas=document.createElement('canvas').getContext('2d');
   R.configure({measureText:(text,size,bold)=>{textCanvas.font=`${bold?'700':'400'} ${size}px "Segoe UI",Arial,sans-serif`;return textCanvas.measureText(text).width;}});
-  const subtitle=n=>R.instructions(n,runtime),dimensions=n=>R.dimensions(n,subtitle(n)),portPoint=(n,port)=>R.portPoint(n,port,dimensions);
+  const subtitle=n=>R.instructions(n,runtime);
+  const dimensions=n=>{
+    const key=n.type+'|'+n.name+'|'+JSON.stringify(n.params)+(n.type==='join'?'|'+JSON.stringify((runtime.groups||[]).filter(g=>g.join===n.id).map(g=>[g.arrived.length,g.expected])):'');
+    const cached=layoutCache.get(n.id);if(cached?.key===key)return cached.layout;
+    const layout=R.dimensions(n,subtitle(n));layoutCache.set(n.id,{key,layout});return layout;
+  };
+  const portPoint=(n,port)=>R.portPoint(n,port,dimensions);
+  function requestDraw(){if(dragFrame!==null)return;dragFrame=requestAnimationFrame(()=>{dragFrame=null;draw();});}
   function short(value,max=33){return value.length>max?value.slice(0,max-1)+'…':value;}
   function rangeDrawing(n){
-    const p=n.params,{w,barY,markers}=R.ruleLayout(n,subtitle(n)),span=p.scale.max-p.scale.min;
+    const p=n.params,{w,barY,markers}=dimensions(n),span=p.scale.max-p.scale.min;
     const segments=A.ruleSegments(p).map((r,i)=>{
       const x=n.x+14+(w-28)*(r.min-p.scale.min)/span,rw=(w-28)*(r.max-r.min)/span;
       return `<rect class="range-segment" x="${x}" y="${n.y+barY}" width="${rw}" height="24" fill="${['#cde6f0','#cfead7','#f2d9b5','#e2d3ed'][i%4]}"/>`
@@ -59,11 +66,12 @@
     }).join('')+`<text class="range-scale" x="${n.x+14}" y="${n.y+barY+42}">${esc(ruleFmt(p.scale.min))}</text><text class="range-scale" text-anchor="end" x="${n.x+w-14}" y="${n.y+barY+42}">${esc(ruleFmt(p.scale.max))}</text>`;
   }
   function draw(){
+    if(dragFrame!==null){cancelAnimationFrame(dragFrame);dragFrame=null;}
     $('canvas').setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);
     $('zoomValue').textContent=Math.round(1200/view.w*100)+' %';
     $('emptyHint').hidden=Boolean(graph.nodes.length);
-    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.params,dimensions(n).w,dimensions(n).h]));
-    if(routeSignature!==routesSignature){routes.clear();routesSignature=routeSignature;}
+    const scene=R.prepare(graph,dimensions),nodesById=new Map(graph.nodes.map(n=>[n.id,n]));
+    for(const id of layoutCache.keys())if(!nodesById.has(id))layoutCache.delete(id);
     const portMarkup=[];
     $('boxes').innerHTML=graph.nodes.map(n=>{
       const {w,h,headerHeight,titleLines,bodyLines}=dimensions(n),p=n.params,color={start:['#e6f5ed','#72b095'],end:['#e6f5ed','#72b095'],test:['#fff4df','#d7a861'],ranges:['#fff4df','#d7a861'],
@@ -90,10 +98,8 @@
     $('ports').innerHTML=portMarkup.join('');
     let blocked=0;
     $('links').innerHTML=graph.links.map(l=>{
-      const a=graph.nodes.find(n=>n.id===l.from),b=graph.nodes.find(n=>n.id===l.to);if(!a||!b)return '';
-      const cacheKey=l.from+'/'+l.port+'/'+l.to;
-      if(!routes.has(cacheKey))routes.set(cacheKey,R.route(graph,l,dimensions));
-      const route=routes.get(cacheKey),d=R.path(route.points);if(route.blocked)blocked++;
+      const a=nodesById.get(l.from),b=nodesById.get(l.to);if(!a||!b)return '';
+      const route=R.route(graph,l,dimensions,scene),d=R.path(route.points);if(route.blocked)blocked++;
       return `<g data-link="${esc(l.id)}" role="button" tabindex="0" aria-label="Liaison ${esc(a.name+' vers '+b.name)}"><title>${route.blocked?'Tracé impossible : écartez les boîtes.':'Connecteur à angle droit'}</title><path class="edge ${route.blocked?'blocked':''} ${selected===l.id?'selected':''}" d="${d}"/><path class="edge-hit" d="${d}"/></g>`;
     }).join('');
     $('routeWarning').textContent=blocked?`${blocked} liaison(s) sans passage libre : écartez les boîtes.`:'';
@@ -222,7 +228,7 @@
   function receive(data){
     if(data?.type==='centurion-auto-init'){
       try{graph=A.validate(data.graph,new Set(data.measurements.map(d=>d.id)));measurements=data.measurements;commands=data.commands;
-        R.configure({measurements,commands});routesSignature=null;
+        R.configure({measurements,commands});layoutCache.clear();
         runtime=data.runtime;values=data.values||{};connected=true;simulationRunning=data.simulationRunning;
         $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);pending=null;undo=[];redo=[];
         if(!graph.nodes.some(n=>n.id===selected))selected=null;
@@ -261,7 +267,7 @@
     },field==='command'||field==='variable'||field==='branches');
     if(!ok&&field==='command')properties();
   }
-  function coordinate(e){const p=$('canvas').createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform($('canvas').getScreenCTM().inverse());}
+  function coordinate(e,matrix=null){const p=$('canvas').createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(matrix||$('canvas').getScreenCTM().inverse());}
   function fit(){
     if(!graph.nodes.length)view={x:0,y:0,w:1200,h:700};
     else {const left=Math.min(...graph.nodes.map(n=>n.x))-60,top=Math.min(...graph.nodes.map(n=>n.y))-60;
@@ -369,11 +375,11 @@
         ...(boundary?{boundary:Number(boundary.dataset.rangeBoundary)}:{})};
     }else if(!e.target.closest('[data-link]'))drag={x:point.x,y:point.y,beforeView:{...view},moved:false,
       ...(e.shiftKey?{marquee:true,base:new Set(selection),rectangle:{x:point.x,y:point.y,w:0,h:0}}:{})};
-    if(!drag)return;e.preventDefault();$('canvas').focus();
+    if(!drag)return;drag.matrix=$('canvas').getScreenCTM().inverse();e.preventDefault();$('canvas').focus();
     $('canvas').setPointerCapture(e.pointerId);
   });
   $('canvas').addEventListener('pointermove',e=>{
-    if(!drag)return;const p=coordinate(e),dx=p.x-drag.x,dy=p.y-drag.y;
+    if(!drag)return;const p=coordinate(e,drag.matrix),dx=p.x-drag.x,dy=p.y-drag.y;
     if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;
     if(drag.node){const n=graph.nodes.find(n=>n.id===drag.node);
       if(drag.boundary!==undefined){
@@ -391,8 +397,8 @@
       drag.rectangle={x:Math.min(p.x,drag.x),y:Math.min(p.y,drag.y),w:Math.abs(dx),h:Math.abs(dy)};
       selection=new Set([...drag.base,...graph.nodes.filter(n=>B.overlaps(drag.rectangle,{x:n.x,y:n.y,...dimensions(n)},0)).map(n=>n.id)]);
       selected=[...selection].at(-1)||null;
-    }else {view.x-=dx;view.y-=dy;}
-    draw();
+    }else {view.x=drag.beforeView.x-dx;view.y=drag.beforeView.y-dy;}
+    requestDraw();
   });
   function finishDrag(){
     if(!drag)return;suppressClick=drag.moved||drag.handled;

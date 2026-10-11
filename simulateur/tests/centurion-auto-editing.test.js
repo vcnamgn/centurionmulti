@@ -79,10 +79,31 @@ test('éditeur : clic Shift réel non doublé, déplacement commun avec un seul 
   ui.get('undo').click();assert.deepEqual(ui.graph(),g);ui.get('redo').click();assert.equal(ui.graph().nodes[1].x,560);
 });
 
+test('éditeur : déplacement fluide, une image par rafale et dimensions de texte conservées',()=>{
+  const g=fixture(),ui=surface(g);const n=ui.query('[data-node="a"]');
+  ui.event('canvas','pointerdown',n,{button:0,clientX:40,clientY:430,pointerId:1});
+  const pending=ui.pendingFrames,measurements=ui.textMeasurements;
+  for(let dy=2;dy<=60;dy+=2)ui.event('canvas','pointermove',ui.get('canvas'),{clientX:90,clientY:430+dy});
+  assert.equal(ui.pendingFrames,pending+1);assert.equal(ui.textMeasurements,measurements);
+  ui.frame();assert.equal(ui.pendingFrames,pending);assert.equal(ui.textMeasurements,measurements);
+  const moved=ui.query('[data-node="a"] .body');assert.equal(moved.getAttribute('x'),'60');assert.equal(moved.getAttribute('y'),'480');
+  ui.event('canvas','pointerup',ui.get('canvas'),{pointerId:1});
+  assert.equal(ui.graph().nodes.find(n=>n.id==='a').y,480);ui.get('undo').click();assert.deepEqual(ui.graph(),g);
+});
+
+test('éditeur : déplacement du canevas sans cumul des mouvements entre deux images',()=>{
+  const g=A.emptyGraph();g.nodes=[A.node('info','a',0,0)];const ui=surface(g),before=rect(ui);
+  ui.event('canvas','pointerdown',ui.get('paper'),{button:0,clientX:0,clientY:0,pointerId:1});
+  for(let x=10;x<=100;x+=10)ui.event('canvas','pointermove',ui.get('canvas'),{clientX:x,clientY:x/2});
+  ui.event('canvas','pointerup',ui.get('canvas'),{pointerId:1});
+  assert.deepEqual(rect(ui),{...before,x:before.x-100,y:before.y-50});assert.deepEqual(ui.graph(),g);
+});
+
 test('éditeur : sélection par rectangle et ajout visible sur un canevas déplacé',()=>{
   const g=A.emptyGraph();g.nodes=[A.node('info','a',24,24),A.node('info','b',500,24),A.node('end','off',9000,9000)];const ui=surface(g);
   ui.event('canvas','pointerdown',ui.get('paper'),{button:0,clientX:0,clientY:0,shiftKey:true,pointerId:1});
   ui.event('canvas','pointermove',ui.get('canvas'),{clientX:850,clientY:180});
+  ui.frame();
   assert.ok(ui.query('.selection-rectangle'));ui.event('canvas','pointerup',ui.get('canvas'),{pointerId:1});
   assert.deepEqual(selected(ui),['a','b']);assert.equal(ui.query('.selection-rectangle'),null);
   ui.query('[data-add="parallel"]').click();const added=ui.graph().nodes.slice(3);
