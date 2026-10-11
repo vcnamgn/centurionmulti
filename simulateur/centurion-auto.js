@@ -23,8 +23,9 @@
       :type==='wait'?{duration:10,unit:'seconds'}
       :type==='parallel'?{branches:2,join:null}:type==='join'?{fork:null}:{};
     return {id,type,x,y,name:{start:'Nouvelle séquence',test:'Comparaison',ranges:'Plages de mesure',action:'Action',
-      info:'Information',wait:'Attente',parallel:'Effectuer les X actions en parallèle',join:'Attendre la fin de toutes les actions simultanées',end:'Fin de séquence'}[type],params:{...params,stepDelayS:null}};
+      info:'Information',wait:'Attente',parallel:'Plusieurs actions',join:'Attendre la fin de toutes les actions simultanées',end:'Fin de séquence'}[type],params:{...params,stepDelayS:null}};
   }
+  function actionItems(p){return Array.isArray(p.actions)?p.actions:[{command:p.command,value:p.value}];}
   function ports(n){
     return n.type==='end'?[]:n.type==='parallel'?Array.from({length:n.params.branches},(_,i)=>`branch:${i}`):n.type==='test'?['yes','no-left','no-right']
       :n.type==='ranges'?n.params.labels.map((_,i)=>`range:${i}`):['next'];
@@ -79,37 +80,44 @@
       l.port='range:'+(Number(l.port.split(':')[1])-1);
   }
   function actionCatalog(){
-    const defs=[];
-    const add=(id,label,unit,min,max,options=null)=>defs.push({id,label,unit,min,max,options});
-    const bool=(id,label)=>add(id,label,'TOR',0,1,[[1,'En service / oui'],[0,'Hors service / non']]);
+    const defs=[];let group='Modes CC';
+    const add=(id,label,unit,min,max,options=null)=>defs.push({id,label,unit,min,max,options,group});
+    const bool=(id,label,options=[[1,'ES'],[0,'HS']])=>add(id,label,'TOR',0,1,options);
+    const valve=(id,label)=>bool(id,label,[[1,'ES (ouvert)'],[0,'HS (fermé)']]);
     const rate=(id,label,gcta=false,unit='%/min')=>add(id,label,unit,0,200,
       [...(gcta?[0.25]:[]),0.5,1,2,5,10,200].map(v=>[v,String(v).replace('.',',')+' '+unit]).concat([[null,'Instantanée']]));
-    add('turbine.target','PTUR · puissance turbine demandée','%',0,110);rate('turbine.rate','PTUR · pente');
-    bool('regulation.enabled','Activer les régulations CC');bool('protection.enabled','Activer les protections CC');
+    bool('regulation.enabled','Régulations CC',[[1,'Actives'],[0,'Désactivées']]);bool('protection.enabled','Protections CC',[[1,'Actives'],[0,'Désactivées']]);
     add('protection.disable','Désactiver les protections','',0,0,[[1,'Désactiver']]);
-    bool('rods.manual','Groupe R en manuel');add('rods.R','Position du groupe R','pas extraits',0,260);
+    group='Turbine';add('turbine.target','PTUR · puissance turbine demandée','%',0,110);rate('turbine.rate','PTUR · pente');
+    group='Grappes';bool('rods.manual','Commande du groupe R',[[1,'Manuel'],[0,'CC-RÉGUL']]);add('rods.R','Position du groupe R','pas extraits',0,260);
     add('gcp.calibration','Décalibrage GCP','% PN',0,8);
     add('rods.all','Tous les groupes, y compris arrêt','pas',0,260,[[0,'Descendre à 0 pas'],[260,'Lever à 260 pas'],[null,'Retour à la conduite']]);
-    add('gv.level','Consigne niveau GV','%',0,100);
-    for(const [id,label,min,max,unit] of [['gcta','Pression d’ouverture GCT-A',1,100,'bar'],['pressure','Consigne pression primaire',1,180,'bar'],['level','Consigne niveau PZR',0,100,'%']]){
+    function setpoint(id,label,min,max,unit){
       add(`setpoint.${id}`,label,unit,min,max);rate(`rate.${id}`,label+' · rampe',id==='gcta',unit+'/min');
-      if(id!=='gcta')bool(`setpoint.${id}.manual`,label+' · référence manuelle');
+      if(id!=='gcta')bool(`setpoint.${id}.manual`,label+' · référence',[[1,'Manuelle'],[0,'CC-RÉGUL']]);
     }
+    group='GV';add('gv.level','Consigne niveau GV','%',0,100);setpoint('gcta','Pression d’ouverture GCT-A',1,100,'bar');
     for(let i=1;i<=4;i++){
-      add(`gv.${i}.are`,`ARE · ouverture GV${i}`,'%',0,100);bool(`gv.${i}.vvp`,`VVP ${i}20VV · ouverture`);
-      bool(`asg.${i}`,`Alimentation ASG GV${i}`);
+      add(`gv.${i}.are`,`ARE · ouverture GV${i}`,'%',0,100);valve(`gv.${i}.vvp`,`VVP ${i}20VV`);
     }
+    group='GMPP';add('gmpp.stop','Déclenchement des quatre GMPP','',0,0,[[1,'Déclencher']]);
+    group='Pressuriseur';setpoint('pressure','Consigne pression primaire',1,180,'bar');
     add('heater','Puissance chaufferettes','kW',0,2500);add('spray','Aspersion réglante · ouverture','%',0,100);
     add('spray.aux','Aspersion auxiliaire RCV','m³/h',0,8);
-    for(let i=1;i<=3;i++){bool(`relief.${i}`,`Soupapes PZR · étage ${i}`);bool(`rcv.orifice.${i}`,`Orifice RCV ${i}`);}
-    add('rcv.charge','Charge RCV demandée','m³/h',0,60);add('rcv.boron','CB manuelle de charge RCV','ppm',0,7000);
+    for(let i=1;i<=3;i++)valve(`relief.${i}`,`Soupapes PZR · étage ${i}`);
+    group='RCV';setpoint('level','Consigne niveau PZR',0,100,'%');
+    add('rcv.charge','Charge RCV demandée','m³/h',0,60);
+    for(let i=1;i<=3;i++)valve(`rcv.orifice.${i}`,`Orifice RCV ${i}`);
+    add('rcv.boron','CB manuelle de charge RCV','ppm',0,7000);
     add('rcv.injection','Dilution / borication par la charge','',0,0,[['off','Arrêter'],['dilution','Dilution · 0 ppm'],['borication','Borication · 7 000 ppm']]);
-    bool('asg.manual','ASG en manuel');bool('asg.A','Voie ASG A · GV1 et GV2');bool('asg.B','Voie ASG B · GV3 et GV4');
+    group='ASG';
     add('asg.start','Ordre de démarrage ASG','',0,0,[[1,'Démarrer']]);
+    bool('asg.manual','Commande ASG',[[1,'Manuel'],[0,'Automatique']]);bool('asg.A','Voie ASG A · GV1 et GV2');bool('asg.B','Voie ASG B · GV3 et GV4');
+    for(let i=1;i<=4;i++)valve(`asg.${i}`,`Alimentation ASG GV${i}`);
+    group='RIS';
     add('ris.mode','Pompes RIS','',0,0,[['on','Démarrer'],['off','Arrêter'],['auto','Sur demande IS']]);
     add('ris.source','Source RIS','',0,0,[['direct','Injection directe PTR'],['recirculation','Puisards']]);
-    add('gmpp.stop','Déclenchement des quatre GMPP','',0,0,[[1,'Déclencher']]);
-    add('rra.connect','Connexion du RRA','',0,0,[[1,'Connecter si conditions remplies']]);
+    group='RRA';add('rra.connect','Connexion du RRA','',0,0,[[1,'Connecter si conditions remplies']]);
     return defs;
   }
   function measurementCatalog(E,H,model){
@@ -161,7 +169,13 @@
             throw Error('Repères non ordonnés ou échelle de règle invalide.');
         }
       }
-      if(['action','info','wait'].includes(n.type))validateAction({...p,type:n.type},commands);
+      if(n.type==='action'){
+        if(p.actions!==undefined&&(!Array.isArray(p.actions)||!p.actions.length||p.actions.length>24))throw Error('Une boîte doit contenir 1 à 24 actions.');
+        const used=new Set();for(const a of actionItems(p)){
+          validateAction({...a,type:'action'},commands);
+          if(used.has(a.command))throw Error('Une commande ne peut figurer qu’une fois dans la même boîte.');used.add(a.command);
+        }
+      }else if(['info','wait'].includes(n.type))validateAction({...p,type:n.type},commands);
       if(n.type==='parallel'&&(!Number.isInteger(p.branches)||p.branches<2||p.branches>8||p.join!==null&&!identifier(p.join)))
         throw Error('Une ouverture parallèle doit avoir 2 à 8 branches et une clôture associée.');
       if(n.type==='join'&&p.fork!==null&&!identifier(p.fork))throw Error('Ouverture associée à la clôture invalide.');
@@ -190,6 +204,7 @@
   }
   function migrateGraph(raw){
     const g=clone(raw);g.stepDelayS??=2;
+    for(const n of g.nodes)if(n.type==='parallel'&&n.name==='Effectuer les X actions en parallèle')n.name='Plusieurs actions';
     if(g.version<3)for(const n of g.nodes.filter(n=>n.type==='ranges'&&Array.isArray(n.params?.ranges))){
       const p=n.params,old=p.ranges,segments=[],mapping=[];
       if(!old.length||old.length>8||old.some((r,i)=>!text(r.label,60)||!finite(r.min)||!finite(r.max)||r.min>=r.max||i&&r.min<old[i-1].max))
@@ -288,19 +303,24 @@
     r.remaining=Math.max(0,...r.tokens.map(t=>t.remaining));r.lastValue=t?.lastValue??null;r.lastPort=t?.lastPort??null;
     r.activeNodes=[...new Set(r.tokens.map(t=>t.current))];
   }
-  function tick(r,graph,dt,read,execute){
+  function tick(r,graph,dt,read,execute,executeBatch=null){
     if(r.status!=='running'||!finite(dt)||dt<=0)return r;
     const nodes=new Map(graph.nodes.map(n=>[n.id,n])),links=new Map(graph.links.map(l=>[l.from+'/'+l.port,l]));
     r.totalElapsed+=dt;
     try{
       // Vérifier ensemble les commandes entrant dans le même pas, avant d’en appliquer une.
-      const commands=r.tokens.filter(t=>!t.entered&&nodes.get(t.current)?.type==='action').map(t=>nodes.get(t.current).params),used=new Set();
-      for(const p of commands){if(used.has(p.command))throw Error('Deux branches simultanées ciblent la même commande.');used.add(p.command);execute(p.command,p.value,true);}
+      const commands=r.tokens.filter(t=>!t.entered&&nodes.get(t.current)?.type==='action').flatMap(t=>actionItems(nodes.get(t.current).params)),used=new Set();
+      for(const p of commands){if(used.has(p.command))throw Error('Deux actions simultanées ciblent la même commande.');used.add(p.command);}
+      if(executeBatch&&commands.length)executeBatch(commands,true);
+      else for(const p of commands)execute(p.command,p.value,true);
       for(const t of [...r.tokens]){
         const n=nodes.get(t.current);if(!n)throw Error('Boîte active absente.');
         const entered=t.entered;
         if(!entered){t.entered=true;t.elapsed=0;record(r,n,'entrée',t);
-          if(n.type==='action')execute(n.params.command,n.params.value,false);
+          if(n.type==='action'){
+            const actions=actionItems(n.params);if(executeBatch)executeBatch(actions,false);
+            else for(const p of actions)execute(p.command,p.value,false);
+          }
           if(n.type==='info')record(r,n,n.params.message,t);
         }else t.elapsed+=dt;
         const minimum=n.params.stepDelayS??graph.stepDelayS??2;
@@ -424,7 +444,7 @@
     if(/^asg\.[1-4AB]$/.test(id)&&!u.asgManual)throw Error('Passez d’abord ASG en manuel.');
     if(id==='rra.connect'&&!E.rraConditions(s).allowed)throw Error('Connexion RRA impossible : '+E.rraConditions(s).reasons.join(' ; '));
     if(checkOnly)return;
-    if(id==='regulation.enabled')return ctx.setRegulationActive(Boolean(value));
+    if(id==='regulation.enabled'){ctx.regulationActive=Boolean(value);return ctx.setRegulationActive(Boolean(value));}
     if(id==='protection.enabled')return ctx.setProtectionActive(Boolean(value));
     if(id==='protection.disable')return ctx.setProtectionActive(false);
     if(id==='turbine.target')return E.setManualTurbineDemand(model,value);
@@ -463,7 +483,16 @@
     if(id==='rra.connect')return E.connectRra(model);
     throw Error('Commande non raccordée : '+id);
   }
+  function executeActions(ctx,actions,checkOnly=false){
+    // Le brouillon reproduit les changements de mode dans l'ordre, sans toucher au simulateur.
+    const draft={...ctx,model:{...ctx.model,controls:structuredClone(ctx.model.controls),state:structuredClone({...ctx.model.state,history:[]})}};
+    draft.setRegulationActive=value=>{draft.regulationActive=Boolean(value);};
+    draft.setProtectionActive=value=>{draft.model.controls.protectionsEnabled=Boolean(value);};
+    draft.setRManualOverride=value=>draft.E.setRManualOverride(draft.model,value);
+    for(const a of actions)executeCommand(draft,a.command,a.value);
+    if(!checkOnly)for(const a of actions)executeCommand(ctx,a.command,a.value);
+  }
   return {FORMAT,VERSION,TYPES,OPERATORS,DURATION_UNITS,emptyGraph,node,ports,actionCatalog,measurementCatalog,validate,sequences,
     compare,classify,ruleScale,roundRuleValue,ruleStep,ruleSegments,setRuleSeparator,setRuleScale,splitRule,removeRuleSeparator,
-    STEP_DELAYS,migrateGraph,validateExecution,idle,start,tick,validateSaved,executeCommand};
+    STEP_DELAYS,actionItems,migrateGraph,validateExecution,idle,start,tick,validateSaved,executeCommand,executeActions};
 });

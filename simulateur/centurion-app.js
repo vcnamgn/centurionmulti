@@ -138,8 +138,9 @@
   function advanceAutoStep(){
     if(!Auto||autoRuntime.status!=="running")return;
     const values=autoValues();
-    Auto.tick(autoRuntime,autoGraph,0.1,id=>values[id],(id,value,checkOnly)=>Auto.executeCommand({E,model,regulationActive,
-      setRegulationActive,setProtectionActive,setRManualOverride:changeManualROverride},id,value,checkOnly));
+    const context={E,model,regulationActive,setRegulationActive,setProtectionActive,setRManualOverride:changeManualROverride};
+    Auto.tick(autoRuntime,autoGraph,0.1,id=>values[id],(id,value,checkOnly)=>Auto.executeCommand(context,id,value,checkOnly),
+      (actions,checkOnly)=>Auto.executeActions(context,actions,checkOnly));
   }
   function renderInitiatorCountdown(now=performance.now()) {
     const banner=$("initiatorCountdown");

@@ -26,24 +26,12 @@
       if(redrawProperties)properties();status('Diagramme enregistré dans ce navigateur.');return true;
     }catch(error){graph=JSON.parse(before);status(error.message,true);return false;}
   }
-  const dimensions=R.dimensions,portPoint=R.portPoint;
-  function subtitle(n){
-    const p=n.params,m=measurements.find(m=>m.id===p.variable),c=commands.find(c=>c.id===p.command);
-    if(n.type==='test')return [m?.label||p.variable,`${p.operator} ${fmt(p.value)} ${m?.unit||''} · tol. ${fmt(p.tolerance)}`];
-    if(n.type==='ranges')return [m?.label||p.variable,`${p.labels.length} plages · ${m?.unit||''}`];
-    if(n.type==='action')return [c?.label||p.command,c?.options?.find(([v])=>v===p.value)?.[1]||`${fmt(p.value)} ${c?.unit||''}`];
-    if(n.type==='wait')return [`${fmt(p.duration)} ${{seconds:'secondes',minutes:'minutes',hours:'heures'}[p.unit]}`];
-    if(n.type==='info')return [p.message];
-    if(n.type==='parallel')return [`${p.branches} branches indépendantes`,'Clôture obligatoire'];
-    if(n.type==='join'){
-      const groups=(runtime.groups||[]).filter(g=>g.join===n.id);
-      return [groups.length?groups.map(g=>`${g.arrived.length}/${g.expected} branches terminées`).join(' · '):'Réunit tous les curseurs','Reprise après la dernière branche'];
-    }
-    return [n.type==='start'?'Point de départ de la séquence':'Termine la séquence'];
-  }
+  const textCanvas=document.createElement('canvas').getContext('2d');
+  R.configure({measureText:(text,size,bold)=>{textCanvas.font=`${bold?'700':'400'} ${size}px "Segoe UI",Arial,sans-serif`;return textCanvas.measureText(text).width;}});
+  const subtitle=n=>R.instructions(n,runtime),dimensions=n=>R.dimensions(n,subtitle(n)),portPoint=(n,port)=>R.portPoint(n,port,dimensions);
   function short(value,max=33){return value.length>max?value.slice(0,max-1)+'…':value;}
   function rangeDrawing(n){
-    const p=n.params,{w,barY,markers}=R.ruleLayout(n),span=p.scale.max-p.scale.min;
+    const p=n.params,{w,barY,markers}=R.ruleLayout(n,subtitle(n)),span=p.scale.max-p.scale.min;
     const segments=A.ruleSegments(p).map((r,i)=>{
       const x=n.x+14+(w-28)*(r.min-p.scale.min)/span,rw=(w-28)*(r.max-r.min)/span;
       return `<rect class="range-segment" x="${x}" y="${n.y+barY}" width="${rw}" height="24" fill="${['#cde6f0','#cfead7','#f2d9b5','#e2d3ed'][i%4]}"/>`
@@ -59,11 +47,11 @@
     $('canvas').setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);
     $('zoomValue').textContent=Math.round(1200/view.w*100)+' %';
     $('emptyHint').hidden=Boolean(graph.nodes.length);
-    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.name,n.params.message,n.params.scale,n.params.separators,n.params.labels,n.params.branches]));
+    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.params,dimensions(n).w,dimensions(n).h]));
     if(routeSignature!==routesSignature){routes.clear();routesSignature=routeSignature;}
     const portMarkup=[];
     $('boxes').innerHTML=graph.nodes.map(n=>{
-      const {w,h,headerHeight,titleLines}=dimensions(n),p=n.params,color={start:['#e6f5ed','#72b095'],end:['#e6f5ed','#72b095'],test:['#fff4df','#d7a861'],ranges:['#fff4df','#d7a861'],
+      const {w,h,headerHeight,titleLines,bodyLines}=dimensions(n),p=n.params,color={start:['#e6f5ed','#72b095'],end:['#e6f5ed','#72b095'],test:['#fff4df','#d7a861'],ranges:['#fff4df','#d7a861'],
         action:['#f1e9f7','#af87c3'],parallel:['#f1e9f7','#af87c3'],join:['#f1e9f7','#af87c3'],info:['#e7f2fd','#87b7d8'],wait:['#ebf1f6','#9db2c4']}[n.type];
       const active=(runtime.activeNodes||[runtime.current]).includes(n.id)&&['running','paused','error'].includes(runtime.status);
       const highlighted=!active&&recent.has(n.id);
@@ -73,7 +61,6 @@
       };
       const range=n.type==='ranges'?rangeDrawing(n):'';
       const radius=n.type==='start'||n.type==='end'?20:8;
-      const instructions=subtitle(n).flatMap(t=>R.wrapText(t,n.type==='ranges'?42:35,n.type==='info'?6:2));
       portMarkup.push((n.type!=='start'?port('in',true):'')+A.ports(n).map(p=>port(p)).join(''));
       return `<g class="box ${highlighted?'recent':''} ${selected===n.id?'selected':''} ${active?(runtime.status==='error'?'failed':'executing'):''}" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="${esc(n.name)}">
         <title>${esc(n.name+'\n'+subtitle(n).join('\n'))}</title><rect class="body" x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${radius}" fill="${color[0]}" stroke="${color[1]}"/>
@@ -81,7 +68,7 @@
         <line class="band-divider" x1="${n.x}" x2="${n.x+w}" y1="${n.y+headerHeight}" y2="${n.y+headerHeight}" stroke="${color[1]}"/>
         ${titleLines.map((t,i)=>`<text class="title" x="${n.x+14}" y="${n.y+25+i*20}">${esc(t)}</text>`).join('')}
         ${(runtime.tokens||[]).filter(t=>t.current===n.id).length>1?`<text class="cursor-count" text-anchor="end" x="${n.x+w-10}" y="${n.y+h-12}">${(runtime.tokens||[]).filter(t=>t.current===n.id).length} curseurs</text>`:''}
-        ${instructions.map((t,i)=>`<text class="detail" x="${n.x+14}" y="${n.y+headerHeight+25+i*21}">${esc(t)}</text>`).join('')}${range}
+        ${bodyLines.map((t,i)=>`<text class="detail" x="${n.x+14}" y="${n.y+headerHeight+25+i*21}">${esc(t)}</text>`).join('')}${range}
         ${n.type==='test'?`<text class="port-label" x="${n.x+w/2+10}" y="${n.y+h-8}">Vrai</text><text class="port-label" x="${n.x+10}" y="${n.y+h-37}">Faux</text><text class="port-label" text-anchor="end" x="${n.x+w-10}" y="${n.y+h-37}">Faux</text>`:''}
       </g>`;
     }).join('');
@@ -90,7 +77,7 @@
     $('links').innerHTML=graph.links.map(l=>{
       const a=graph.nodes.find(n=>n.id===l.from),b=graph.nodes.find(n=>n.id===l.to);if(!a||!b)return '';
       const cacheKey=l.from+'/'+l.port+'/'+l.to;
-      if(!routes.has(cacheKey))routes.set(cacheKey,R.route(graph,l));
+      if(!routes.has(cacheKey))routes.set(cacheKey,R.route(graph,l,dimensions));
       const route=routes.get(cacheKey),d=R.path(route.points);if(route.blocked)blocked++;
       return `<g data-link="${esc(l.id)}" role="button" tabindex="0" aria-label="Liaison ${esc(a.name+' vers '+b.name)}"><title>${route.blocked?'Tracé impossible : écartez les boîtes.':'Connecteur à angle droit'}</title><path class="edge ${route.blocked?'blocked':''} ${selected===l.id?'selected':''}" d="${d}"/><path class="edge-hit" d="${d}"/></g>`;
     }).join('');
@@ -113,9 +100,15 @@
     $('startSequence').disabled=!connected||locked()||!list.length;
   }
   function options(list,value){return list.map(([v,t])=>`<option value="${esc(JSON.stringify(v))}"${v===value?' selected':''}>${esc(t)}</option>`).join('');}
+  function pickerOptions(list,value,field){
+    const option=d=>`<option value="${esc(d.id)}"${d.id===value?' selected':''}>${esc((d.tag?d.tag+' · ':'')+d.label+(d.unit?' · '+d.unit:''))}</option>`;
+    if(field!=='command')return list.map(option).join('');
+    const groups=new Map();for(const d of list){const group=d.group||'Autres';if(!groups.has(group))groups.set(group,[]);groups.get(group).push(d);}
+    return [...groups].map(([label,items])=>`<optgroup label="${esc(label)}">${items.map(option).join('')}</optgroup>`).join('');
+  }
   function picker(list,value,field,label,index=''){
     return `<label>Rechercher ${label}<input type="search" data-search="${field}" data-index="${index}" placeholder="Nom, repère ou unité…" aria-label="Rechercher ${label}"></label>
-      <label>${label}<select data-field="${field}" data-index="${index}" aria-label="${esc(label)}">${list.map(d=>`<option value="${esc(d.id)}"${d.id===value?' selected':''}>${esc((d.tag?d.tag+' · ':'')+d.label+(d.unit?' · '+d.unit:''))}</option>`).join('')}</select></label>`;
+      <label>${label}<select data-field="${field}" data-index="${index}" aria-label="${esc(label)}">${pickerOptions(list,value,field)}</select></label>`;
   }
   function actionFields(p,index=''){
     const c=commands.find(c=>c.id===p.command);
@@ -130,7 +123,7 @@
     const n=current();
     if(!n){$('properties').innerHTML=graph.links.some(l=>l.id===selected)?'<h2>Liaison</h2><p>Supprimer retire cette liaison, sans effacer les boîtes.</p>':'<h2>Propriétés</h2><p>Sélectionnez une boîte ou une liaison.</p>';return;}
     const p=n.params;
-    let content=`<h2>${esc({start:'Départ',test:'Comparaison',ranges:'Règle à plages',action:'Action',info:'Information',wait:'Attente',parallel:'Effectuer les X actions en parallèle',join:'Attendre la fin de toutes les actions simultanées',end:'Fin'}[n.type])}</h2><label>Nom<input data-name="true" maxlength="100" value="${esc(n.name)}"></label>`;
+    let content=`<h2>${esc({start:'Départ',test:'Comparaison',ranges:'Règle à plages',action:'Action',info:'Information',wait:'Attente',parallel:'Plusieurs actions',join:'Attendre la fin de toutes les actions simultanées',end:'Fin'}[n.type])}</h2><label>Nom<input data-name="true" maxlength="100" value="${esc(n.name)}"></label>`;
     content+=`<label>Durée minimale de cette étape<select data-field="stepDelayS" data-option-value="true">${options([[null,'Réglage commun ('+graph.stepDelayS+' s simulées)'],...A.STEP_DELAYS.map(v=>[v,v+' s simulées'])],p.stepDelayS??null)}</select></label>`;
     if(['test','ranges'].includes(n.type)){
       content+=picker(measurements,p.variable,'variable','une mesure')+'<p class="reading" id="selectedReading"></p>';
@@ -144,7 +137,14 @@
         content+=p.labels.map((label,i)=>`<div class="range-row"><label>Plage ${i+1}<input data-range="${i}" value="${esc(label)}" maxlength="60"></label><span data-range-summary="${i}">${esc(rangeSummary(p,i))}</span></div>`).join('');
         content+='<p>La première et la dernière plage incluent les valeurs hors de l’échelle affichée. Aucun trou ni sortie latérale.</p>';
       }
-    }else if(n.type==='action')content+=actionFields(p);
+    }else if(n.type==='action'){
+      const items=A.actionItems(p);
+      content+=items.map((a,i)=>`<section class="action-row"><div class="action-row-head"><strong>Action ${i+1}</strong><span>
+        ${i?`<button data-move-action="${i}" data-direction="-1" aria-label="Monter l’action ${i+1}">↑</button>`:''}
+        ${i<items.length-1?`<button data-move-action="${i}" data-direction="1" aria-label="Descendre l’action ${i+1}">↓</button>`:''}
+        ${items.length>1?`<button data-remove-action="${i}" aria-label="Retirer l’action ${i+1}">×</button>`:''}</span></div>${actionFields(a,String(i))}</section>`).join('');
+      content+=`<button id="addAction"${items.length>=24?' disabled':''}>Ajouter une action</button><p>Les actions s’appliquent une seule fois à l’entrée, dans l’ordre affiché. Placez les changements de mode avant les commandes qui en dépendent.</p>`;
+    }
     else if(n.type==='wait')content+=waitFields(p);
     else if(n.type==='info')content+=`<label>Texte<textarea data-field="message" maxlength="2000">${esc(p.message)}</textarea></label>`;
     else if(n.type==='parallel'){
@@ -174,6 +174,7 @@
     for(const el of document.querySelectorAll('#properties input,#properties select,#properties textarea,#properties button,.library button'))el.disabled=locked();
     for(const id of ['graphName','stepDelay','openGraph','clearGraph'])$(id).disabled=locked();
     if($('addRange'))$('addRange').disabled=locked()||current()?.params.labels.length>=8;
+    if($('addAction'))$('addAction').disabled=locked()||A.actionItems(current().params).length>=24;
   }
   function refreshRuntime(){
     const active=runtime.status==='running',paused=runtime.status==='paused';
@@ -196,6 +197,7 @@
   function receive(data){
     if(data?.type==='centurion-auto-init'){
       try{graph=A.validate(data.graph,new Set(data.measurements.map(d=>d.id)));measurements=data.measurements;commands=data.commands;
+        R.configure({measurements,commands});routesSignature=null;
         runtime=data.runtime;values=data.values||{};connected=true;simulationRunning=data.simulationRunning;
         $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);pending=null;undo=[];
         if(!graph.nodes.some(n=>n.id===selected))selected=null;
@@ -215,8 +217,7 @@
       const list=el.dataset.search==='command'?commands:measurements,words=norm(el.value).trim().split(/\s+/).filter(Boolean);
       const select=$('properties').querySelector(`select[data-field="${el.dataset.search}"][data-index="${el.dataset.index||''}"]`);
       if(!select)return;const chosen=select.value;
-      select.innerHTML=list.filter(d=>d.id===chosen||words.every(w=>norm(d.id+' '+d.label+' '+d.tag+' '+d.unit).includes(w)))
-        .map(d=>`<option value="${esc(d.id)}">${esc((d.tag?d.tag+' · ':'')+d.label+(d.unit?' · '+d.unit:''))}</option>`).join('');
+      select.innerHTML=pickerOptions(list.filter(d=>d.id===chosen||words.every(w=>norm(d.id+' '+d.label+' '+d.tag+' '+d.unit+' '+d.group).includes(w))),chosen,el.dataset.search);
       select.value=chosen;return;
     }
     if(el.dataset.name){if(el.value.trim())edit(()=>{n.name=el.value;},false);return;}
@@ -224,14 +225,15 @@
       edit(()=>{n.params.labels[Number(el.dataset.range)]=el.value;},false);return;
     }
     const field=el.dataset.field;if(!field)return;
-    const p=n.params;
+    const p=n.type==='action'&&el.dataset.index!==undefined&&el.dataset.index!==''?(n.params.actions?.[Number(el.dataset.index)]||n.params):n.params;
     const value=el.dataset.optionValue?JSON.parse(el.value):el.type==='number'?Number(el.value):el.value;
     if(el.type==='number'&&el.value==='')return;
-    edit(()=>{p[field]=value;
+    const ok=edit(()=>{p[field]=value;
       if(field==='variable'&&n.type==='ranges')A.setRuleScale(p,A.ruleScale(measurements.find(m=>m.id===value)),true);
       if(field==='command'){const c=commands.find(c=>c.id===value);p.value=c.options?c.options[0][0]:c.min;}
       if(field==='branches')graph.links=graph.links.filter(l=>!(l.from===n.id&&l.port.startsWith('branch:')&&Number(l.port.split(':')[1])>=value));
     },field==='command'||field==='variable'||field==='branches');
+    if(!ok&&field==='command')properties();
   }
   function coordinate(e){const p=$('canvas').createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform($('canvas').getScreenCTM().inverse());}
   function fit(){
@@ -266,16 +268,40 @@
     const removed=new Set([selected,...(current()?.type==='parallel'?[current().params.join]:[])]);edit(()=>{graph.nodes=graph.nodes.filter(n=>!removed.has(n.id));
       graph.links=graph.links.filter(l=>l.id!==selected&&!removed.has(l.from)&&!removed.has(l.to));});selected=null;draw();properties();
   }
+  function placeBox(n){
+    for(let i=0;i<=graph.nodes.length;i++){
+      const d=dimensions(n),overlaps=graph.nodes.filter(b=>{const other=dimensions(b);return n.x<b.x+other.w+32&&n.x+d.w+32>b.x&&n.y<b.y+other.h+32&&n.y+d.h+32>b.y;});
+      if(!overlaps.length)return;n.y=Math.max(...overlaps.map(b=>b.y+dimensions(b).h))+60;
+    }
+    throw Error('Déplacez les boîtes pour libérer une place.');
+  }
+  function insertBox(n){
+    placeBox(n);graph.nodes.push(n);
+    if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+dimensions(n).h+120);j.params.fork=n.id;n.params.join=j.id;placeBox(j);graph.nodes.push(j);}
+  }
   document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{
     const n=A.node(b.dataset.add,id('box'),view.x+70+(graph.nodes.length%3)*430,view.y+65+Math.floor(graph.nodes.length/3)*320);
     if(n.type==='start'){let i=1;while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name='Séquence '+ ++i;}
-    if(edit(()=>{graph.nodes.push(n);if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+320);j.params.fork=n.id;n.params.join=j.id;graph.nodes.push(j);}}))select(n.id);
+    if(edit(()=>insertBox(n)))select(n.id);
   }));
   $('properties').addEventListener('input',e=>{if(e.target.localName!=='select')eventField(e);});
   $('properties').addEventListener('change',e=>{if(e.target.matches('[data-rule-boundary],[data-rule-scale]'))commitRuleField(e.target);else if(e.target.localName==='select')eventField(e);});
   $('properties').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-rule-boundary],[data-rule-scale]')){e.preventDefault();commitRuleField(e.target);}});
   $('properties').addEventListener('click',e=>{
     const n=current();if(!n||locked())return;
+    if(n.type==='action'){
+      if(e.target.id==='addAction')edit(()=>{
+        const items=A.actionItems(n.params),used=new Set(items.map(a=>a.command)),c=commands.find(c=>!used.has(c.id));
+        n.params.actions=[...items,{command:c.id,value:c.options?c.options[0][0]:c.min}];delete n.params.command;delete n.params.value;
+      });
+      if(e.target.dataset.removeAction!==undefined)edit(()=>{const items=[...A.actionItems(n.params)];items.splice(Number(e.target.dataset.removeAction),1);n.params.actions=items;});
+      if(e.target.dataset.moveAction!==undefined)edit(()=>{
+        const items=[...A.actionItems(n.params)],from=Number(e.target.dataset.moveAction),to=from+Number(e.target.dataset.direction);
+        [items[from],items[to]]=[items[to],items[from]];n.params.actions=items;
+      });
+      return;
+    }
+    if(n.type!=='ranges')return;
     if(e.target.id==='addRange')edit(()=>A.splitRule(graph,n));
     if(e.target.dataset.removeBoundary!==undefined)edit(()=>A.removeRuleSeparator(graph,n,Number(e.target.dataset.removeBoundary)));
     if(e.target.id==='defaultRuleScale')edit(()=>A.setRuleScale(n.params,A.ruleScale(measurements.find(m=>m.id===n.params.variable)),true));
@@ -337,7 +363,7 @@
   $('duplicate').addEventListener('click',()=>{const n=cloneNode(current());if(!n)return;
     n.id=id('box');n.x+=40;n.y+=dimensions(n).h+60;n.name=short(n.name,85)+' · copie';
     while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name+='2';
-    if(edit(()=>{graph.nodes.push(n);if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+320);j.params.fork=n.id;n.params.join=j.id;graph.nodes.push(j);}}))select(n.id);
+    if(edit(()=>insertBox(n)))select(n.id);
   });
   function cloneNode(n){return n?JSON.parse(JSON.stringify(n)):null;}
   $('undo').addEventListener('click',()=>{
