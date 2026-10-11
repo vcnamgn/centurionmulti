@@ -44,6 +44,7 @@ const modules=[
   ,{file:'simulateur/centurion-auto.js',title:'Séquences de conduite',description:'Validation des diagrammes, mesures, commandes du pupitre et progression en temps simulé.'}
   ,{file:'simulateur/centurion-conduite-auto.js',title:'Canevas de conduite',description:'Édition, connecteurs, plages, propriétés, import/export et suivi de la boîte active.'}
   ,{file:'simulateur/centurion-auto-routing.js',title:'Connecteurs de conduite',description:'Tracé orthogonal, accès aux ports, évitement des boîtes et détection des passages obstrués.'}
+  ,{file:'simulateur/centurion-auto-editing.js',title:'Édition des séquences',description:'Sélections, copie de sous-graphes, import sélectif, renouvellement des références et placement dans un espace libre visible.'}
 ];
 const notes={
   executeCommand:'Conduite : valide ou applique une commande du pupitre, avec vérification des modes manuels, des programmes turbine et des conditions physiques. checkOnly ne modifie rien.',

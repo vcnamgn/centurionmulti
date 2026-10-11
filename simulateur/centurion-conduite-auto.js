@@ -1,17 +1,17 @@
 (function(){
   'use strict';
-  const A=window.CenturionAuto,R=window.CenturionAutoRouting,$=id=>document.getElementById(id),STORAGE='centurion.conduite-auto.v1';
+  const A=window.CenturionAuto,R=window.CenturionAutoRouting,B=window.CenturionAutoEditing,$=id=>document.getElementById(id),STORAGE='centurion.conduite-auto.v1';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const fmt=v=>Number.isFinite(v)?v.toLocaleString('fr-FR',{maximumFractionDigits:3}):'—';
   const ruleFmt=v=>Number.isFinite(v)?v.toLocaleString('fr-FR',{maximumSignificantDigits:3}):'—';
   let graph=A.emptyGraph(),runtime=A.idle(),measurements=[],values={},commands=A.actionCatalog(),connected=false,simulationRunning=false;
-  let selected=null,pending=null,drag=null,undo=[],view={x:0,y:0,w:1200,h:700},suppressClick=false;
+  let selected=null,selection=new Set(),pending=null,drag=null,undo=[],redo=[],clipboard=null,importGraph=null,view={x:0,y:0,w:1200,h:700},suppressClick=false;
   let sequenceListSignature=null,runtimeDrawingSignature=null,seenSerial=0;
   const recent=new Map();let routesSignature=null;const routes=new Map();
   const locked=()=>['running','paused'].includes(runtime.status);
   const post=data=>parent.postMessage(data,'*');
-  const current=()=>graph.nodes.find(n=>n.id===selected);
+  const current=()=>selection.size<=1?graph.nodes.find(n=>n.id===selected):null;
   const id=prefix=>prefix+'-'+(window.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
   const known=()=>new Set(measurements.map(d=>d.id));
   function status(message,error=false){$('editStatus').textContent=message;$('editStatus').dataset.error=String(error);}
@@ -19,12 +19,27 @@
     try{localStorage.setItem(STORAGE,JSON.stringify(graph));}catch(_){status('Le stockage du navigateur est indisponible. Utilisez Enregistrer sous…',true);}
     post({type:'centurion-auto-graph',graph});
   }
+  const snapshot=()=>({graph:JSON.stringify(graph),selected,selection:[...selection],view:{...view}});
+  function remember(before){undo.push(before);if(undo.length>50)undo.shift();redo=[];}
+  function syncDocument(){
+    selection=new Set([...selection].filter(id=>graph.nodes.some(n=>n.id===id)));
+    if(!graph.nodes.some(n=>n.id===selected)&&!graph.links.some(l=>l.id===selected))selected=null;
+    $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);
+    persist();draw();properties();refreshSequences();
+  }
+  function history(backward){
+    const source=backward?undo:redo,destination=backward?redo:undo;
+    if(locked()||!source.length)return;
+    destination.push(snapshot());const saved=source.pop();graph=JSON.parse(saved.graph);
+    selected=saved.selected;selection=new Set(saved.selection);view={...saved.view};pending=null;
+    syncDocument();status(backward?'Modification annulée.':'Modification rétablie.');
+  }
   function edit(fn,redrawProperties=true){
-    if(locked())return false;const before=JSON.stringify(graph);
+    if(locked())return false;const before=snapshot();
     try{fn();graph=A.validate(graph,measurements.length?known():null);
-      undo.push(before);if(undo.length>50)undo.shift();persist();draw();refreshSequences();
+      if(JSON.stringify(graph)!==before.graph)remember(before);persist();draw();refreshSequences();
       if(redrawProperties)properties();status('Diagramme enregistré dans ce navigateur.');return true;
-    }catch(error){graph=JSON.parse(before);status(error.message,true);return false;}
+    }catch(error){graph=JSON.parse(before.graph);view=before.view;status(error.message,true);return false;}
   }
   const textCanvas=document.createElement('canvas').getContext('2d');
   R.configure({measureText:(text,size,bold)=>{textCanvas.font=`${bold?'700':'400'} ${size}px "Segoe UI",Arial,sans-serif`;return textCanvas.measureText(text).width;}});
@@ -62,7 +77,7 @@
       const range=n.type==='ranges'?rangeDrawing(n):'';
       const radius=n.type==='start'||n.type==='end'?20:8;
       portMarkup.push((n.type!=='start'?port('in',true):'')+A.ports(n).map(p=>port(p)).join(''));
-      return `<g class="box ${highlighted?'recent':''} ${selected===n.id?'selected':''} ${active?(runtime.status==='error'?'failed':'executing'):''}" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="${esc(n.name)}">
+      return `<g class="box ${highlighted?'recent':''} ${selection.has(n.id)?'selected':''} ${active?(runtime.status==='error'?'failed':'executing'):''}" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="${esc(n.name)}" aria-pressed="${selection.has(n.id)}">
         <title>${esc(n.name+'\n'+subtitle(n).join('\n'))}</title><rect class="body" x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${radius}" fill="${color[0]}" stroke="${color[1]}"/>
         <path class="name-band" d="M${n.x+radius} ${n.y}H${n.x+w-radius}Q${n.x+w} ${n.y} ${n.x+w} ${n.y+radius}V${n.y+headerHeight}H${n.x}V${n.y+radius}Q${n.x} ${n.y} ${n.x+radius} ${n.y}Z" fill="${color[1]}35"/>
         <line class="band-divider" x1="${n.x}" x2="${n.x+w}" y1="${n.y+headerHeight}" y2="${n.y+headerHeight}" stroke="${color[1]}"/>
@@ -82,12 +97,20 @@
       return `<g data-link="${esc(l.id)}" role="button" tabindex="0" aria-label="Liaison ${esc(a.name+' vers '+b.name)}"><title>${route.blocked?'Tracé impossible : écartez les boîtes.':'Connecteur à angle droit'}</title><path class="edge ${route.blocked?'blocked':''} ${selected===l.id?'selected':''}" d="${d}"/><path class="edge-hit" d="${d}"/></g>`;
     }).join('');
     $('routeWarning').textContent=blocked?`${blocked} liaison(s) sans passage libre : écartez les boîtes.`:'';
-    $('delete').disabled=locked()||!selected;$('duplicate').disabled=locked()||!current()||current()?.type==='join';$('undo').disabled=locked()||!undo.length;
+    $('delete').disabled=locked()||!selected;$('duplicate').disabled=locked()||!selection.size;
+    $('copy').disabled=!selection.size;$('paste').disabled=locked()||!clipboard?.nodes.length;
+    $('undo').disabled=locked()||!undo.length;$('redo').disabled=locked()||!redo.length;
+    $('selectionOverlay').innerHTML=drag?.marquee?`<rect class="selection-rectangle" x="${drag.rectangle.x}" y="${drag.rectangle.y}" width="${drag.rectangle.w}" height="${drag.rectangle.h}"/>`:'';
   }
-  function select(value){
+  function select(value,additive=false){
     const focused=document.activeElement;
     if(focused?.matches('[data-rule-boundary],[data-rule-scale]')&&focused.closest('#properties')&&!commitRuleField(focused))return false;
-    selected=value;draw();properties();return true;
+    if(graph.nodes.some(n=>n.id===value)){
+      if(additive){if(selection.has(value))selection.delete(value);else selection.add(value);}
+      else selection=new Set([value]);
+      selected=selection.has(value)?value:[...selection].at(-1)||null;
+    }else {if(!additive)selection.clear();selected=value||[...selection].at(-1)||null;}
+    draw();properties();return true;
   }
   function refreshSequences(){
     const previous=$('sequenceSelect').value,list=A.sequences(graph);
@@ -120,6 +143,7 @@
     return `<div class="row"><label>Durée<input data-field="duration" data-index="${index}" type="number" min="0" step="any" value="${p.duration}"></label><label>Unité<select data-field="unit" data-index="${index}">${Object.entries({seconds:'Secondes',minutes:'Minutes',hours:'Heures'}).map(([v,t])=>`<option value="${v}"${p.unit===v?' selected':''}>${t}</option>`).join('')}</select></label></div>`;
   }
   function properties(){
+    if(selection.size>1){$('properties').innerHTML=`<h2>${selection.size} boîtes sélectionnées</h2><p>Glissez une boîte sélectionnée pour déplacer l’ensemble. Copier, Dupliquer ou Supprimer s’applique à la sélection.</p><p>Shift + clic ajoute ou retire une boîte. L’ouverture et la clôture parallèles sont conservées ensemble lors d’une copie ou d’une suppression.</p>`;return;}
     const n=current();
     if(!n){$('properties').innerHTML=graph.links.some(l=>l.id===selected)?'<h2>Liaison</h2><p>Supprimer retire cette liaison, sans effacer les boîtes.</p>':'<h2>Propriétés</h2><p>Sélectionnez une boîte ou une liaison.</p>';return;}
     const p=n.params;
@@ -173,6 +197,7 @@
   function setEditingLock(){
     for(const el of document.querySelectorAll('#properties input,#properties select,#properties textarea,#properties button,.library button'))el.disabled=locked();
     for(const id of ['graphName','stepDelay','openGraph','clearGraph'])$(id).disabled=locked();
+    if(locked()&&$('importDialog').hasAttribute('open')){$('importDialog').close();importGraph=null;}
     if($('addRange'))$('addRange').disabled=locked()||current()?.params.labels.length>=8;
     if($('addAction'))$('addAction').disabled=locked()||A.actionItems(current().params).length>=24;
   }
@@ -199,8 +224,9 @@
       try{graph=A.validate(data.graph,new Set(data.measurements.map(d=>d.id)));measurements=data.measurements;commands=data.commands;
         R.configure({measurements,commands});routesSignature=null;
         runtime=data.runtime;values=data.values||{};connected=true;simulationRunning=data.simulationRunning;
-        $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);pending=null;undo=[];
+        $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);pending=null;undo=[];redo=[];
         if(!graph.nodes.some(n=>n.id===selected))selected=null;
+        selection=new Set([...selection].filter(id=>graph.nodes.some(n=>n.id===id)));
         try{localStorage.setItem(STORAGE,JSON.stringify(graph));}catch(_error){}
         draw();properties();refreshRuntime();
       }catch(error){status(error.message,true);}return;
@@ -260,27 +286,37 @@
     const out=e.target.closest('[data-output]'),input=e.target.closest('[data-input]');
     if(out&&!locked()){pending={node:out.dataset.output,port:out.dataset.port};draw();status('Cliquez l’entrée haute de la boîte suivante.');return;}
     if(input){connectInput(input.dataset.input);return;}
-    const n=e.target.closest('[data-node]'),l=e.target.closest('[data-link]');select(n?.dataset.node||l?.dataset.link||null);
+    const n=e.target.closest('[data-node]'),l=e.target.closest('[data-link]');select(n?.dataset.node||l?.dataset.link||null,e.shiftKey);
     if(!n&&!l){pending=null;draw();}
   }
   function remove(){
-    if(!selected||locked())return;if(current()?.type==='join'){status('La clôture est obligatoire. Supprimez son ouverture pour la retirer.',true);return;}
-    const removed=new Set([selected,...(current()?.type==='parallel'?[current().params.join]:[])]);edit(()=>{graph.nodes=graph.nodes.filter(n=>!removed.has(n.id));
-      graph.links=graph.links.filter(l=>l.id!==selected&&!removed.has(l.from)&&!removed.has(l.to));});selected=null;draw();properties();
-  }
-  function placeBox(n){
-    for(let i=0;i<=graph.nodes.length;i++){
-      const d=dimensions(n),overlaps=graph.nodes.filter(b=>{const other=dimensions(b);return n.x<b.x+other.w+32&&n.x+d.w+32>b.x&&n.y<b.y+other.h+32&&n.y+d.h+32>b.y;});
-      if(!overlaps.length)return;n.y=Math.max(...overlaps.map(b=>b.y+dimensions(b).h))+60;
+    if(!selected||locked())return;
+    if(current()?.type==='join'&&!selection.has(current().params.fork)){status('La clôture est obligatoire. Sélectionnez son ouverture pour la retirer.',true);return;}
+    const removed=B.selection(graph,selection);
+    if(edit(()=>{graph.nodes=graph.nodes.filter(n=>!removed.has(n.id));
+      graph.links=graph.links.filter(l=>l.id!==selected&&!removed.has(l.from)&&!removed.has(l.to));})){
+      selected=null;selection.clear();draw();properties();
     }
-    throw Error('Déplacez les boîtes pour libérer une place.');
   }
   function insertBox(n){
-    placeBox(n);graph.nodes.push(n);
-    if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+dimensions(n).h+120);j.params.fork=n.id;n.params.join=j.id;placeBox(j);graph.nodes.push(j);}
+    const boxes=[n];
+    if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+dimensions(n).h+120);j.params.fork=n.id;n.params.join=j.id;boxes.push(j);}
+    view=B.place(boxes,graph.nodes,view,dimensions);graph.nodes.push(...boxes);
   }
+  function copy(){
+    if(!selection.size)return false;
+    clipboard=B.fragment(graph,selection);draw();status(clipboard.nodes.length+' boîte(s) copiée(s), avec leurs liaisons internes.');return true;
+  }
+  function append(source,preserveDelay=false){
+    const added=B.remap(source,graph,id,{preserveDelay});
+    if(!added.nodes.length){status('Aucune boîte à ajouter.',true);return false;}
+    if(!edit(()=>{view=B.place(added.nodes,graph.nodes,view,dimensions);graph.nodes.push(...added.nodes);graph.links.push(...added.links);} ))return false;
+    selection=new Set(added.nodes.map(n=>n.id));selected=added.nodes[0].id;pending=null;draw();properties();return true;
+  }
+  function paste(){if(clipboard&&!locked()&&append(clipboard))status(clipboard.nodes.length+' boîte(s) collée(s).');}
+  function duplicate(){if(!locked()&&selection.size){const source=B.fragment(graph,selection);if(append(source))status(source.nodes.length+' boîte(s) dupliquée(s).');}}
   document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{
-    const n=A.node(b.dataset.add,id('box'),view.x+70+(graph.nodes.length%3)*430,view.y+65+Math.floor(graph.nodes.length/3)*320);
+    const n=A.node(b.dataset.add,id('box'),0,0);
     if(n.type==='start'){let i=1;while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name='Séquence '+ ++i;}
     if(edit(()=>insertBox(n)))select(n.id);
   }));
@@ -325,9 +361,15 @@
     if(e.target.closest('[data-output],[data-input]'))return;
     const point=coordinate(e),n=graph.nodes.find(n=>n.id===e.target.closest('[data-node]')?.dataset.node);
     const boundary=e.target.closest('[data-range-boundary]');
-    if(n){if(!select(n.id))return;if(locked())return;drag={node:n.id,x:point.x,y:point.y,bx:n.x,by:n.y,before:JSON.stringify(graph),moved:false,
-      ...(boundary?{boundary:Number(boundary.dataset.rangeBoundary)}:{})};}
-    else if(!e.target.closest('[data-link]'))drag={x:point.x,y:point.y,beforeView:{...view},moved:false};
+    if(n){
+      if(e.shiftKey||boundary||!selection.has(n.id)){if(!select(n.id,e.shiftKey&&!boundary))return;}
+      if(locked()){suppressClick=true;return;}
+      drag={node:n.id,x:point.x,y:point.y,before:snapshot(),moved:false,handled:true,
+        origins:graph.nodes.filter(b=>selection.has(b.id)).map(b=>({id:b.id,x:b.x,y:b.y})),
+        ...(boundary?{boundary:Number(boundary.dataset.rangeBoundary)}:{})};
+    }else if(!e.target.closest('[data-link]'))drag={x:point.x,y:point.y,beforeView:{...view},moved:false,
+      ...(e.shiftKey?{marquee:true,base:new Set(selection),rectangle:{x:point.x,y:point.y,w:0,h:0}}:{})};
+    if(!drag)return;e.preventDefault();$('canvas').focus();
     $('canvas').setPointerCapture(e.pointerId);
   });
   $('canvas').addEventListener('pointermove',e=>{
@@ -339,15 +381,23 @@
         const low=i?params.separators[i-1]:params.scale.min,high=i<params.separators.length-1?params.separators[i+1]:params.scale.max;
         const value=A.roundRuleValue(params.scale.min+(p.x-n.x-14)/(dimensions(n).w-28)*span);
         if(value>low&&value<high)params.separators[i]=value;
-      }else{n.x=Math.max(-19000,Math.min(19000,drag.bx+dx));n.y=Math.max(-19000,Math.min(19000,drag.by+dy));}
+      }else if(drag.moved&&drag.origins.length){
+        const sx=Math.max(-19000-Math.min(...drag.origins.map(b=>b.x)),Math.min(19000-Math.max(...drag.origins.map(b=>b.x)),dx));
+        const sy=Math.max(-19000-Math.min(...drag.origins.map(b=>b.y)),Math.min(19000-Math.max(...drag.origins.map(b=>b.y)),dy));
+        for(const origin of drag.origins){const box=graph.nodes.find(b=>b.id===origin.id);box.x=origin.x+sx;box.y=origin.y+sy;}
+      }
     }
-    else {view.x-=dx;view.y-=dy;}
+    else if(drag.marquee){
+      drag.rectangle={x:Math.min(p.x,drag.x),y:Math.min(p.y,drag.y),w:Math.abs(dx),h:Math.abs(dy)};
+      selection=new Set([...drag.base,...graph.nodes.filter(n=>B.overlaps(drag.rectangle,{x:n.x,y:n.y,...dimensions(n)},0)).map(n=>n.id)]);
+      selected=[...selection].at(-1)||null;
+    }else {view.x-=dx;view.y-=dy;}
     draw();
   });
   function finishDrag(){
-    if(!drag)return;suppressClick=drag.moved;
-    if(drag.node&&drag.moved){undo.push(drag.before);if(undo.length>50)undo.shift();persist();}
-    const resized=drag.boundary!==undefined;drag=null;draw();if(resized)properties();
+    if(!drag)return;suppressClick=drag.moved||drag.handled;
+    if(drag.node&&JSON.stringify(graph)!==drag.before.graph){remember(drag.before);persist();}
+    const resized=drag.boundary!==undefined||drag.marquee;drag=null;draw();if(resized)properties();
   }
   $('canvas').addEventListener('pointerup',finishDrag);$('canvas').addEventListener('pointercancel',finishDrag);
   $('canvas').addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();zoom(e.deltaY>0?1.15:1/1.15);},{passive:false});
@@ -360,18 +410,20 @@
   },{passive:false});
   $('fit').addEventListener('click',fit);$('zoomIn').addEventListener('click',()=>zoom(1/1.2));$('zoomOut').addEventListener('click',()=>zoom(1.2));
   $('delete').addEventListener('click',remove);
-  $('duplicate').addEventListener('click',()=>{const n=cloneNode(current());if(!n)return;
-    n.id=id('box');n.x+=40;n.y+=dimensions(n).h+60;n.name=short(n.name,85)+' · copie';
-    while(graph.nodes.some(b=>b.type==='start'&&b.name===n.name))n.name+='2';
-    if(edit(()=>insertBox(n)))select(n.id);
-  });
-  function cloneNode(n){return n?JSON.parse(JSON.stringify(n)):null;}
-  $('undo').addEventListener('click',()=>{
-    if(locked()||!undo.length)return;graph=JSON.parse(undo.pop());selected=null;pending=null;$('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);persist();draw();properties();refreshSequences();
+  $('copy').addEventListener('click',copy);$('paste').addEventListener('click',paste);
+  $('duplicate').addEventListener('click',duplicate);
+  $('undo').addEventListener('click',()=>history(true));$('redo').addEventListener('click',()=>history(false));
+  document.addEventListener('keydown',e=>{
+    if(e.target.closest('input,select,textarea,[contenteditable="true"]')||$('importDialog').hasAttribute('open'))return;
+    const modifier=e.ctrlKey||e.metaKey,key=e.key.toLowerCase();
+    if(!modifier)return;
+    if(['c','v','z','y','a'].includes(key))e.preventDefault();
+    if(key==='c')copy();else if(key==='v')paste();else if(key==='z')history(!e.shiftKey);else if(key==='y')history(false);
+    else if(key==='a'){selection=new Set(graph.nodes.map(n=>n.id));selected=[...selection].at(-1)||null;draw();properties();}
   });
   $('clearGraph').addEventListener('click',()=>{if(locked())return;
     if(graph.nodes.length&&!confirm('Créer un diagramme vide ? La dernière modification pourra être annulée.'))return;
-    edit(()=>{graph=A.emptyGraph();});$('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);selected=null;properties();
+    if(edit(()=>{graph=A.emptyGraph();})){selected=null;selection.clear();pending=null;syncDocument();}
   });
   $('saveGraph').addEventListener('click',()=>{
     try{const valid=A.validate(graph,measurements.length?known():null),url=URL.createObjectURL(new Blob([JSON.stringify(valid,null,2)],{type:'application/json'}));
@@ -380,12 +432,49 @@
     }catch(error){status(error.message,true);}
   });
   $('openGraph').addEventListener('click',()=>$('graphFile').click());
+  function refreshImport(){
+    const replacing=$('importMode').value==='replace';$('importChoices').hidden=replacing;
+    $('importApply').textContent=replacing?'Remplacer':'Ajouter';
+    $('importApply').disabled=locked()||!importGraph||!replacing&&!$('importSequences').querySelectorAll('input:checked').length;
+    $('importError').textContent='';
+  }
+  function showImport(loaded){
+    importGraph=loaded;const list=A.sequences(loaded),reachable=B.sequenceFragment(loaded,list.map(s=>s.id));
+    const orphans=loaded.nodes.filter(n=>!reachable.nodes.some(b=>b.id===n.id));
+    $('importName').textContent=loaded.name+' · '+loaded.nodes.length+' boîtes · '+list.length+' séquence(s)';
+    $('importMode').value=graph.nodes.length?'append':'replace';
+    $('importSequences').innerHTML=list.map(s=>`<label><input type="checkbox" data-sequence="${esc(s.id)}" checked><span>${esc(s.name)}<small>${B.sequenceFragment(loaded,[s.id]).nodes.length} boîte(s), y compris les parties communes</small></span></label>`).join('')
+      +(orphans.length?`<label><input type="checkbox" data-orphans="true" checked><span>Boîtes sans départ<small>${orphans.length} boîte(s) en cours de construction</small></span></label>`:'');
+    refreshImport();$('importDialog').showModal();
+  }
+  $('importMode').addEventListener('change',refreshImport);$('importSequences').addEventListener('change',refreshImport);
+  for(const [button,checked] of [['importAll',true],['importNone',false]])$(button).addEventListener('click',()=>{
+    for(const el of $('importSequences').querySelectorAll('input'))el.checked=checked;refreshImport();
+  });
+  $('importCancel').addEventListener('click',()=>{$('importDialog').close();importGraph=null;});
+  $('importDialog').addEventListener('cancel',()=>{importGraph=null;});
+  $('importApply').addEventListener('click',()=>{
+    if(!importGraph||locked())return;let ok=false;
+    if($('importMode').value==='replace'){
+      ok=edit(()=>{graph=importGraph;});if(ok){selection.clear();selected=null;pending=null;syncDocument();fit();}
+    }else{
+      const ids=[...$('importSequences').querySelectorAll('input[data-sequence]:checked')].map(el=>el.dataset.sequence);
+      const part=B.sequenceFragment(importGraph,ids);
+      if($('importSequences').querySelector('input[data-orphans]:checked')){
+        const all=B.sequenceFragment(importGraph,A.sequences(importGraph).map(s=>s.id)),reachable=new Set(all.nodes.map(n=>n.id));
+        const included=new Set([...part.nodes.map(n=>n.id),...importGraph.nodes.filter(n=>!reachable.has(n.id)).map(n=>n.id)]);
+        Object.assign(part,B.fragment(importGraph,included));
+      }
+      ok=append(part,true);
+    }
+    if(ok){$('importDialog').close();importGraph=null;status('Conduite chargée · aucune séquence lancée.');}
+    else $('importError').textContent=$('editStatus').textContent;
+  });
   $('graphFile').addEventListener('change',async e=>{
     const file=e.target.files[0];if(!file||locked())return;
     try{if(file.size>2e6)throw Error('Fichier trop volumineux (2 Mo maximum).');
       const loaded=A.validate(await file.text(),measurements.length?known():null);
-      if(graph.nodes.length&&!confirm('Remplacer le diagramme courant par ce fichier ?'))return;
-      if(edit(()=>{graph=loaded;})){selected=null;pending=null;$('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);properties();fit();status('Conduite chargée · aucune séquence lancée.');}
+      if(!locked())showImport(loaded);
     }catch(error){status('Ouverture impossible : '+error.message,true);}finally{e.target.value='';}
   });
   for(const [button,action] of [['startSequence','start'],['pauseSequence','pause'],['resumeSequence','resume'],['stopSequence','stop']])

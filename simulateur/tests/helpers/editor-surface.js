@@ -60,7 +60,7 @@ function editorSurface(mode='regul',{saved=null}={}){
     closest(s){let n=this;while(n&&!matches(n,s))n=n.parentElement;return n;}
     matches(s){return matches(this,s);}
     addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);}
-    fire(k,extra={}){for(const fn of this.listeners[k]||[])fn({type:k,target:this,preventDefault(){},...extra});}
+    fire(k,extra={}){return Promise.all((this.listeners[k]||[]).map(fn=>fn({type:k,target:this,preventDefault(){},...extra})));}
     focus(){}select(){}click(){this.fire('click');}setPointerCapture(){}releasePointerCapture(){}
     showModal(){this.setAttribute('open','');}close(){this.removeAttribute('open');}
     getBoundingClientRect(){return {left:0,top:0,right:1200,bottom:700,width:1200,height:700};}
@@ -103,13 +103,14 @@ function editorSurface(mode='regul',{saved=null}={}){
     Blob,URL});
   const main=root.querySelectorAll('script').find(n=>!n.hasAttribute('src')&&!n.hasAttribute('type'));
   if(mode==='auto'){
-    for(const name of ['centurion-auto.js','centurion-auto-routing.js','centurion-conduite-auto.js'])
+    for(const name of ['centurion-auto.js','centurion-auto-routing.js','centurion-auto-editing.js','centurion-conduite-auto.js'])
       vm.runInContext(fs.readFileSync(path.join(__dirname,'../../'+name),'utf8'),context,{filename:name});
     return {messages,storage,get:id=>document.getElementById(id),query:s=>document.querySelector(s),queryAll:s=>document.querySelectorAll(s),
       receive:data=>window.CenturionAutoEditor.receive(data),
       graph:()=>JSON.parse(storage.get('centurion.conduite-auto.v1')||JSON.stringify(saved)),
       realTime:ms=>{now=ms;for(const fn of intervals)fn();},
       focus:el=>{document.activeElement=el;},
+      key:(key,extra={})=>{for(const fn of events['document-keydown']||[])fn({key,target:document.body,preventDefault(){},...extra});},
       event:(id,event,target,extra={})=>document.getElementById(id).fire(event,{target,...extra})};
   }
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../../centurion-cc-pzr.js'),'utf8'),context,

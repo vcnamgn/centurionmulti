@@ -2,7 +2,7 @@
   "format": "Centurion-Documentation",
   "version": 1,
   "date": "2026-10-11",
-  "noteHash": "ced98d06e0997eed75bd9b11a33e3fe80d0b072195804edaf7b53c7ffc309a40",
+  "noteHash": "8e1d1c7af53cbe8c78c9d0265644388874903f5e5cd1d99d947326b328833786",
   "modules": [
     {
       "file": "simulateur/centurion-engine.js",
@@ -3488,7 +3488,7 @@
       "file": "simulateur/centurion-conduite-auto.js",
       "title": "Canevas de conduite",
       "description": "Édition, connecteurs, plages, propriétés, import/export et suivi de la boîte active.",
-      "sha256": "080dcbd2420f4d0096302d7f54edc8a53e0e1e3dd92dbbdc50ea8111db445387",
+      "sha256": "b6398f2cd402559d9ae941fc3409c30ee7010d1c64c5a85abbe7bc2871f02505",
       "functions": [
         {
           "name": "status",
@@ -3507,236 +3507,292 @@
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L18"
         },
         {
+          "name": "remember",
+          "line": 23,
+          "signature": "remember(before)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L23"
+        },
+        {
+          "name": "syncDocument",
+          "line": 24,
+          "signature": "syncDocument()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L24"
+        },
+        {
+          "name": "history",
+          "line": 30,
+          "signature": "history(backward)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L30"
+        },
+        {
           "name": "edit",
-          "line": 22,
+          "line": 37,
           "signature": "edit(fn,redrawProperties=true)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L22"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L37"
         },
         {
           "name": "short",
-          "line": 32,
+          "line": 47,
           "signature": "short(value,max=33)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L32"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L47"
         },
         {
           "name": "rangeDrawing",
-          "line": 33,
+          "line": 48,
           "signature": "rangeDrawing(n)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L33"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L48"
         },
         {
           "name": "draw",
-          "line": 46,
+          "line": 61,
           "signature": "draw()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L46"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L61"
         },
         {
           "name": "select",
-          "line": 87,
-          "signature": "select(value)",
+          "line": 105,
+          "signature": "select(value,additive=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L87"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L105"
         },
         {
           "name": "refreshSequences",
-          "line": 92,
+          "line": 115,
           "signature": "refreshSequences()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L92"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L115"
         },
         {
           "name": "options",
-          "line": 102,
+          "line": 125,
           "signature": "options(list,value)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L102"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L125"
         },
         {
           "name": "pickerOptions",
-          "line": 103,
+          "line": 126,
           "signature": "pickerOptions(list,value,field)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L103"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L126"
         },
         {
           "name": "picker",
-          "line": 109,
+          "line": 132,
           "signature": "picker(list,value,field,label,index='')",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L109"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L132"
         },
         {
           "name": "actionFields",
-          "line": 113,
+          "line": 136,
           "signature": "actionFields(p,index='')",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L113"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L136"
         },
         {
           "name": "waitFields",
-          "line": 119,
+          "line": 142,
           "signature": "waitFields(p,index='')",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L119"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L142"
         },
         {
           "name": "properties",
-          "line": 122,
+          "line": 145,
           "signature": "properties()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L122"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L145"
         },
         {
           "name": "rangeSummary",
-          "line": 156,
+          "line": 180,
           "signature": "rangeSummary(p,i)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L156"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L180"
         },
         {
           "name": "commitRuleField",
-          "line": 157,
+          "line": 181,
           "signature": "commitRuleField(el)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L157"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L181"
         },
         {
           "name": "updateReading",
-          "line": 171,
+          "line": 195,
           "signature": "updateReading()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L171"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L195"
         },
         {
           "name": "setEditingLock",
-          "line": 173,
-          "signature": "setEditingLock()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L173"
-        },
-        {
-          "name": "refreshRuntime",
-          "line": 179,
-          "signature": "refreshRuntime()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L179"
-        },
-        {
-          "name": "receive",
           "line": 197,
-          "signature": "receive(data)",
+          "signature": "setEditingLock()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L197"
         },
         {
+          "name": "refreshRuntime",
+          "line": 204,
+          "signature": "refreshRuntime()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L204"
+        },
+        {
+          "name": "receive",
+          "line": 222,
+          "signature": "receive(data)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L222"
+        },
+        {
           "name": "eventField",
-          "line": 214,
+          "line": 240,
           "signature": "eventField(e)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L214"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L240"
         },
         {
           "name": "coordinate",
-          "line": 238,
+          "line": 264,
           "signature": "coordinate(e)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L238"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L264"
         },
         {
           "name": "fit",
-          "line": 239,
+          "line": 265,
           "signature": "fit()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L239"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L265"
         },
         {
           "name": "zoom",
-          "line": 247,
+          "line": 273,
           "signature": "zoom(factor)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L247"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L273"
         },
         {
           "name": "connectInput",
-          "line": 249,
+          "line": 275,
           "signature": "connectInput(target)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L249"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L275"
         },
         {
           "name": "canvasClick",
-          "line": 258,
+          "line": 284,
           "signature": "canvasClick(e)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L258"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L284"
         },
         {
           "name": "remove",
-          "line": 266,
+          "line": 292,
           "signature": "remove()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L266"
-        },
-        {
-          "name": "placeBox",
-          "line": 271,
-          "signature": "placeBox(n)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L271"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L292"
         },
         {
           "name": "insertBox",
-          "line": 278,
+          "line": 301,
           "signature": "insertBox(n)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L278"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L301"
+        },
+        {
+          "name": "copy",
+          "line": 306,
+          "signature": "copy()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L306"
+        },
+        {
+          "name": "append",
+          "line": 310,
+          "signature": "append(source,preserveDelay=false)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L310"
+        },
+        {
+          "name": "paste",
+          "line": 316,
+          "signature": "paste()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L316"
+        },
+        {
+          "name": "duplicate",
+          "line": 317,
+          "signature": "duplicate()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L317"
         },
         {
           "name": "finishDrag",
-          "line": 347,
+          "line": 397,
           "signature": "finishDrag()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L347"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L397"
         },
         {
-          "name": "cloneNode",
-          "line": 368,
-          "signature": "cloneNode(n)",
+          "name": "refreshImport",
+          "line": 435,
+          "signature": "refreshImport()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L368"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L435"
+        },
+        {
+          "name": "showImport",
+          "line": 441,
+          "signature": "showImport(loaded)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-conduite-auto.js#L441"
         }
       ]
     },
@@ -3865,6 +3921,62 @@
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-auto-routing.js#L118"
+        }
+      ]
+    },
+    {
+      "file": "simulateur/centurion-auto-editing.js",
+      "title": "Édition des séquences",
+      "description": "Sélections, copie de sous-graphes, import sélectif, renouvellement des références et placement dans un espace libre visible.",
+      "sha256": "db4ca583a7149741cf05a463dc29f96838714d3f8954851d0fc51aae868b08b5",
+      "functions": [
+        {
+          "name": "selection",
+          "line": 9,
+          "signature": "selection(graph,ids)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-auto-editing.js#L9"
+        },
+        {
+          "name": "fragment",
+          "line": 17,
+          "signature": "fragment(graph,ids)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-auto-editing.js#L17"
+        },
+        {
+          "name": "sequenceFragment",
+          "line": 22,
+          "signature": "sequenceFragment(graph,starts)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-auto-editing.js#L22"
+        },
+        {
+          "name": "remap",
+          "line": 32,
+          "signature": "remap(source,target,makeId,{preserveDelay=false}={})",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-auto-editing.js#L32"
+        },
+        {
+          "name": "bounds",
+          "line": 49,
+          "signature": "bounds(nodes,dimensions)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-auto-editing.js#L49"
+        },
+        {
+          "name": "place",
+          "line": 57,
+          "signature": "place(nodes,existing,viewport,dimensions)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-auto-editing.js#L57"
         }
       ]
     }
@@ -4169,7 +4281,7 @@
       "source": "simulateur/README.md",
       "output": "simulateur/README.html",
       "title": "Mode d’emploi",
-      "sha256": "1c0ff597f7925316f40279417e5cb09be793811c0d1491a5a687d7a26bf49de4"
+      "sha256": "e0b767d8129cc88ac03294e195e04828d7489fa7034d8c25c367b1c80f2dbfb4"
     },
     {
       "source": "simulateur/METHODE-CENTURION.md",
@@ -4199,7 +4311,7 @@
       "source": "docs/CONCEPTION.md",
       "output": "docs/index.html",
       "title": "Conception et API",
-      "sha256": "ced98d06e0997eed75bd9b11a33e3fe80d0b072195804edaf7b53c7ffc309a40"
+      "sha256": "8e1d1c7af53cbe8c78c9d0265644388874903f5e5cd1d99d947326b328833786"
     }
   ]
 }

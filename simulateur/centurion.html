@@ -357,7 +357,7 @@
     </section>
 
     <section class="view" id="view-conduiteAuto">
-      <iframe id="autoEditor" class="logic-editor-frame auto-editor-frame" src="centurion-conduite-auto.html?v=20261011-auto9" title="Atelier Conduite Auto"></iframe>
+      <iframe id="autoEditor" class="logic-editor-frame auto-editor-frame" src="centurion-conduite-auto.html?v=20261011-auto10" title="Atelier Conduite Auto"></iframe>
     </section>
 
     <section class="view" id="view-initiateurs">
@@ -663,6 +663,7 @@ total          = (L3 − L0) × 60 / dt</code></pre>
 <ol><li>AAR réalisé : chute de tous les groupes et arrêt turbine ; aucune régulation ni commande de levée normale ne peut relever les grappes.</li><li>IS : demande AAR et injection mémorisées, sans arrêt GMPP. Perte de tension, déclenchement manuel ou niveau CPP ≤ 11 m : arrêt GMPP mémorisé ; les manœuvres RIS/ASG prévues restent accessibles.</li><li>Commande manuelle de tous les groupes : priorité de manœuvre sur les sorties de position, sans créer d&#39;AAR ni de CIA par elle-même.</li><li>Surcharge R manuelle : priorité sur R uniquement.</li><li>Sorties CC actives et finies ; puis commandes manuelles de repli.</li></ol>
 <p>Les alarmes du tableau de bord et les clignotements de domaine ne déclenchent pas d&#39;ordres. Les limitations physiques, la temporisation des effets, le GCT-A et la coupure ASG haut niveau demeurent dans le moteur. Un mode de protection interne par seuils existe pour utiliser le moteur seul ; l&#39;application fixe <code>protectionGraphMode=true</code> pour faire provenir les ordres automatiques du graphe CC-PROTECT.</p>
 <h3 id="detail-atelier-conduite-auto">Atelier Conduite Auto</h3>
+<p>L&#39;édition utilise une sélection multiple (Shift + clic ou rectangle), un presse-papiers de boîtes avec liaisons internes, et deux piles d&#39;historique limitées à 50 opérations pour Annuler/Rétablir. Un déplacement groupé constitue une seule opération. <code>centurion-auto-editing.js</code> extrait les séquences accessibles depuis les départs choisis, conserve les paires ouverture/clôture, renouvelle les identifiants et cherche un emplacement libre dans la vue courante. Si la place manque, la vue est élargie sans déplacer les boîtes existantes. L&#39;ouverture d&#39;un JSON permet remplacement ou ajout sélectif ; les durées héritées du fichier deviennent explicites lors d&#39;un ajout pour conserver le comportement temporel.</p>
 <p>La bibliothèque reste à gauche, le canevas au centre et les propriétés à droite (sous le canevas sur une fenêtre étroite). Les connecteurs sont orthogonaux, au premier plan ; leurs accès aux ports sont conservés et leur tracé contourne les rectangles des boîtes avec une marge. Un passage impossible, notamment entre boîtes superposées, est signalé plutôt que dessiné à travers les boîtes.</p>
 <p>Un diagramme contient plusieurs <strong>départs nommés</strong>, des boîtes et des liaisons orientées. La liste de lancement suit immédiatement les créations et changements de noms. Chaque boîte, sauf le départ, possède une entrée haute. Les commandes, informations, attentes et lots parallèles sortent en bas. Une comparaison sort en bas si elle est vraie, et sur le côté négatif raccordé si elle est fausse. Sans liaison négative, elle attend que le test soit vrai. La boîte en cours est surlignée ; une erreur est indiquée en rouge.</p>
 <p>Le catalogue de mesures est celui des graphiques et des instruments, complété par l&#39;horloge, l&#39;état RP / AN/GV / CIA et la disponibilité RRA. Les recherches portent sur le nom, le repère et l&#39;unité. Les valeurs sont calculées depuis <code>historyPoint</code> sur l&#39;état courant, sans attendre un échantillon archivé. Une mesure absente provoque une erreur explicite ; elle n&#39;est pas remplacée par zéro.</p>
@@ -792,9 +793,9 @@ node scripts/check-docs.mjs</code></pre>
   <script src="centurion-engine.js?v=20261011-auto"></script>
   <script src="centurion-history.js?v=20261009-pt-probe"></script>
   <script src="centurion-cc-pzr.js?v=20261009-pt-probe"></script>
-  <script src="centurion-auto.js?v=20261011-auto9"></script>
+  <script src="centurion-auto.js?v=20261011-auto10"></script>
   <script src="centurion-state.js?v=20261011-auto"></script>
   <script src="centurion-certificate.js?v=20261009-pt-probe"></script>
-<script src="centurion-app.js?v=20261011-auto9"></script>
+<script src="centurion-app.js?v=20261011-auto10"></script>
 </body>
 </html>

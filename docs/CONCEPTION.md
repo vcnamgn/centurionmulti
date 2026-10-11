@@ -530,6 +530,8 @@ Les alarmes du tableau de bord et les clignotements de domaine ne déclenchent p
 
 ### Atelier Conduite Auto
 
+L'édition utilise une sélection multiple (Shift + clic ou rectangle), un presse-papiers de boîtes avec liaisons internes, et deux piles d'historique limitées à 50 opérations pour Annuler/Rétablir. Un déplacement groupé constitue une seule opération. `centurion-auto-editing.js` extrait les séquences accessibles depuis les départs choisis, conserve les paires ouverture/clôture, renouvelle les identifiants et cherche un emplacement libre dans la vue courante. Si la place manque, la vue est élargie sans déplacer les boîtes existantes. L'ouverture d'un JSON permet remplacement ou ajout sélectif ; les durées héritées du fichier deviennent explicites lors d'un ajout pour conserver le comportement temporel.
+
 La bibliothèque reste à gauche, le canevas au centre et les propriétés à droite (sous le canevas sur une fenêtre étroite). Les connecteurs sont orthogonaux, au premier plan ; leurs accès aux ports sont conservés et leur tracé contourne les rectangles des boîtes avec une marge. Un passage impossible, notamment entre boîtes superposées, est signalé plutôt que dessiné à travers les boîtes.
 
 Un diagramme contient plusieurs **départs nommés**, des boîtes et des liaisons orientées. La liste de lancement suit immédiatement les créations et changements de noms. Chaque boîte, sauf le départ, possède une entrée haute. Les commandes, informations, attentes et lots parallèles sortent en bas. Une comparaison sort en bas si elle est vraie, et sur le côté négatif raccordé si elle est fausse. Sans liaison négative, elle attend que le test soit vrai. La boîte en cours est surlignée ; une erreur est indiquée en rouge.
