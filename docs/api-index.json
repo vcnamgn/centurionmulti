@@ -3336,7 +3336,7 @@
       "file": "simulateur/centurion-conduite-auto.js",
       "title": "Canevas de conduite",
       "description": "Édition, connecteurs, plages, propriétés, import/export et suivi de la boîte active.",
-      "sha256": "c6842258a5decca45567c57b845b4204b1e5776ae0e91861f0659cadc96f626e",
+      "sha256": "d3d8cc80a8ba8b135e0be33d98a82f8d1d140e55144d2ab4bda45c88128f9d99",
       "functions": [
         {
           "name": "status",

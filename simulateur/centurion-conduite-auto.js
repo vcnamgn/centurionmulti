@@ -304,7 +304,8 @@
   });
   $('saveGraph').addEventListener('click',()=>{
     try{const valid=A.validate(graph,measurements.length?known():null),url=URL.createObjectURL(new Blob([JSON.stringify(valid,null,2)],{type:'application/json'}));
-      const a=document.createElement('a');a.href=url;a.download=(graph.name.replace(/[^\wÀ-ÿ-]/g,'-')||'conduite')+'.centurion-conduite.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status('Diagramme exporté.');
+      const a=document.createElement('a');a.href=url;a.download=(graph.name.replace(/[^\wÀ-ÿ-]/g,'-')||'conduite')+'.centurion-conduite.json';
+      a.hidden=true;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status('Diagramme exporté.');
     }catch(error){status(error.message,true);}
   });
   $('openGraph').addEventListener('click',()=>$('graphFile').click());
