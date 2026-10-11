@@ -6,6 +6,7 @@
   const fmt=v=>Number.isFinite(v)?v.toLocaleString('fr-FR',{maximumFractionDigits:3}):'—';
   let graph=A.emptyGraph(),runtime=A.idle(),measurements=[],values={},commands=A.actionCatalog(),connected=false,simulationRunning=false;
   let selected=null,pending=null,drag=null,undo=[],view={x:0,y:0,w:1200,h:700},suppressClick=false;
+  let sequenceListSignature=null,runtimeDrawingSignature=null;
   const locked=()=>['running','paused'].includes(runtime.status);
   const post=data=>parent.postMessage(data,'*');
   const current=()=>graph.nodes.find(n=>n.id===selected);
@@ -85,8 +86,12 @@
   function select(value){selected=value;draw();properties();}
   function refreshSequences(){
     const previous=$('sequenceSelect').value,list=A.sequences(graph);
-    $('sequenceSelect').innerHTML=list.length?list.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join(''):'<option value="">Créer une boîte Départ</option>';
-    if(list.some(s=>s.id===previous))$('sequenceSelect').value=previous;
+    const signature=JSON.stringify(list);
+    if(signature!==sequenceListSignature){
+      $('sequenceSelect').innerHTML=list.length?list.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join(''):'<option value="">Créer une boîte Départ</option>';
+      if(list.some(s=>s.id===previous))$('sequenceSelect').value=previous;
+      sequenceListSignature=signature;
+    }
     $('startSequence').disabled=!connected||locked()||!list.length;
   }
   function options(list,value){return list.map(([v,t])=>`<option value="${esc(JSON.stringify(v))}"${v===value?' selected':''}>${esc(t)}</option>`).join('');}
@@ -139,7 +144,10 @@
     $('runStatus').dataset.error=String(runtime.status==='error');
     $('pauseSequence').disabled=!active;$('resumeSequence').disabled=!paused;$('stopSequence').disabled=!active&&!paused;
     $('runLog').innerHTML=runtime.history.slice(-25).map(h=>`<li>${fmt(h.time)} s · ${esc(h.name)} : ${esc(h.event)}</li>`).join('');
-    setEditingLock();refreshSequences();draw();updateReading();
+    setEditingLock();refreshSequences();
+    const drawing=runtime.status+' / '+runtime.current;
+    if(drawing!==runtimeDrawingSignature){runtimeDrawingSignature=drawing;draw();}
+    updateReading();
   }
   function receive(data){
     if(data?.type==='centurion-auto-init'){
