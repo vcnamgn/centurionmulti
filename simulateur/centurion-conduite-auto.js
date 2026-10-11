@@ -4,6 +4,7 @@
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const fmt=v=>Number.isFinite(v)?v.toLocaleString('fr-FR',{maximumFractionDigits:3}):'—';
+  const ruleFmt=v=>Number.isFinite(v)?v.toLocaleString('fr-FR',{maximumSignificantDigits:3}):'—';
   let graph=A.emptyGraph(),runtime=A.idle(),measurements=[],values={},commands=A.actionCatalog(),connected=false,simulationRunning=false;
   let selected=null,pending=null,drag=null,undo=[],view={x:0,y:0,w:1200,h:700},suppressClick=false;
   let sequenceListSignature=null,runtimeDrawingSignature=null,seenSerial=0;
@@ -29,7 +30,7 @@
   function subtitle(n){
     const p=n.params,m=measurements.find(m=>m.id===p.variable),c=commands.find(c=>c.id===p.command);
     if(n.type==='test')return [m?.label||p.variable,`${p.operator} ${fmt(p.value)} ${m?.unit||''} · tol. ${fmt(p.tolerance)}`];
-    if(n.type==='ranges')return [m?.label||p.variable,`${p.ranges.length} plages · ${m?.unit||''}`];
+    if(n.type==='ranges')return [m?.label||p.variable,`${p.labels.length} plages · ${m?.unit||''}`];
     if(n.type==='action')return [c?.label||p.command,c?.options?.find(([v])=>v===p.value)?.[1]||`${fmt(p.value)} ${c?.unit||''}`];
     if(n.type==='wait')return [`${fmt(p.duration)} ${{seconds:'secondes',minutes:'minutes',hours:'heures'}[p.unit]}`];
     if(n.type==='info')return [p.message];
@@ -41,11 +42,24 @@
     return [n.type==='start'?'Point de départ de la séquence':'Termine la séquence'];
   }
   function short(value,max=33){return value.length>max?value.slice(0,max-1)+'…':value;}
+  function rangeDrawing(n){
+    const p=n.params,{w,barY,markers}=R.ruleLayout(n),span=p.scale.max-p.scale.min;
+    const segments=A.ruleSegments(p).map((r,i)=>{
+      const x=n.x+14+(w-28)*(r.min-p.scale.min)/span,rw=(w-28)*(r.max-r.min)/span;
+      return `<rect class="range-segment" x="${x}" y="${n.y+barY}" width="${rw}" height="24" fill="${['#cde6f0','#cfead7','#f2d9b5','#e2d3ed'][i%4]}"/>`
+        +(rw>=19?`<text class="range-label" text-anchor="middle" x="${x+rw/2}" y="${n.y+barY+16}">P${i+1}</text>`:'')
+        +`<text class="range-label" text-anchor="middle" x="${n.x+w*(i+1)/(p.labels.length+1)}" y="${n.y+barY+61}">P${i+1}</text>`;
+    }).join('');
+    return segments+markers.map(({index,x,lane})=>{
+      const cy=n.y+barY-16-lane*22,value=p.separators[index];
+      return `<g class="range-marker" data-range-boundary="${index}" role="slider" tabindex="0" aria-label="Repère ${index+1}" aria-valuenow="${value}" aria-valuemin="${index?p.separators[index-1]:p.scale.min}" aria-valuemax="${index<p.separators.length-1?p.separators[index+1]:p.scale.max}"><title>Repère ${index+1} : ${esc(ruleFmt(value))}</title><line class="range-divider-hit" x1="${n.x+x}" x2="${n.x+x}" y1="${cy}" y2="${n.y+barY+25}"/><line class="range-divider" x1="${n.x+x}" x2="${n.x+x}" y1="${cy+8}" y2="${n.y+barY+25}"/><circle cx="${n.x+x}" cy="${cy}" r="8"/><text text-anchor="middle" x="${n.x+x}" y="${cy+3.5}">${index+1}</text></g>`;
+    }).join('')+`<text class="range-scale" x="${n.x+14}" y="${n.y+barY+42}">${esc(ruleFmt(p.scale.min))}</text><text class="range-scale" text-anchor="end" x="${n.x+w-14}" y="${n.y+barY+42}">${esc(ruleFmt(p.scale.max))}</text>`;
+  }
   function draw(){
     $('canvas').setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);
     $('zoomValue').textContent=Math.round(1200/view.w*100)+' %';
     $('emptyHint').hidden=Boolean(graph.nodes.length);
-    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.params.ranges,n.params.branches]));
+    const routeSignature=JSON.stringify(graph.nodes.map(n=>[n.id,n.x,n.y,n.type,n.params.scale,n.params.separators,n.params.labels,n.params.branches]));
     if(routeSignature!==routesSignature){routes.clear();routesSignature=routeSignature;}
     const portMarkup=[];
     $('boxes').innerHTML=graph.nodes.map(n=>{
@@ -54,14 +68,10 @@
       const active=(runtime.activeNodes||[runtime.current]).includes(n.id)&&['running','paused','error'].includes(runtime.status);
       const highlighted=!active&&recent.has(n.id);
       const port=(kind,incoming=false)=>{
-        const point=portPoint(n,kind),label=incoming?'Entrée':kind==='yes'?'Vrai':kind.startsWith('no-')?'Faux':kind.startsWith('range:')?p.ranges[Number(kind.split(':')[1])].label:kind.startsWith('branch:')?'Branche '+(Number(kind.split(':')[1])+1):'Suite';
+        const point=portPoint(n,kind),label=incoming?'Entrée':kind==='yes'?'Vrai':kind.startsWith('no-')?'Faux':kind.startsWith('range:')?'Plage '+(Number(kind.split(':')[1])+1)+' · '+p.labels[Number(kind.split(':')[1])]:kind.startsWith('branch:')?'Branche '+(Number(kind.split(':')[1])+1):'Suite';
         return `<circle class="port ${pending?.node===n.id&&pending?.port===kind?'pending':''}" cx="${point.x}" cy="${point.y}" r="6" ${incoming?'data-input':'data-output'}="${esc(n.id)}" data-port="${kind}" role="button" tabindex="0" aria-label="${esc(n.name+' · '+label)}"><title>${esc(label)}</title></circle>`;
       };
-      const range=n.type==='ranges'?p.ranges.map((r,i)=>{
-        const min=p.ranges[0].min,span=p.ranges.at(-1).max-min,x=n.x+12+(w-24)*(r.min-min)/span,rw=(w-24)*(r.max-r.min)/span;
-        return `<rect class="range-segment" x="${x}" y="${n.y+77}" width="${rw}" height="22" fill="${['#cde6f0','#cfead7','#f2d9b5','#e2d3ed'][i%4]}"/><text class="range-label" text-anchor="middle" x="${x+rw/2}" y="${n.y+91}">${esc(short(r.label,Math.max(1,Math.floor(rw/6))))}</text><text class="range-label" text-anchor="middle" x="${x+rw/2}" y="${n.y+116}">${esc(fmt(r.min)+'–'+fmt(r.max))}</text>`
-          +(i<p.ranges.length-1?`<path class="range-divider" data-range-boundary="${i}" d="M${x+rw} ${n.y+74}V${n.y+102}"/>`:'');
-      }).join(''):'';
+      const range=n.type==='ranges'?rangeDrawing(n):'';
       portMarkup.push((n.type!=='start'?port('in',true):'')+A.ports(n).map(p=>port(p)).join(''));
       return `<g class="box ${highlighted?'recent':''} ${selected===n.id?'selected':''} ${active?(runtime.status==='error'?'failed':'executing'):''}" data-node="${esc(n.id)}" role="button" tabindex="0" aria-label="${esc(n.name)}">
         <title>${esc(n.name)}</title><rect class="body" x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${n.type==='start'||n.type==='end'?20:8}" fill="${color[0]}" stroke="${color[1]}"/>
@@ -83,7 +93,11 @@
     $('routeWarning').textContent=blocked?`${blocked} liaison(s) sans passage libre : écartez les boîtes.`:'';
     $('delete').disabled=locked()||!selected;$('duplicate').disabled=locked()||!current()||current()?.type==='join';$('undo').disabled=locked()||!undo.length;
   }
-  function select(value){selected=value;draw();properties();}
+  function select(value){
+    const focused=document.activeElement;
+    if(focused?.matches('[data-rule-boundary],[data-rule-scale]')&&focused.closest('#properties')&&!commitRuleField(focused))return false;
+    selected=value;draw();properties();return true;
+  }
   function refreshSequences(){
     const previous=$('sequenceSelect').value,list=A.sequences(graph);
     const signature=JSON.stringify(list);
@@ -117,10 +131,14 @@
     if(['test','ranges'].includes(n.type)){
       content+=picker(measurements,p.variable,'variable','une mesure')+'<p class="reading" id="selectedReading"></p>';
       if(n.type==='test')content+=`<div class="row"><label>Test<select data-field="operator">${A.OPERATORS.map(v=>`<option${v===p.operator?' selected':''}>${esc(v)}</option>`).join('')}</select></label><label>Seuil<input type="number" step="any" data-field="value" value="${p.value}"></label></div>`;
-      content+=`<label>Tolérance (unité de la mesure)<input type="number" min="0" step="any" data-field="tolerance" value="${p.tolerance}"></label>`;
+      if(n.type==='test')content+=`<label>Tolérance (unité de la mesure)<input type="number" min="0" step="any" data-field="tolerance" value="${p.tolerance}"></label>`;
       if(n.type==='ranges'){
-        content+=p.ranges.map((r,i)=>`<div class="range-row"><label>Plage ${i+1}<input data-range="${i}" data-range-field="label" value="${esc(r.label)}" maxlength="60"></label><div class="row"><label>De<input type="number" step="any" data-range="${i}" data-range-field="min" value="${r.min}"></label><label>À<input type="number" step="any" data-range="${i}" data-range-field="max" value="${r.max}"></label></div><button class="remove-row" data-remove-range="${i}">Retirer cette plage</button></div>`).join('');
-        content+='<button id="addRange">Ajouter une plage</button>';
+        const step=A.ruleStep(p.scale),unit=measurements.find(m=>m.id===p.variable)?.unit||'';
+        content+=`<h3>Échelle de la règle ${esc(unit)}</h3><div class="row"><label>Minimum affiché<input type="number" step="${step}" data-rule-scale="min" value="${p.scale.min}"></label><label>Maximum affiché<input type="number" step="${step}" data-rule-scale="max" value="${p.scale.max}"></label></div><button id="defaultRuleScale" class="remove-row">Échelle par défaut de la mesure</button><h3>Repères de séparation</h3>`;
+        content+=p.separators.map((value,i)=>`<div class="separator-row"><span class="separator-number">${i+1}</span><label>Repère ${i+1} ${esc(unit)}<input type="number" step="${step}" data-rule-boundary="${i}" value="${value}" aria-label="Valeur du repère ${i+1}"></label><button class="remove-row" data-remove-boundary="${i}" aria-label="Retirer le repère ${i+1}">×</button></div>`).join('');
+        content+=`<button id="addRange"${p.labels.length>=8?' disabled':''}>Ajouter un repère</button><p>Les repères sont communs aux deux plages voisines. Saisie validée par Entrée ou en quittant le champ ; la molette agit immédiatement. Retirer un repère conserve la liaison de la plage de gauche.</p><h3>Plages et sorties basses</h3>`;
+        content+=p.labels.map((label,i)=>`<div class="range-row"><label>Plage ${i+1}<input data-range="${i}" value="${esc(label)}" maxlength="60"></label><span data-range-summary="${i}">${esc(rangeSummary(p,i))}</span></div>`).join('');
+        content+='<p>La première et la dernière plage incluent les valeurs hors de l’échelle affichée. Aucun trou ni sortie latérale.</p>';
       }
     }else if(n.type==='action')content+=actionFields(p);
     else if(n.type==='wait')content+=waitFields(p);
@@ -131,11 +149,27 @@
     content+='<p class="property-note">Les changements sont appliqués dès la saisie. Pour modifier une conduite active, interrompez-la.</p>';
     $('properties').innerHTML=content;setEditingLock();updateReading();
   }
+  function rangeSummary(p,i){return i===0&&p.labels.length===1?'Toutes les valeurs':i===0?'Inférieur à '+ruleFmt(p.separators[0]):i===p.labels.length-1?'À partir de '+ruleFmt(p.separators.at(-1)):ruleFmt(p.separators[i-1])+' inclus → '+ruleFmt(p.separators[i])+' exclu';}
+  function commitRuleField(el){
+    const n=current();if(n?.type!=='ranges'||locked())return false;
+    if(el.value.trim()===''||!Number.isFinite(Number(el.value))){el.setAttribute('aria-invalid','true');status('Saisissez une valeur numérique pour ce repère ou cette échelle.',true);return false;}
+    const value=Number(el.value),ok=edit(()=>{
+      if(el.dataset.ruleBoundary!==undefined)A.setRuleSeparator(n.params,Number(el.dataset.ruleBoundary),value);
+      else A.setRuleScale(n.params,{...n.params.scale,[el.dataset.ruleScale]:value});
+    },false);
+    el.setAttribute('aria-invalid',String(!ok));
+    if(ok){const p=current().params;
+      for(const summary of $('properties').querySelectorAll('[data-range-summary]'))summary.textContent=rangeSummary(p,Number(summary.dataset.rangeSummary));
+      for(const input of $('properties').querySelectorAll('[data-rule-boundary],[data-rule-scale]'))input.setAttribute('step',A.ruleStep(p.scale));
+    }
+    return ok;
+  }
   function updateReading(){const n=current(),m=measurements.find(m=>m.id===n?.params.variable);
     if($('selectedReading'))$('selectedReading').textContent=`Valeur actuelle : ${fmt(values[n.params.variable])} ${m?.unit||''}`;}
   function setEditingLock(){
     for(const el of document.querySelectorAll('#properties input,#properties select,#properties textarea,#properties button,.library button'))el.disabled=locked();
     for(const id of ['graphName','stepDelay','openGraph','clearGraph'])$(id).disabled=locked();
+    if($('addRange'))$('addRange').disabled=locked()||current()?.params.labels.length>=8;
   }
   function refreshRuntime(){
     const active=runtime.status==='running',paused=runtime.status==='paused';
@@ -183,14 +217,14 @@
     }
     if(el.dataset.name){if(el.value.trim())edit(()=>{n.name=el.value;},false);return;}
     if(el.dataset.range!==undefined){
-      const field=el.dataset.rangeField,value=field==='label'?el.value:Number(el.value);
-      if(el.value==='')return;edit(()=>{n.params.ranges[Number(el.dataset.range)][field]=value;},false);return;
+      edit(()=>{n.params.labels[Number(el.dataset.range)]=el.value;},false);return;
     }
     const field=el.dataset.field;if(!field)return;
     const p=n.params;
     const value=el.dataset.optionValue?JSON.parse(el.value):el.type==='number'?Number(el.value):el.value;
     if(el.type==='number'&&el.value==='')return;
     edit(()=>{p[field]=value;
+      if(field==='variable'&&n.type==='ranges')A.setRuleScale(p,A.ruleScale(measurements.find(m=>m.id===value)),true);
       if(field==='command'){const c=commands.find(c=>c.id===value);p.value=c.options?c.options[0][0]:c.min;}
       if(field==='branches')graph.links=graph.links.filter(l=>!(l.from===n.id&&l.port.startsWith('branch:')&&Number(l.port.split(':')[1])>=value));
     },field==='command'||field==='variable'||field==='branches');
@@ -234,23 +268,23 @@
     if(edit(()=>{graph.nodes.push(n);if(n.type==='parallel'){const j=A.node('join',id('join'),n.x,n.y+320);j.params.fork=n.id;n.params.join=j.id;graph.nodes.push(j);}}))select(n.id);
   }));
   $('properties').addEventListener('input',e=>{if(e.target.localName!=='select')eventField(e);});
-  $('properties').addEventListener('change',e=>{if(e.target.localName==='select')eventField(e);});
+  $('properties').addEventListener('change',e=>{if(e.target.matches('[data-rule-boundary],[data-rule-scale]'))commitRuleField(e.target);else if(e.target.localName==='select')eventField(e);});
+  $('properties').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-rule-boundary],[data-rule-scale]')){e.preventDefault();commitRuleField(e.target);}});
   $('properties').addEventListener('click',e=>{
     const n=current();if(!n||locked())return;
-    if(e.target.id==='addRange')edit(()=>{
-      const ranges=n.params.ranges,index=ranges.findIndex(r=>r.max-r.min===Math.max(...ranges.map(r=>r.max-r.min))),r=ranges[index],max=r.max,middle=(r.min+r.max)/2;
-      r.max=middle;ranges.splice(index+1,0,{label:'Plage '+(ranges.length+1),min:middle,max});
-      const original=graph.links.find(l=>l.from===n.id&&l.port===`range:${index}`);
-      for(const l of graph.links)if(l.from===n.id&&l.port.startsWith('range:')&&Number(l.port.split(':')[1])>index)l.port='range:'+(Number(l.port.split(':')[1])+1);
-      if(original)graph.links.push({...original,id:id('link'),port:`range:${index+1}`});
-    });
-    if(e.target.dataset.removeRange!==undefined)edit(()=>{const index=Number(e.target.dataset.removeRange);n.params.ranges.splice(index,1);
-      graph.links=graph.links.filter(l=>!(l.from===n.id&&l.port.startsWith('range:')));});
+    if(e.target.id==='addRange')edit(()=>A.splitRule(graph,n));
+    if(e.target.dataset.removeBoundary!==undefined)edit(()=>A.removeRuleSeparator(graph,n,Number(e.target.dataset.removeBoundary)));
+    if(e.target.id==='defaultRuleScale')edit(()=>A.setRuleScale(n.params,A.ruleScale(measurements.find(m=>m.id===n.params.variable)),true));
   });
   $('stepDelay').addEventListener('change',e=>edit(()=>{graph.stepDelayS=Number(e.target.value);}));
   $('graphName').addEventListener('input',e=>edit(()=>{graph.name=e.target.value;},false));
   $('canvas').addEventListener('click',canvasClick);
   $('canvas').addEventListener('keydown',e=>{
+    const marker=e.target.closest('[data-range-boundary]');
+    if(marker&&['ArrowLeft','ArrowRight'].includes(e.key)&&!locked()){
+      e.preventDefault();const n=graph.nodes.find(n=>n.id===marker.closest('[data-node]').dataset.node),index=Number(marker.dataset.rangeBoundary);
+      edit(()=>A.setRuleSeparator(n.params,index,A.roundRuleValue(n.params.separators[index]+(e.key==='ArrowRight'?1:-1)*A.ruleStep(n.params.scale))));return;
+    }
     if(e.key==='Escape'){pending=null;draw();return;}
     if(e.key==='Delete'){e.preventDefault();remove();return;}
     if(e.code==='Space'){e.preventDefault();fit();return;}
@@ -260,7 +294,7 @@
     if(e.button!==0||e.target.closest('[data-output],[data-input]'))return;
     const point=coordinate(e),n=graph.nodes.find(n=>n.id===e.target.closest('[data-node]')?.dataset.node);
     const boundary=e.target.closest('[data-range-boundary]');
-    if(n){select(n.id);if(locked())return;drag={node:n.id,x:point.x,y:point.y,bx:n.x,by:n.y,before:JSON.stringify(graph),moved:false,
+    if(n){if(!select(n.id))return;if(locked())return;drag={node:n.id,x:point.x,y:point.y,bx:n.x,by:n.y,before:JSON.stringify(graph),moved:false,
       ...(boundary?{boundary:Number(boundary.dataset.rangeBoundary)}:{})};}
     else if(!e.target.closest('[data-link]'))drag={x:point.x,y:point.y,beforeView:{...view},moved:false};
     $('canvas').setPointerCapture(e.pointerId);
@@ -270,9 +304,10 @@
     if(Math.abs(dx)+Math.abs(dy)>4)drag.moved=true;
     if(drag.node){const n=graph.nodes.find(n=>n.id===drag.node);
       if(drag.boundary!==undefined){
-        const ranges=n.params.ranges,i=drag.boundary,span=ranges.at(-1).max-ranges[0].min;
-        const value=Math.max(ranges[i].min+span/1000,Math.min(ranges[i+1].max-span/1000,ranges[0].min+(p.x-n.x-12)/(dimensions(n).w-24)*span));
-        ranges[i].max=value;ranges[i+1].min=value;
+        const params=n.params,i=drag.boundary,span=params.scale.max-params.scale.min;
+        const low=i?params.separators[i-1]:params.scale.min,high=i<params.separators.length-1?params.separators[i+1]:params.scale.max;
+        const value=A.roundRuleValue(params.scale.min+(p.x-n.x-14)/(dimensions(n).w-28)*span);
+        if(value>low&&value<high)params.separators[i]=value;
       }else{n.x=Math.max(-19000,Math.min(19000,drag.bx+dx));n.y=Math.max(-19000,Math.min(19000,drag.by+dy));}
     }
     else {view.x-=dx;view.y-=dy;}
@@ -288,8 +323,9 @@
   $('properties').addEventListener('wheel',e=>{
     const el=e.target;if(el.type!=='number'||el.disabled||!e.deltaY)return;
     e.preventDefault();const step=el.dataset.field==='tolerance'?.01:Number(el.step)>0?Number(el.step):1;
-    el.value=Math.max(el.min===''?-Infinity:Number(el.min),Math.min(el.max===''?Infinity:Number(el.max),Number(el.value)+(e.deltaY<0?step:-step)));
-    eventField({target:el});
+    const rule=el.matches('[data-rule-boundary],[data-rule-scale]'),value=Number(el.value)+(e.deltaY<0?step:-step);
+    el.value=rule?A.roundRuleValue(value):Math.max(el.min===''?-Infinity:Number(el.min),Math.min(el.max===''?Infinity:Number(el.max),value));
+    if(rule)commitRuleField(el);else eventField({target:el});
   },{passive:false});
   $('fit').addEventListener('click',fit);$('zoomIn').addEventListener('click',()=>zoom(1/1.2));$('zoomOut').addEventListener('click',()=>zoom(1.2));
   $('delete').addEventListener('click',remove);

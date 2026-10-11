@@ -26,13 +26,13 @@ test('comparaisons : opérateurs et tolérance dans l’unité physique',()=>{
   assert.equal(A.compare(30.05,'<=',30,.1),true);assert.equal(A.compare(30.2,'<=',30,.1),false);
   assert.throws(()=>A.compare(null,'=',0),/indisponible/);
 });
-test('règle à plages : frontières non ambiguës et tolérance aux bornes externes',()=>{
+test('règle à plages : frontières communes, valeurs extrêmes et absence de sortie latérale',()=>{
   const p=A.node('ranges','r').params;
-  assert.equal(A.classify(14.99,p.ranges),'range:0');assert.equal(A.classify(15,p.ranges),'range:1');
-  assert.equal(A.classify(70,p.ranges),'range:2');assert.equal(A.classify(100,p.ranges),'range:2');
-  assert.equal(A.classify(-.05,p.ranges,.1),'range:0');assert.equal(A.classify(-.2,p.ranges,.1),'no-left');
-  assert.equal(A.classify(101,p.ranges,.1),'no-right');
-  const g=make(['ranges']);g.nodes[0].params.ranges[1].min=10;assert.throws(()=>A.validate(g),/superposées/);
+  assert.equal(A.classify(14.99,p),'range:0');assert.equal(A.classify(15,p),'range:1');
+  assert.equal(A.classify(70,p),'range:2');assert.equal(A.classify(100,p),'range:2');
+  assert.equal(A.classify(-100,p),'range:0');assert.equal(A.classify(101,p),'range:2');
+  assert.deepEqual(A.ports(A.node('ranges','r')),['range:0','range:1','range:2']);
+  const g=make(['ranges']);g.nodes[0].params.separators[1]=10;assert.throws(()=>A.validate(g),/Repères/);
 });
 test('connecteurs : entrée haute, une sortie négative au choix et boucles sans verrouiller le navigateur',()=>{
   const g=make(['start','test','end']);link(g,0,1);link(g,1,2,'no-right');

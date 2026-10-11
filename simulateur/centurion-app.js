@@ -100,7 +100,7 @@
     if(!Auto||!autoReady)return;
     dispatchAuto({type:init?"centurion-auto-init":"centurion-auto-state",runtime:autoRuntime,
       values:autoValues(),simulationRunning:running,
-      ...(init?{graph:autoGraph,measurements:autoMeasurements.map(({id,label,tag,unit,group})=>({id,label,tag,unit,group})),
+      ...(init?{graph:autoGraph,measurements:autoMeasurements.map(({id,label,tag,unit,group,range})=>({id,label,tag,unit,group,range})),
         commands:Auto.actionCatalog()}:{} )});
   }
   function handleAutoMessage(data,source){

@@ -1,12 +1,22 @@
 /* Connecteurs orthogonaux : visibilité sur une grille de coordonnées des obstacles. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.CenturionAutoRouting=api;})(typeof window!=='undefined'?window:globalThis,function(){
   'use strict';
-  function dimensions(n){return {w:260,h:n.type==='ranges'?142:n.type==='test'||n.type==='parallel'||n.type==='join'?112:92};}
+  function ruleLayout(n){
+    const w=320,p=n.params,span=p.scale.max-p.scale.min,lanes=[];
+    const markers=p.separators.map((value,index)=>{
+      const x=14+(w-28)*(value-p.scale.min)/span;
+      let lane=lanes.findIndex(last=>x-last>=22);if(lane<0)lane=lanes.length;lanes[lane]=x;
+      return {index,x,lane};
+    });
+    const barY=98+Math.max(0,lanes.length-1)*22;
+    return {w,h:barY+70,barY,markers};
+  }
+  function dimensions(n){return n.type==='ranges'?ruleLayout(n):{w:260,h:n.type==='test'||n.type==='parallel'||n.type==='join'?112:92};}
   function portPoint(n,port){
     const {w,h}=dimensions(n);if(port==='in')return {x:n.x+w/2,y:n.y};
     if(port==='no-left'||port==='no-right')return {x:n.x+(port==='no-right'?w:0),y:n.y+h/2};
     if(n.type==='parallel'&&port.startsWith('branch:'))return {x:n.x+w*(Number(port.split(':')[1])+1)/(n.params.branches+1),y:n.y+h};
-    if(n.type==='ranges'&&port.startsWith('range:')){const rs=n.params.ranges,r=rs[Number(port.split(':')[1])];return {x:n.x+12+(w-24)*((r.min+r.max)/2-rs[0].min)/(rs.at(-1).max-rs[0].min),y:n.y+h};}
+    if(n.type==='ranges'&&port.startsWith('range:'))return {x:n.x+w*(Number(port.split(':')[1])+1)/(n.params.labels.length+1),y:n.y+h};
     return {x:n.x+w/2,y:n.y+h};
   }
   function simplify(points){return points.filter((p,i)=>!i||i===points.length-1||!((points[i-1].x===p.x&&p.x===points[i+1].x)||(points[i-1].y===p.y&&p.y===points[i+1].y)));}
@@ -46,5 +56,5 @@
     return {points:[s,a],blocked:true};
   }
   function path(points){return points.map((p,i)=>i===0?`M${p.x} ${p.y}`:p.x===points[i-1].x?`V${p.y}`:`H${p.x}`).join('');}
-  return {dimensions,portPoint,route,path};
+  return {dimensions,ruleLayout,portPoint,route,path};
 });

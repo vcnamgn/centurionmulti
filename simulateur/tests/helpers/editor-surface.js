@@ -3,9 +3,9 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 // Surface DOM de test : exécute le script complet de l'éditeur et ses messages.
 // Les données JSON, les éléments et les identifiants viennent du véritable HTML.
 function editorSurface(mode='regul',{saved=null}={}){
-  const html=fs.readFileSync(path.join(__dirname,'../../centurion-cc-regul.html'),'utf8');
-  const events={},frames=[],messages=[],timers=[],storage=new Map();
-  if(saved)storage.set(`centurion-${mode}-autosave-v1`,JSON.stringify(saved));
+  const html=fs.readFileSync(path.join(__dirname,mode==='auto'?'../../centurion-conduite-auto.html':'../../centurion-cc-regul.html'),'utf8');
+  const events={},frames=[],messages=[],timers=[],intervals=[],storage=new Map();let now=0;
+  if(saved)storage.set(mode==='auto'?'centurion.conduite-auto.v1':`centurion-${mode}-autosave-v1`,JSON.stringify(saved));
   const decode=text=>text.replace(/&(?:amp|lt|gt|quot|#39);/g,s=>
     ({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&#39;':"'"})[s]);
   const dataKey=name=>'data-'+name.replace(/[A-Z]/g,c=>'-'+c.toLowerCase());
@@ -44,11 +44,13 @@ function editorSurface(mode='regul',{saved=null}={}){
           if(add)this.classList.add(c);else this.classList.remove(c);return add;}};
     }
     get id(){return this.attrs.id||'';}set id(v){this.attrs.id=v;}
+    get value(){return this._value;}set value(v){this._value=String(v);}
     get className(){return this.attrs.class||'';}set className(v){this.attrs.class=v;}
     get textContent(){return this._text+this.children.map(c=>c.textContent).join('');}
     set textContent(v){this._text=String(v);this.children=[];}
     get innerHTML(){return this.textContent;}set innerHTML(v){this._text='';this.children=[];parse(String(v),this);}
     get min(){return this.attrs.min||'';}get max(){return this.attrs.max||'';}get step(){return this.attrs.step||'1';}
+    get type(){return this.attrs.type||'';}
     setAttribute(k,v){this.attrs[k]=String(v);}getAttribute(k){return this.attrs[k]??null;}
     hasAttribute(k){return k in this.attrs;}removeAttribute(k){delete this.attrs[k];}
     appendChild(child){child.parentElement=this;this.children.push(child);return child;}
@@ -56,12 +58,15 @@ function editorSurface(mode='regul',{saved=null}={}){
     querySelectorAll(s){return descendants(this).filter(n=>matches(n,s));}
     querySelector(s){return this.querySelectorAll(s)[0]||null;}
     closest(s){let n=this;while(n&&!matches(n,s))n=n.parentElement;return n;}
+    matches(s){return matches(this,s);}
     addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);}
     fire(k,extra={}){for(const fn of this.listeners[k]||[])fn({target:this,preventDefault(){},...extra});}
     focus(){}select(){}click(){this.fire('click');}setPointerCapture(){}releasePointerCapture(){}
     showModal(){this.setAttribute('open','');}close(){this.removeAttribute('open');}
     getBoundingClientRect(){return {left:0,top:0,right:1200,bottom:700,width:1200,height:700};}
     getContext(){return new Proxy({measureText:t=>({width:String(t).length*7})},{get:(o,k)=>o[k]||(()=>{})});}
+    createSVGPoint(){return {x:0,y:0,matrixTransform(){return {x:this.x,y:this.y};}};}
+    getScreenCTM(){return {inverse(){return {};}};}
   }
   function parse(fragment,parent){
     const stack=[parent],voidTags=new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
@@ -90,13 +95,23 @@ function editorSurface(mode='regul',{saved=null}={}){
     createElementNS:(_,t)=>new Element(t),addEventListener:(k,fn)=>(events['document-'+k]??=[]).push(fn)};
   const parent={postMessage:data=>messages.push(data)};
   const window={parent,devicePixelRatio:1,addEventListener:(k,fn)=>(events[k]??=[]).push(fn)};
-  const context=vm.createContext({document,window,location:{search:'?mode='+mode},console,
-    performance:{now:()=>0},requestAnimationFrame:fn=>frames.push(fn),
-    setTimeout:fn=>(timers.push(fn),timers.length),clearTimeout(){},
+  const context=vm.createContext({document,window,parent,location:{search:'?mode='+mode},console,
+    performance:{now:()=>now},requestAnimationFrame:fn=>frames.push(fn),
+    setTimeout:fn=>(timers.push(fn),timers.length),clearTimeout(){},setInterval:fn=>(intervals.push(fn),intervals.length),
     ResizeObserver:class{observe(){}},URLSearchParams,
     localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},
     Blob,URL});
   const main=root.querySelectorAll('script').find(n=>!n.hasAttribute('src')&&!n.hasAttribute('type'));
+  if(mode==='auto'){
+    for(const name of ['centurion-auto.js','centurion-auto-routing.js','centurion-conduite-auto.js'])
+      vm.runInContext(fs.readFileSync(path.join(__dirname,'../../'+name),'utf8'),context,{filename:name});
+    return {messages,storage,get:id=>document.getElementById(id),query:s=>document.querySelector(s),queryAll:s=>document.querySelectorAll(s),
+      receive:data=>window.CenturionAutoEditor.receive(data),
+      graph:()=>JSON.parse(storage.get('centurion.conduite-auto.v1')||JSON.stringify(saved)),
+      realTime:ms=>{now=ms;for(const fn of intervals)fn();},
+      focus:el=>{document.activeElement=el;},
+      event:(id,event,target,extra={})=>document.getElementById(id).fire(event,{target,...extra})};
+  }
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../../centurion-cc-pzr.js'),'utf8'),context,
     {filename:'centurion-cc-pzr.js'});
   vm.runInContext(main.textContent,context,{filename:'centurion-cc-regul.html'});

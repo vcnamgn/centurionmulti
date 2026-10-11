@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Centurion · Conduite Auto</title>
-  <link rel="stylesheet" href="centurion-conduite-auto.css?v=20261011-auto5">
+  <link rel="stylesheet" href="centurion-conduite-auto.css?v=20261011-auto6">
 </head>
 <body>
   <header class="toolbar">
@@ -56,14 +56,14 @@
     </div></div>
     <output id="editStatus" role="status"></output>
     <details class="help"><summary>Utilisation et journal de conduite</summary>
-      <p>Un test vrai sort en bas. Un test faux sort à gauche ou à droite selon la liaison choisie ; sans liaison négative, la boîte attend que le test soit vrai. Une règle répartit la mesure entre ses plages, avec une sortie basse par plage. Les bornes communes appartiennent à la plage suivante ; la dernière borne est incluse. La tolérance élargit seulement les deux bornes externes.</p>
+      <p>Un test vrai sort en bas. Un test faux sort à gauche ou à droite selon la liaison choisie ; sans liaison négative, la boîte attend que le test soit vrai. Une règle répartit la mesure entre des plages contiguës définies par des repères partagés, avec une sortie basse par plage. Un repère appartient à la plage de droite. Les valeurs hors de l’échelle suivent la plage extrême correspondante. Sans liaison sur la plage sélectionnée, la règle attend. L’échelle est adaptée à la mesure ; déplacer les repères arrondit à trois chiffres significatifs. Une saisie explicite se valide par Entrée ou en quittant le champ.</p>
       <p>Pour « = », la tolérance est l’écart absolu accepté, dans l’unité de la mesure. Pour &gt; / &lt;, il faut dépasser le seuil de plus que la tolérance ; ≥ / ≤ l’acceptent. Les actions sont exécutées une seule fois à l’entrée de la boîte. Les attentes utilisent le temps simulé. L’ouverture parallèle lance un curseur par branche ; la clôture attend la fin de toutes les branches avant de laisser repartir une seule suite. Chaque étape dure au minimum 2 secondes simulées par défaut (0, 1, 2 ou 5 au choix). Les traces de surlignage restent visibles 2 secondes réelles, indépendamment de l’accélérateur.</p>
       <p>Les commandes suivent le pupitre. Un actionneur déjà piloté par CC-RÉGUL nécessite le même passage en manuel. Configurez ces modes dans une boîte précédente, avant une ouverture parallèle. AAR, limites hydrauliques et conditions de connexion du RRA restent prioritaires. Interrompre une séquence laisse les dernières commandes appliquées.</p>
       <ol id="runLog"></ol>
     </details>
   </main>
-  <script src="centurion-auto.js?v=20261011-auto5"></script>
-  <script src="centurion-auto-routing.js?v=20261011-auto5"></script>
-  <script src="centurion-conduite-auto.js?v=20261011-auto5"></script>
+  <script src="centurion-auto.js?v=20261011-auto6"></script>
+  <script src="centurion-auto-routing.js?v=20261011-auto6"></script>
+  <script src="centurion-conduite-auto.js?v=20261011-auto6"></script>
 </body>
 </html>
