@@ -151,8 +151,11 @@
       const remaining=String(Math.max(1,Math.ceil((pendingInitiator.deadline-now)/1000)));
       if(seconds.textContent!==remaining)seconds.textContent=remaining;
     }
-    for(const id of ["startBreak","startSecondaryBreak","startEjection","startWithdrawal","startVoltage"])
-      $(id).disabled=Boolean(pendingInitiator||model.state.endState);
+    for(const id of ["startBreak","startSecondaryBreak","startEjection","startWithdrawal","startVoltage","startEquipmentFault"]){
+      const button=$(id);
+      if(button)button.disabled=Boolean(pendingInitiator||model.state.endState)
+        ||id==="startEquipmentFault"&&!$("equipmentFaultSelect")?.value;
+    }
   }
   function cancelInitiator() {
     if(initiatorTimer!==null)clearInterval(initiatorTimer);
@@ -727,10 +730,12 @@
     $("simSpeed").disabled=Boolean(danger);
     $("auxiliarySprayValue").textContent=`${fmt(u.manualAuxiliarySprayM3h,1)} m³/h`;
     $("auxiliarySprayActual").textContent=`${fmt(s.auxiliarySprayM3h,1)} m³/h`;
+    const failedPumps=s.loops.filter(loop=>u.equipmentFaults?.[`gmpp.${loop.index}`]).map(loop=>loop.index);
     $("primaryPumpStatus").textContent=s.primaryPumpsStopped
       ?`${s.primaryPumpStopReason} à ${tLabel(s.primaryPumpStopAt)} · ${s.inventory.loopLevelM<=E.C.primaryPumpLowLevelM
         ?"débit forcé nul : aspiration vidangée, thermosiphon désamorcé"
         :"ralentissement ≈ 1 minute ; relais naturel si la boucle est amorcée"}`
+      :failedPumps.length?`Défaillance d’entraînement : GMPP ${failedPumps.join(", ")} · ralentissement et relais naturel sur les boucles concernées`
       :"GMPP en marche · aucun arrêt sur AAR, IS ou baisse de charge · arrêt sur niveau CPP ≤ 11 m";
     $("tripPrimaryPumps").disabled=Boolean(s.primaryPumpsStopped||s.endState);
     $("boardPrimaryFlow").title=$("primaryPumpStatus").textContent;
@@ -862,7 +867,7 @@
       `Éjection : ${s.ejectWorthPcm?`+${fmt(s.ejectWorthPcm)} pcm`:"aucune"}`,
       `Retrait R : ${s.withdrawalActive?"actif":"non"}`,
       `Tension : ${s.lossOfVoltage?"perdue":"présente"}`,
-      `GMPP : ${s.primaryPumpsStopped?s.primaryPumpStopReason:"en marche"}`,
+      `GMPP : ${s.primaryPumpsStopped?s.primaryPumpStopReason:failedPumps.length?`défaillance sur ${failedPumps.join(", ")}`:"en marche"}`,
       ...s.gv.filter(g=>g.secondaryBreakAreaCm2>0).map(g=>
         `Brèche vapeur GV ${g.index} : ${fmt(g.secondaryBreakAreaCm2)} cm² · ${fmt(g.secondaryBreakKgS,1)} kg/s`),
       `Couverture cœur : ${fmt(s.coveragePct,1)} % (indicateur)`
@@ -876,7 +881,72 @@
       +` · cumul ${fmt(g.secondaryBreakReleasedKg/1000,2)} t<br>`
       +`Bilan eau : ARE ${fmt(g.feedKgS,1)} + ASG ${fmt(g.asgKgS,1)} − vapeur ${fmt(g.steamKgS,1)}`
       +` = ${fmt(g.waterMassRateKgS,1)} kg/s</div>`).join("");
+    renderEquipmentFaults();
     renderBoard();renderInventoryBalance();renderSignals();renderAxial();updateSvg();drawCoreCharts();drawHistory();drawLoadProgramChart();
+  }
+  let equipmentFaultListSignature=null;
+  function faultValueLabel(equipment,value){
+    return equipment.unit==="TOR"?(value>=.5?"ES":"HS")
+      :`${fmt(value,equipment.unit==="pas extraits"||equipment.unit==="kW"?0:1)} ${equipment.unit}`;
+  }
+  function renderEquipmentFaults(){
+    const selected=E.FAULT_EQUIPMENT.find(item=>item.id===$("equipmentFaultSelect").value);
+    $("equipmentFaultPreview").textContent=selected
+      ?`État réalisé : ${faultValueLabel(selected,E.equipmentValue(model,selected.id))}`:"Aucun équipement trouvé.";
+    const faults=Object.entries(model.controls.equipmentFaults);
+    $("equipmentFaultBanner").hidden=!faults.length;
+    $("equipmentFaultSummary").textContent=`Conduite perturbée · ${faults.length} défaillance${faults.length>1?"s":""} en cours`;
+    $("clearEquipmentFaults").disabled=!faults.length;
+    const signature=JSON.stringify(faults);
+    if(signature!==equipmentFaultListSignature){
+      equipmentFaultListSignature=signature;
+      $("equipmentFaultList").innerHTML=faults.length?faults.map(([id,fault])=>{
+        const item=E.FAULT_EQUIPMENT.find(e=>e.id===id);
+        return `<div class="equipment-fault-row"><div><strong>${item.label}</strong><span>${E.FAULT_MODES[fault.mode]}${fault.mode==="hold"?` · ${faultValueLabel(item,fault.value)}`:""} · depuis ${tLabel(fault.at)}</span></div><output data-fault-value="${id}"></output><button class="button" data-clear-fault="${id}" type="button">Lever</button></div>`;
+      }).join(""):"<p class=\"scenario-note\">Aucune défaillance d’équipement.</p>";
+    }
+    for(const output of document.querySelectorAll("[data-fault-value]")){
+      const item=E.FAULT_EQUIPMENT.find(e=>e.id===output.dataset.faultValue);
+      output.textContent=faultValueLabel(item,E.equipmentValue(model,item.id));
+    }
+    renderInitiatorCountdown();
+  }
+  function bindEquipmentFaults(){
+    const equipmentSelect=$("equipmentFaultSelect"),modeSelect=$("equipmentFaultMode");
+    const updateModes=()=>{
+      const item=E.FAULT_EQUIPMENT.find(e=>e.id===equipmentSelect.value),previous=modeSelect.value;
+      modeSelect.innerHTML=(item?.modes||[]).map(mode=>`<option value="${mode}">${E.FAULT_MODES[mode]}</option>`).join("");
+      modeSelect.value=item?.modes.includes(previous)?previous:item?.modes[0]||"";
+      modeSelect.disabled=!item;renderEquipmentFaults();
+    };
+    const updateEquipment=()=>{
+      const normalize=value=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+      const query=normalize($("equipmentFaultSearch").value),previous=equipmentSelect.value;
+      const matching=E.FAULT_EQUIPMENT.filter(item=>normalize(item.label+" "+item.group).includes(query));
+      equipmentSelect.innerHTML=[...new Set(matching.map(item=>item.group))].map(group=>
+        `<optgroup label="${group}">${matching.filter(item=>item.group===group).map(item=>`<option value="${item.id}">${item.label}</option>`).join("")}</optgroup>`).join("");
+      equipmentSelect.value=matching.some(item=>item.id===previous)?previous:matching[0]?.id||"";
+      equipmentSelect.disabled=!matching.length;updateModes();
+    };
+    $("equipmentFaultSearch").addEventListener("input",updateEquipment);
+    equipmentSelect.addEventListener("change",updateModes);
+    $("startEquipmentFault").addEventListener("click",()=>{
+      const item=E.FAULT_EQUIPMENT.find(e=>e.id===equipmentSelect.value);
+      if(item)scheduleInitiator("equipmentFault",{equipment:item.id,mode:modeSelect.value},`Défaillance · ${item.label}`);
+    });
+    $("equipmentFaultList").addEventListener("click",event=>{
+      const button=event.target.closest("[data-clear-fault]");if(!button)return;
+      const id=button.dataset.clearFault;
+      if(pendingInitiator?.name==="equipmentFault"&&pendingInitiator.details.equipment===id)cancelInitiator();
+      E.clearEquipmentFault(model,id);render();
+    });
+    $("clearEquipmentFaults").addEventListener("click",()=>{
+      if(pendingInitiator?.name==="equipmentFault")cancelInitiator();
+      for(const id of Object.keys(model.controls.equipmentFaults))E.clearEquipmentFault(model,id);
+      render();
+    });
+    $("showEquipmentFaults").addEventListener("click",()=>activateView("initiateurs"));
+    updateEquipment();
   }
 
   function bindNumber(id,callback) {
@@ -1508,6 +1578,7 @@
     for(const [id,key,i] of [["mpA","mpTrainEnabled",0],["mpB","mpTrainEnabled",1],
       ["bpA","bpTrainEnabled",0],["bpB","bpTrainEnabled",1]])
       $(id).addEventListener("change",e=>{model.controls[key][i]=e.target.checked;render();});
+    bindEquipmentFaults();
     $("cancelInitiator").addEventListener("click",cancelInitiator);
     $("tripPrimaryPumps").addEventListener("click",()=>{E.tripPrimaryPumps(model);render();});
     $("startSecondaryBreak").addEventListener("click",()=>scheduleInitiator("secondaryBreak",{

@@ -619,8 +619,9 @@
     return s.dpaxPctPn>dpaxRightLimit(s.powerPct)+1e-6;
   }
   function rcvLetdownM3h(model) {
-    return model.controls.rcvLetdownCloseGraph===true?0
-      :C.rcvOrificeM3h*model.controls.rcvLetdownOrifices.filter(Boolean).length;
+    const {state:s,controls:u}=model;
+    return C.rcvOrificeM3h*u.rcvLetdownOrifices.reduce((total,open,i)=>total
+      +Number(faultValue(u,`orifice.${i+1}`,u.rcvLetdownCloseGraph===true?0:Number(open))>=.5),0);
   }
   function rcvChargeBoronPpm(model) {
     const u=model.controls;
@@ -806,6 +807,7 @@
     const model={
       state: initialState(),
       controls: {
+        equipmentFaults: {},
         demandPct: 100, manualTurbineTargetPct: null, manualTurbineRatePctMin: 5,
         turbineLimitGraphPct: null, campaign: "debut", halfCycle: "premiere",
         rMode: "manual", rManualPas: 233, rGraphPas: 233, rManualOverride: false,
@@ -855,6 +857,74 @@
     };
     updateAxial(model.state,model.controls,0);
     return model;
+  }
+
+  const FAULT_MODES=Object.freeze({hold:"Bloqué à la valeur actuelle",off:"Indisponible / fermé",
+    on:"Marche forcée / ouvert",rise:"Remontée intempestive",fall:"Descente intempestive"});
+  const FAULT_EQUIPMENT=Object.freeze([
+    {id:"heater",label:"PZR · chaufferettes",group:"Pressuriseur",unit:"kW",max:2500},
+    {id:"spray",label:"PZR · aspersion principale",group:"Pressuriseur",unit:"%",max:100},
+    {id:"auxSpray",label:"PZR · aspersion auxiliaire RCV",group:"Pressuriseur",unit:"m³/h",max:C.auxiliarySprayMaxM3h},
+    ...[1,2,3].map(i=>({id:`relief.${i}`,label:`PZR · soupape étage ${i}`,group:"Pressuriseur",unit:"%",max:100})),
+    ...ROD_NAMES.map(name=>({id:`rod.${name}`,label:`Grappes · groupe ${name}`,group:"Grappes",unit:"pas extraits",max:260,modes:["hold","rise","fall"]})),
+    {id:"charge",label:"RCV · débit de charge",group:"RCV",unit:"m³/h",max:C.rcvMaxCommandM3h},
+    ...[1,2,3].map(i=>({id:`orifice.${i}`,label:`RCV · orifice ${i}`,group:"RCV",unit:"TOR",max:1})),
+    ...[1,2,3,4].flatMap(i=>[
+      {id:`are.${i}`,label:`GV ${i} · vanne ARE`,group:"Générateurs de vapeur",unit:"%",max:100},
+      {id:`vvp.${i}`,label:`GV ${i} · vanne VVP ${i}20VV`,group:"Générateurs de vapeur",unit:"%",max:100},
+      {id:`gcta.${i}`,label:`GV ${i} · vanne GCT-A`,group:"Générateurs de vapeur",unit:"%",max:100},
+      {id:`asg.${i}`,label:`GV ${i} · alimentation ASG`,group:"ASG",unit:"TOR",max:1,modes:["off","on"]},
+      {id:`gmpp.${i}`,label:`GMPP ${i} · perte de l’entraînement`,group:"GMPP",unit:"TOR",max:1,modes:["off"]}]),
+    {id:"risPumps",label:"RIS · indisponibilité des pompes MP/BP",group:"RIS",unit:"TOR",max:1,modes:["off"]}
+  ].map(item=>Object.freeze({...item,modes:Object.freeze(item.modes||["hold","off","on"])})));
+  const faultById=new Map(FAULT_EQUIPMENT.map(item=>[item.id,item]));
+  function equipmentValue(model,id) {
+    const {state:s,controls:u}=model,[type,name]=id.split('.'),i=Number(name)-1;
+    if(type==="rod")return s.rods[name];
+    if(type==="relief")return s.reliefOpeningPct[i];
+    if(type==="orifice")return faultValue(u,id,u.rcvLetdownCloseGraph===true?0:Number(u.rcvLetdownOrifices[i]));
+    if(type==="are")return s.gv[i].feedValvePct;
+    if(type==="vvp")return s.gv[i].steamValvePct;
+    if(type==="gcta")return s.gv[i].gctAValvePct;
+    if(type==="asg")return Number(s.gv[i].asgKgS>.01);
+    if(type==="gmpp")return Number(!primaryPumpStopped(s,u,s.loops[i]));
+    return {heater:s.heaterKW,spray:s.sprayPct,auxSpray:s.auxiliarySprayM3h,
+      charge:s.rcvChargeM3h,risPumps:Number(risPumpsReady(s,u))}[id];
+  }
+  function faultValue(u,id,normal) {
+    const fault=u.equipmentFaults?.[id];
+    if(!fault)return normal;
+    return fault.mode==="hold"?fault.value:fault.mode==="off"?0
+      :fault.mode==="on"?faultById.get(id).max:normal;
+  }
+  function setEquipmentFault(model,id,mode) {
+    const equipment=faultById.get(id);
+    if(!equipment||!equipment.modes.includes(mode))throw new Error("Défaillance d’équipement invalide.");
+    const value=clamp(equipmentValue(model,id),0,equipment.max);
+    if(!Number.isFinite(value))throw new Error("État de l’équipement indisponible.");
+    const faults=model.controls.equipmentFaults||(model.controls.equipmentFaults={});
+    faults[id]={mode,value,at:model.state.time};
+    addEvent(model.state,"incident",`${equipment.label} : ${FAULT_MODES[mode]}`);
+  }
+  function clearEquipmentFault(model,id) {
+    if(!model.controls.equipmentFaults?.[id])return false;
+    delete model.controls.equipmentFaults[id];
+    addEvent(model.state,"system",`${faultById.get(id)?.label||id} : défaillance levée, commande normale rétablie`);
+    return true;
+  }
+  function primaryPumpStopped(s,u,loop) {
+    return s.primaryPumpsStopped||loop.pumpStopped||u.equipmentFaults?.[`gmpp.${loop.index}`]?.mode==="off";
+  }
+  function applyRodFaults(s,u,before,dt) {
+    for(const name of ROD_NAMES){
+      const fault=u.equipmentFaults?.[`rod.${name}`];
+      if(!fault)continue;
+      // Un blocage mécanique peut empêcher la chute. Une commande erronée
+      // de mouvement reste en revanche subordonnée à l’AAR.
+      if(fault.mode==="hold")s.rods[name]=fault.value;
+      else if(s.tripAt===null)s.rods[name]=clamp(before[name]
+        +(fault.mode==="rise"?1:-1)*C.rodSpeedPasS*dt,0,260);
+    }
   }
 
   const TRANSIENTS = Object.freeze({
@@ -996,7 +1066,9 @@
   }
   function initiate(model, name, details = {}) {
     const s = model.state, u = model.controls;
-    if (name === "break") {
+    if(name === "equipmentFault") {
+      setEquipmentFault(model,details.equipment,details.mode);
+    } else if (name === "break") {
       u.breakAreaCm2 = clamp(Number(details.areaCm2) || 0, 0, 2000);
       u.breakLoop = clamp(Math.round(Number(details.loop) || 1), 1, 4);
       u.breakBranch = details.branch === "chaude" ? "chaude" : "froide";
@@ -1303,7 +1375,7 @@
   function risPumpsReady(s,u) {
     const sourceReady = (u.risSourceMode==="recirculation"?s.sumpKg:s.risTankRemainingKg) > 0;
     const voltageReady = !s.lossOfVoltage || s.time-s.voltageLostAt >= C.dieselStartS;
-    return s.risEnabled && u.risPumpMode!=="off"
+    return faultValue(u,"risPumps",1)>.5 && s.risEnabled && u.risPumpMode!=="off"
       && (u.risPumpMode==="on"||s.risAt !== null) && sourceReady && voltageReady;
   }
   function risPumpCapacity(s,u,p=s.pressureBar) {
@@ -1496,7 +1568,7 @@
           -100*dt/C.reliefStrokeS,100*dt/C.reliefStrokeS);
       }
       // Même organe : la commande manuelle et l'automatique ne doublent pas le débit.
-      s.reliefOpeningPct[i]=u.manualReliefStages[i]?100:s.reliefAutoOpeningPct[i];
+      s.reliefOpeningPct[i]=faultValue(u,`relief.${i+1}`,u.manualReliefStages[i]?100:s.reliefAutoOpeningPct[i]);
       s.reliefStages[i]=s.reliefOpeningPct[i]>1e-9;
       s.reliefStageKgS[i]=50*Math.sqrt(Math.max(0,s.pressureBar)/155)*s.reliefOpeningPct[i]/100;
     }
@@ -1533,7 +1605,7 @@
     // Le limiteur turbine répartit le débit demandé entre les quatre GV.
     // Une pression GV élevée augmente le débit disponible, pas la consigne réseau.
     const availableSteam=s.gv.map(gv=>{
-      const valveTarget=clamp(u.gvSteamValvePct[gv.index-1],0,100);
+      const valveTarget=faultValue(u,`vvp.${gv.index}`,clamp(u.gvSteamValvePct[gv.index-1],0,100));
       gv.steamValvePct+=clamp(valveTarget-gv.steamValvePct,
         -C.steamValveStrokePctPerS*dt,C.steamValveStrokePctPerS*dt);
       const pressureFactor=Math.sqrt(clamp(gv.pressureBar/C.steamPressureBar,0.05,1.5));
@@ -1555,7 +1627,7 @@
       const gctASetpoint=clamp(Number(u.gctAOpeningPressureBar),1,100);
       // Conserver la précision de l'écrêtage lors d'un refroidissement à basse pression.
       const gctABand=C.gctABandBar*Math.min(1,gctASetpoint/C.gctAPressureBar);
-      const gctATarget = clamp(100*(gv.pressureBar-gctASetpoint)/gctABand, 0, 100);
+      const gctATarget = faultValue(u,`gcta.${gv.index}`,clamp(100*(gv.pressureBar-gctASetpoint)/gctABand, 0, 100));
       gv.gctAValvePct += clamp(gctATarget-gv.gctAValvePct,
         -C.gctAStrokePctPerS*dt, C.gctAStrokePctPerS*dt);
       gv.dumpKgS = C.gctAFullKgSPerGV*gv.gctAValvePct/100
@@ -1564,6 +1636,7 @@
       let feedTarget=Number.isFinite(graphFeed)
         ? clamp(graphFeed,0,100)*9.5
         : clamp(u.gvManualFeedPct[gv.index-1],0,100)*9.5;
+      if(u.equipmentFaults?.[`are.${gv.index}`])feedTarget=9.5*faultValue(u,`are.${gv.index}`,feedTarget/9.5);
       if (s.lossOfVoltage||s.tripAt!==null) feedTarget = 0;
       gv.feedKgS += (feedTarget-gv.feedKgS)*clamp(dt/(s.tripAt!==null?1:8),0,1);
       if(feedTarget===0&&gv.feedKgS<0.01)gv.feedKgS=0;
@@ -1577,12 +1650,13 @@
       }else if(!u.asgManual&&s.asgAt!==null&&gv.levelPct<10-1e-9){
         gv.asgRunning=true;
       }
-      const asgRunning=u.asgManual?u.asgTrainEnabled[gv.index-1]:gv.asgRunning;
+      const asgRunning=gv.levelPct<=90+1e-9&&faultValue(u,`asg.${gv.index}`,
+        Number(u.asgManual?u.asgTrainEnabled[gv.index-1]:gv.asgRunning))>=.5;
       // MPS secourues par diesel ; TPS autonomes. Aucun effet du bouton CC-RÉGUL.
       const asgPowerReady=gv.asgType==="TPS"||!s.lossOfVoltage
         ||s.time-s.voltageLostAt>=C.dieselStartS;
       const asgTarget=u.asgAvailable && asgRunning && asgPowerReady
-        && (u.asgManual||s.asgAt!==null) ? asgFlowKgS(gv.pressureBar) : 0;
+        && (u.asgManual||s.asgAt!==null||u.equipmentFaults?.[`asg.${gv.index}`]?.mode==="on") ? asgFlowKgS(gv.pressureBar) : 0;
       gv.asgKgS+=(asgTarget-gv.asgKgS)*clamp(dt/2,0,1);
       if(asgTarget===0&&gv.asgKgS<0.01)gv.asgKgS=0;
       // La sortie vapeur est limitée par l'eau réellement disponible durant
@@ -1733,7 +1807,9 @@
     s.breakLoop=clamp(Math.round(Number(u.breakLoop)||1),1,4);
     s.breakBranch=u.breakBranch;
     updateProtection(s,u,dt);
+    const rodsBeforeFault=Object.keys(u.equipmentFaults||{}).some(id=>id.startsWith("rod."))?{...s.rods}:null;
     updateRods(s,u,dt);
+    if(rodsBeforeFault)applyRodFaults(s,u,rodsBeforeFault,dt);
 
     refreshReactivity(model);
     const rho=clamp(s.reactivityPcm*1e-5,-0.15,0.012);
@@ -1760,7 +1836,7 @@
       stopPrimaryPumps(s,`Arrêt GMPP : niveau CPP ${s.inventory.loopLevelM.toFixed(2)} m ≤ ${C.primaryPumpLowLevelM} m · risque de cavitation (hypothèse d'étude)`);
     const forcedPriming=clamp((s.inventory.loopLevelM-C.primaryPumpLowLevelM)/C.primaryPumpLowLevelBandM,0,1);
     for (const loop of s.loops) {
-      const stopped=s.primaryPumpsStopped||loop.pumpStopped;
+      const stopped=primaryPumpStopped(s,u,loop);
       // Apport thermique de l'entraînement alimenté, distinct du débit :
       // ni PTUR ni le relais par thermosiphon ne le commandent.
       // Après déclenchement, l'énergie cinétique du ralentissement n'est pas
@@ -1881,7 +1957,7 @@
       ? u.rcvChargeGraphM3h : u.rcvChargeM3h;
     // La glissière/CC demande un débit ; la HMT de la pompe en limite
     // le débit réalisé. Les retours des joints restent dans le bilan CPP.
-    s.rcvDemandM3h=clamp(Number(chargeM3h)||0,0,C.rcvMaxCommandM3h);
+    s.rcvDemandM3h=faultValue(u,"charge",clamp(Number(chargeM3h)||0,0,C.rcvMaxCommandM3h));
     s.rcvCapacityM3h=rcvPumpCapacityM3h(hydraulicPressureBar);
     s.rcvChargeM3h=Math.min(s.rcvDemandM3h,s.rcvCapacityM3h);
     const chargeDensity=liquidWaterDensityKgM3(s.tavgC,s.pressureBar);
@@ -1970,6 +2046,8 @@
       s.heaterKW=clamp(Number(u.manualHeaterKW),0,2500);
       sprayDemandPct=clamp(Number(u.manualSprayPct),0,100);
     }
+    s.heaterKW=faultValue(u,"heater",s.heaterKW);
+    sprayDemandPct=faultValue(u,"spray",sprayDemandPct);
     s.sprayPct+=clamp(sprayDemandPct-s.sprayPct,
       -C.sprayStrokePctPerS*dt,C.sprayStrokePctPerS*dt);
     const sprayDrive1=s.loops[0].vesselDeltaBar;
@@ -1997,7 +2075,7 @@
       *Math.max(0,saturationC-spraySourceC)/1000;
     // Détour de la charge directe vers le PZR : même masse et même bore,
     // déjà comptés dans arrivedRcv. Ni débit supplémentaire, ni HMT GMPP.
-    s.auxiliarySprayM3h=Math.min(clamp(Number(u.manualAuxiliarySprayM3h)||0,0,C.auxiliarySprayMaxM3h),
+    s.auxiliarySprayM3h=Math.min(faultValue(u,"auxSpray",clamp(Number(u.manualAuxiliarySprayM3h)||0,0,C.auxiliarySprayMaxM3h)),
       Math.max(0,s.rcvDeliveredM3h-Math.min(C.rcvSealM3h,s.rcvDeliveredM3h)));
     s.auxiliarySpraySourceC=arrivedRcv.massKg>0
       ? arrivedRcv.energyJ/(arrivedRcv.massKg*C.primaryCpJkgK) : s.tavgC;
@@ -2147,7 +2225,7 @@
   function primaryFlowDiagnostics(model) {
     const s=model.state,u=model.controls;
     const loops=s.loops.map(loop=>{
-      const gv=s.gv[loop.index-1],stopped=s.primaryPumpsStopped||loop.pumpStopped;
+      const gv=s.gv[loop.index-1],stopped=primaryPumpStopped(s,u,loop);
       const priming=loop.primingFraction??s.inventory.loopPriming[loop.index-1];
       const forcedPriming=loop.forcedPrimingFraction??clamp((s.inventory.loopLevelM-C.primaryPumpLowLevelM)/C.primaryPumpLowLevelBandM,0,1);
       const drive=loop.thermalDriveC??Math.max(0,s.tavgC-gv.tempC);
@@ -2163,6 +2241,7 @@
       else if(water<.99)reasons.push(`inventaire secondaire réduit (${Math.round(water*100)} % du nominal)`);
       if(coverage<.999)reasons.push(`couverture du cœur ${Math.round(coverage*100)} %`);
       if(Number(u.naturalCirculationKgSPerLoop)<=0)reasons.push("débit naturel de référence réglé à zéro");
+      if(u.equipmentFaults?.[`gmpp.${loop.index}`])reasons.push("GMPP indisponible : défaillance d’entraînement introduite dans Conduite perturbée");
       if(loop.breakFactor<1)reasons.push("brèche sur cette boucle");
       const lost=stopped&&loop.naturalFlowKgS<.1&&reasons.length>0;
       const limited=stopped&&reasons.length>0;
@@ -2194,7 +2273,7 @@
     const gv=Math.max(1,Math.min(4,Math.trunc(Number(selectedGv)||1)));
     const gvAll=s.gv.map(g=>({...g,areTempC:C.areFeedTempC,feedTh:g.feedKgS*3.6,
       asgM3h:g.asgKgS*3600/C.risWaterDensityKgM3}));
-    const loops=s.loops.map(loop=>({...loop,pumpStopped:s.primaryPumpsStopped||loop.pumpStopped,
+    const loops=s.loops.map(loop=>({...loop,pumpStopped:primaryPumpStopped(s,u,loop),
       flowPct:100*loop.flowKgS/(C.nominalPrimaryFlowKgS/4)}));
     const rBelowLimit=s.tripAt===null&&s.rods.R<s.rLimitPas-0.5;
     return {gv,gvState:gvAll[gv-1],gvAll,loops,operatingState:reactorOperatingState(s),
@@ -2276,6 +2355,20 @@
       rcvLetdownCloseSignal:[u.rcvLetdownCloseGraph===true?1:0,"TOR"],
       qchargeCapacitySignal:[s.rcvCapacityM3h,"m³/h"]
     });
+    // Nouvelles mesures à la fin : préserver les indices CC des historiques.
+    Object.assign(values,{
+      trefSignal:[s.trefC,"°C"],xenonSignal:[s.xenonWorthPcm,"pcm"],
+      dpaxSignal:[s.dpaxPctPn,"% PN"],boronSignal:[s.boronPpm,"ppm"],
+      tricSignal:[s.tRicC,"°C"],residualPowerSignal:[100*s.decayMW/C.nominalThermalMW,"% PN"],
+      pumpHeatSignal:[s.pumpHeatMW,"MWth"],fDeltaHSignal:[s.fDeltaH,""],
+      cppLevelSignal:[s.inventory.levelM,"m"],risFlowSignal:[s.risDeliveredKgS,"kg/s"]
+    });
+    for(const name of ROD_NAMES.filter(name=>name!=="R"))values[`rod${name}Signal`]=[s.rods[name],"pas extraits"];
+    for(const g of s.gv){
+      values[`gv${g.index}PressureSignal`]=[g.pressureBar,"bar abs."];
+      for(const [suffix,key] of [["Feed","feedKgS"],["Asg","asgKgS"],["Dump","dumpKgS"],["TurbineSteam","turbineSteamKgS"]])
+        values[`gv${g.index}${suffix}Signal`]=[g[key],"kg/s"];
+    }
     return values;
   }
   return { C,G3,ROD_NAMES,ROD_WORTH_PCM,AXIAL_ROD_ABSORPTION,TRANSIENTS,make,step,advance,
@@ -2284,6 +2377,7 @@
     latentHeatJkg,gvThermalCapacityJk,gvLatentHeatJkg,secondaryBreakFlowKgS,accumulatorFlowKgS,ptLimits,reactorOperatingState,isPtOutside,rraConditions,connectRra,setRisOperation,commandAllRods,tripPrimaryPumps,
     instrumentSnapshot,controlSignals,primaryMassBalance,primaryFlowDiagnostics,TURBINE_MANUAL_RATES,setManualTurbineDemand,
     SETPOINT_RATES,SETPOINT_CONTROLS,setManualSetpoint,
+    FAULT_EQUIPMENT,FAULT_MODES,setEquipmentFault,clearEquipmentFault,equipmentValue,
     evolveAxialPoisons,
     g3Target,gcpPositions,rInsertionLimit,rodIntegral,rodsReactivityPcm,
     axialInsertionFraction,solveAxialShape,smoothAxialProfile,

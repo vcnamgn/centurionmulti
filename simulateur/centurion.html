@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Centurion · Simulateur REP 1300 pédagogique</title>
-  <link rel="stylesheet" href="centurion.css?v=20261011-auto">
+  <link rel="stylesheet" href="centurion.css?v=20261015-faults1">
 </head>
 <body>
   <header class="topbar">
@@ -36,6 +36,7 @@
 
   <main>
     <div class="initiator-countdown" id="initiatorCountdown" role="status" aria-live="polite" aria-atomic="true" hidden><strong id="initiatorCountdownLabel"></strong><span>Départ dans <b id="initiatorCountdownSeconds">5</b> s</span><button class="button" id="cancelInitiator" type="button">Annuler</button></div>
+    <div id="equipmentFaultBanner" class="equipment-fault-banner" hidden><strong id="equipmentFaultSummary"></strong><button id="showEquipmentFaults" class="button" type="button">Voir les défaillances</button></div>
     <section class="view active" id="view-synoptiques">
       <div class="diagram-toolbar" role="group" aria-label="Choisir un synoptique">
         <button class="diagram-tab active" data-diagram="rcp">RCP général</button>
@@ -336,12 +337,12 @@
     </section>
 
     <section class="view" id="view-regulation">
-      <iframe id="regulationEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=regul&amp;v=20261011-arrows2" title="Éditeur CC-RÉGUL"></iframe>
+      <iframe id="regulationEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=regul&amp;v=20261015-library1" title="Éditeur CC-RÉGUL"></iframe>
     </section>
 
     <section class="view" id="view-protection">
       <div class="protection-toolbar"><label class="inline-check"><input id="protectionsEnabled" type="checkbox" checked> Protection active</label><label class="inline-check"><input id="risEnabled" type="checkbox" checked> RIS disponible</label><button class="button button-danger" id="forceTrip">Forcer l’AAR</button><button class="button button-primary" id="forceRis">Forcer l’IS</button><span class="badge" id="protectionState">Surveillance</span></div>
-      <iframe id="protectionEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=protect&amp;v=20261011-arrows2" title="Éditeur CC-PROTECT"></iframe>
+      <iframe id="protectionEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=protect&amp;v=20261015-library1" title="Éditeur CC-PROTECT"></iframe>
       <div id="signalCards" class="signal-grid"></div>
       <div class="control-grid two-col">
         <section class="card"><h2>Chaîne RIS</h2><div class="form-row thresholds">
@@ -383,6 +384,19 @@
         </section>
       </div>
       <section class="card"><h2>État des initiateurs</h2><div id="accidentStatus" class="accident-status"></div></section>
+      <section class="card equipment-fault-panel" aria-labelledby="equipmentFaultTitle">
+        <div class="panel-head"><div><h2 id="equipmentFaultTitle">Conduite perturbée</h2><p>Introduire une défaillance d’équipement, indépendamment des initiateurs d’accidents. Plusieurs équipements peuvent être affectés simultanément.</p></div></div>
+        <div class="equipment-fault-form">
+          <label>Rechercher un équipement<input id="equipmentFaultSearch" type="search" placeholder="Chaufferettes, groupe R, ARE, GCT-A…"></label>
+          <label>Équipement<select id="equipmentFaultSelect"></select></label>
+          <label>Défaillance<select id="equipmentFaultMode"></select></label>
+          <button id="startEquipmentFault" class="button button-danger" type="button">Introduire la défaillance</button>
+        </div>
+        <p id="equipmentFaultPreview" class="scenario-note" role="status"></p>
+        <p class="scenario-note">Départ après 5 secondes réelles. Les ordres des commandes manuelles et du CC restent visibles ; l’équipement suit la défaillance. Une grappe bloquée mécaniquement reste bloquée pendant un AAR ; un mouvement intempestif est interrompu par l’AAR. ARE reste dépendant de son alimentation, ASG conserve la coupure sur haut niveau.</p>
+        <div class="equipment-fault-head"><h3>Défaillances en cours</h3><button id="clearEquipmentFaults" class="button" type="button">Lever toutes les défaillances</button></div>
+        <div id="equipmentFaultList" class="equipment-fault-list" aria-live="polite"></div>
+      </section>
     </section>
 
     <section class="view" id="view-transitoires">
@@ -697,6 +711,12 @@ total          = (L3 − L0) × 60 / dt</code></pre>
 <p><code>simulateur/synoptiques/Diagramme-PT.svg</code> conserve huit calques nommés pour Inkscape : fond, domaines, grille, limites, trace, axes, légendes et réticule. Le domaine et les graduations sont présents dans le fichier sans exécuter JavaScript. Les identifiants <code>pt-*</code>, les attributs <code>data-*</code> et le lien vers le pont SVG portent les liaisons temps réel ; les retouches graphiques doivent les conserver. <code>pt-plot-area</code> indique les coordonnées du graphique et les bornes physiques utilisées pour projeter les mesures et lire le pointeur.</p>
 </article>
 <article class="model-detail-page" id="model-detail-8" aria-label="États et incidents"><h2>8. États, incidents et fin de partie</h2>
+<h3 id="detail-bibliotheques-cc-et-conduite-perturbee">Bibliothèques CC et conduite perturbée</h3>
+<p>Les bibliothèques CC-Régul et CC-Protect exposent les mêmes mesures physiques. Leur ordre est : capteurs primaires, capteurs secondaires, signaux calculés, positions des grappes, mesures des GV, consignes et informations de protection, opérateurs, courbes spéciales, signaux de sortie. Les sorties restent distinctes : actionneurs de régulation dans CC-Régul ; AAR/IS/ASG dans CC-Protect. Les nouvelles clés de <code>controlSignals</code> sont ajoutées à la fin pour conserver les indices des historiques déjà enregistrés.</p>
+<p>Sous les initiateurs d’accidents, la section <strong>Conduite perturbée</strong> introduit des défaillances d’actionneurs après cinq secondes réelles. Le catalogue <code>FAULT_EQUIPMENT</code> définit les équipements, leurs unités, domaines et modes autorisés. Les pannes sont enregistrées dans <code>controls.equipmentFaults</code>, sous la forme <code>{mode, value, at}</code> ; <code>value</code> est la valeur réelle capturée au déclenchement. Une seule panne est active par équipement, plusieurs équipements peuvent être affectés. Les commandes demandées restent intactes : les capteurs, synoptiques et bilans utilisent les états réalisés après application de la panne.</p>
+<ul><li><strong>Blocage</strong> : conserver l’état capturé. Pour une grappe, il s’agit d’un blocage mécanique qui peut empêcher sa chute à l’AAR.</li><li><strong>Indisponibilité / fermeture</strong> : imposer zéro à l’actionneur concerné, avec les transits et inerties du circuit.</li><li><strong>Marche forcée / ouverture</strong> : demander la pleine capacité de l’équipement, dans les limites hydrauliques existantes.</li><li><strong>Mouvement intempestif d’un groupe</strong> : montée ou descente à la vitesse normale de manœuvre. L’AAR reprend la priorité sur ce mouvement électrique erroné.</li></ul>
+<p>La défaillance se substitue à la réponse de l’actionneur après arbitrage de ses commandes. Elle ne crée aucun ordre AAR/IS caché ; les protections réagissent aux conséquences physiques. ARE reste dépendant de son alimentation ; la coupure ASG sur haut niveau GE demeure effective ; la charge conserve sa courbe pression/débit. Une perte d’entraînement GMPP s’applique à la boucle choisie, retire ses 6 MW et laisse le débit décroître avant le relais naturel. La panne des pompes RIS ne bloque pas les accumulateurs. Les positions individuelles des GCP restent des positions réelles ; leur compteur de chevauchement conserve sa séquence demandée lorsqu’un groupe est bloqué.</p>
+<p><code>setEquipmentFault</code> valide et introduit une panne ; <code>clearEquipmentFault</code> la lève sans modifier les autres équipements, les brèches ou les demandes de protection. Le bandeau orange signale les pannes actives depuis les autres onglets. Réinitialiser les efface. La révision d’état <code>20261015-equipment-faults-v11</code> les sauvegarde et les valide ; une archive antérieure est reprise avec un ensemble de pannes vide, sans modifier ses stocks ni ses mémoires CC.</p>
 <p>RP est l&#39;état de production. AN/GV est reconnu lorsque la puissance neutronique est ≤0,01 % PN et la réactivité négative. Une demande ou réalisation AAR/IS place le modèle en CIA ; les états standards ne s&#39;appliquent alors plus.</p>
 <p>Le clignotement P–T en RP utilise 150–160 bar et 297,2–307,5 °C. En AN/GV, il utilise les limites plus strictes de <code>ptLimits</code> et la borne haute de température propre à cet état. En CIA, ce clignotement standard est désactivé. La vue conserve le point réel et sa trace, même hors domaine.</p>
 <p>La connexion RRA exige TMOY 90–180 °C, P 25–31 bar, puissance neutronique ≤0,01 % PN et cœur couvert. Elle n&#39;exige ni AAR préalable, ni seuil de réactivité. La connexion marque <code>endState=&quot;safe&quot;</code> et arrête la simulation : elle ne poursuit pas une simulation détaillée de refroidissement RRA.</p>
@@ -792,12 +812,12 @@ node scripts/check-docs.mjs</code></pre>
     <img id="certificatePreview" class="certificate-preview" alt="Aperçu du certificat de fin de simulation" hidden>
   </dialog>
   <script src="vendor/html2canvas-1.4.1.min.js"></script>
-  <script src="centurion-engine.js?v=20261011-auto"></script>
+  <script src="centurion-engine.js?v=20261015-faults1"></script>
   <script src="centurion-history.js?v=20261009-pt-probe"></script>
   <script src="centurion-cc-pzr.js?v=20261009-pt-probe"></script>
   <script src="centurion-auto.js?v=20261011-auto11"></script>
-  <script src="centurion-state.js?v=20261011-auto"></script>
+  <script src="centurion-state.js?v=20261015-faults1"></script>
   <script src="centurion-certificate.js?v=20261009-pt-probe"></script>
-<script src="centurion-app.js?v=20261011-auto11"></script>
+<script src="centurion-app.js?v=20261015-faults1"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Centurion — note de conception
 
-Version documentaire du 11 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
+Version documentaire du 15 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
 
 ## 1. Objet et périmètre
 
@@ -615,6 +615,21 @@ Le survol affiche un réticule et les coordonnées du pointeur sur les deux axes
 `simulateur/synoptiques/Diagramme-PT.svg` conserve huit calques nommés pour Inkscape : fond, domaines, grille, limites, trace, axes, légendes et réticule. Le domaine et les graduations sont présents dans le fichier sans exécuter JavaScript. Les identifiants `pt-*`, les attributs `data-*` et le lien vers le pont SVG portent les liaisons temps réel ; les retouches graphiques doivent les conserver. `pt-plot-area` indique les coordonnées du graphique et les bornes physiques utilisées pour projeter les mesures et lire le pointeur.
 
 ## 8. États, incidents et fin de partie
+
+### Bibliothèques CC et conduite perturbée
+
+Les bibliothèques CC-Régul et CC-Protect exposent les mêmes mesures physiques. Leur ordre est : capteurs primaires, capteurs secondaires, signaux calculés, positions des grappes, mesures des GV, consignes et informations de protection, opérateurs, courbes spéciales, signaux de sortie. Les sorties restent distinctes : actionneurs de régulation dans CC-Régul ; AAR/IS/ASG dans CC-Protect. Les nouvelles clés de `controlSignals` sont ajoutées à la fin pour conserver les indices des historiques déjà enregistrés.
+
+Sous les initiateurs d’accidents, la section **Conduite perturbée** introduit des défaillances d’actionneurs après cinq secondes réelles. Le catalogue `FAULT_EQUIPMENT` définit les équipements, leurs unités, domaines et modes autorisés. Les pannes sont enregistrées dans `controls.equipmentFaults`, sous la forme `{mode, value, at}` ; `value` est la valeur réelle capturée au déclenchement. Une seule panne est active par équipement, plusieurs équipements peuvent être affectés. Les commandes demandées restent intactes : les capteurs, synoptiques et bilans utilisent les états réalisés après application de la panne.
+
+- **Blocage** : conserver l’état capturé. Pour une grappe, il s’agit d’un blocage mécanique qui peut empêcher sa chute à l’AAR.
+- **Indisponibilité / fermeture** : imposer zéro à l’actionneur concerné, avec les transits et inerties du circuit.
+- **Marche forcée / ouverture** : demander la pleine capacité de l’équipement, dans les limites hydrauliques existantes.
+- **Mouvement intempestif d’un groupe** : montée ou descente à la vitesse normale de manœuvre. L’AAR reprend la priorité sur ce mouvement électrique erroné.
+
+La défaillance se substitue à la réponse de l’actionneur après arbitrage de ses commandes. Elle ne crée aucun ordre AAR/IS caché ; les protections réagissent aux conséquences physiques. ARE reste dépendant de son alimentation ; la coupure ASG sur haut niveau GE demeure effective ; la charge conserve sa courbe pression/débit. Une perte d’entraînement GMPP s’applique à la boucle choisie, retire ses 6 MW et laisse le débit décroître avant le relais naturel. La panne des pompes RIS ne bloque pas les accumulateurs. Les positions individuelles des GCP restent des positions réelles ; leur compteur de chevauchement conserve sa séquence demandée lorsqu’un groupe est bloqué.
+
+`setEquipmentFault` valide et introduit une panne ; `clearEquipmentFault` la lève sans modifier les autres équipements, les brèches ou les demandes de protection. Le bandeau orange signale les pannes actives depuis les autres onglets. Réinitialiser les efface. La révision d’état `20261015-equipment-faults-v11` les sauvegarde et les valide ; une archive antérieure est reprise avec un ensemble de pannes vide, sans modifier ses stocks ni ses mémoires CC.
 
 RP est l'état de production. AN/GV est reconnu lorsque la puissance neutronique est ≤0,01 % PN et la réactivité négative. Une demande ou réalisation AAR/IS place le modèle en CIA ; les états standards ne s'appliquent alors plus.
 

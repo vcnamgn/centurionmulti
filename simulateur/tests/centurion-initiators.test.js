@@ -21,7 +21,8 @@ function countdownHarness() {
   const ctx=vm.createContext({E,$:id=>elements[id],performance:{now:()=>now},
     setInterval(fn){const id=++nextTimer;timers.set(id,fn);return id;},
     clearInterval(id){timers.delete(id);},render:()=>{},syncInputs:()=>{},
-    historyView:{reset(){}},editorSignals:()=>({}),editorReady:{regul:false,protect:false},sendEditorTick:()=>{},stateStatus:()=>{}});
+    historyView:{reset(){}},editorSignals:()=>({}),editorReady:{regul:false,protect:false},sendEditorTick:()=>{},stateStatus:()=>{},
+    Auto:null,releasePtProbe:()=>{}});
   const functions=app.slice(app.indexOf('  function renderInitiatorCountdown('),app.indexOf('  function setDiagram('));
   const handlers=app.slice(app.indexOf('    $("cancelInitiator").addEventListener'),
     app.indexOf('    document.querySelectorAll(".program-choice")'));

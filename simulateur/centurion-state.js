@@ -8,9 +8,9 @@
   const History=typeof module==='object'&&module.exports?require('./centurion-history.js'):window.CenturionHistory;
   const PzrCommands=typeof module==='object'&&module.exports?require('./centurion-cc-pzr.js'):window.CenturionPzrCommands;
   const Auto=typeof module==='object'&&module.exports?require('./centurion-auto.js'):window.CenturionAuto;
-  const FORMAT="Centurion-State",VERSION=1,REVISION="20261009-charge-v10";
+  const FORMAT="Centurion-State",VERSION=1,REVISION="20261015-equipment-faults-v11";
   const MAX_STATE_BYTES=160*1024*1024;
-  const COMPATIBLE_REVISIONS=["20261008-pzr-v2","20261008-pzr-v3","20261008-breche-v4","20261008-gv-breches-v5","20261008-ris-inertie-v6","20261008-gmpp-niveau-v7","20261009-pzr-breche-v8","20261009-consignes-v9"];
+  const COMPATIBLE_REVISIONS=["20261008-pzr-v2","20261008-pzr-v3","20261008-breche-v4","20261008-gv-breches-v5","20261008-ris-inertie-v6","20261008-gmpp-niveau-v7","20261009-pzr-breche-v8","20261009-consignes-v9","20261009-charge-v10"];
   const LEGACY_REVISION="20261007-state-v1";
   const clone=value=>JSON.parse(JSON.stringify(value));
   function checkJson(value,path="fichier",depth=0){
@@ -50,6 +50,12 @@
       if(typeof value!=="number"||!Number.isFinite(value)||value<min||value>max)
         throw new Error(`${label} : valeur hors domaine.`);
     };
+    for(const [id,fault] of Object.entries(u.equipmentFaults)){
+      const equipment=E.FAULT_EQUIPMENT.find(item=>item.id===id);
+      if(!equipment||!fault||!equipment.modes.includes(fault.mode))throw new Error("Défaillance d’équipement invalide.");
+      range(fault.value,0,equipment.max,`Défaillance ${id}`);
+      range(fault.at,0,s.time,`Date de défaillance ${id}`);
+    }
     range(s.time,0,1e9,"Horloge");range(s.primaryMassKg,1,1e8,"Masse primaire");
     range(s.pressureBar,1,E.C.primaryPressureMaxBar,"Pression primaire");
     range(s.risPumpSpeedFraction,0,1,"Vitesse des pompes RIS");
@@ -164,6 +170,7 @@
       if(raw.model.controls.manualTurbineRatePctMin===undefined)raw.model.controls.manualTurbineRatePctMin=5;
     }
     const oldRevision=raw.engineRevision!==REVISION;
+    if(oldRevision&&raw.model?.controls?.equipmentFaults===undefined)raw.model.controls.equipmentFaults={};
     if(oldRevision){
       const u=raw.model.controls,s=raw.model.state;
       const defaults={pressureSetpointBar:155,pressureSetpointManual:false,

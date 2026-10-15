@@ -993,7 +993,6 @@
     .reg-main{max-height:calc(100vh - 2px);overflow:auto}
     body.regul-mode .protect-only{display:none!important}
     body.protect-mode .regul-only{display:none!important}
-    body.protect-mode .reg-palette .palette-group:not(.protect-only):not(.operator-palette):not(.shared-signals):not(.output-palette){display:none!important}
     body.protect-mode .reg-live{display:none}
     @media(max-width:900px){.reg-layout{grid-template-columns:1fr}.reg-palette{max-height:42vh}.reg-main{max-height:none}}
   </style>
@@ -1450,6 +1449,8 @@
                 <button class="palette-item" type="button" data-block-type="mt2Signal">MT2<br>T branche froide</button>
                 <button class="palette-item" type="button" data-block-type="mp1Signal">MP1<br>Pression primaire</button>
                 <button class="palette-item" type="button" data-block-type="mn1Signal">MN1<br>Niveau pressu</button>
+                <button class="palette-item" type="button" data-block-type="tricSignal">T RIC<br>Sortie cœur</button>
+                <button class="palette-item" type="button" data-block-type="qpriSignal">QPRI<br>Débit primaire</button>
               </div>
             </div>
             <div class="palette-group">
@@ -1469,11 +1470,96 @@
                 <button class="palette-item" type="button" data-block-type="pdem">PDEM<br>Demande réseau</button>
                 <button class="palette-item" type="button" data-block-type="pthcSignal">PTHC<br>Puiss. thermique</button>
                 <button class="palette-item" type="button" data-block-type="tmoy">TMOY<br>Temp. moyenne</button>
-                <button class="palette-item regul-only" type="button" data-block-type="qchargeCapacitySignal">QCHARGE max<br>Capacité pompe RCV</button>
+                <button class="palette-item" type="button" data-block-type="qchargeCapacitySignal">QCHARGE max<br>Capacité pompe RCV</button>
                 <button class="palette-item" type="button" data-block-type="plinSignal">PLIN<br>Puiss. linéique max.</button>
                 <button class="palette-item" type="button" data-block-type="dnbrSignal">DNBR<br>Marge critique</button>
                 <button class="palette-item" type="button" data-block-type="qchaSignal">QCHA<br>Charge RCV</button>
                 <button class="palette-item" type="button" data-block-type="qdecSignal">QDEC<br>Décharge RCV</button>
+                <button class="palette-item" type="button" data-block-type="reacSignal">REAC<br>Réactivité</button>
+                <button class="palette-item" type="button" data-block-type="xenonSignal">XÉNON<br>Antiréactivité</button>
+                <button class="palette-item" type="button" data-block-type="dpaxSignal">DPAX<br>Déséquilibre axial</button>
+                <button class="palette-item" type="button" data-block-type="boronSignal">BORE<br>CB primaire</button>
+                <button class="palette-item" type="button" data-block-type="trefSignal">TREF<br>Temp. de référence</button>
+                <button class="palette-item" type="button" data-block-type="tpzrSignal">TPZR<br>Temp. pressuriseur</button>
+                <button class="palette-item" type="button" data-block-type="tfuelSignal">TCRA<br>Temp. crayon</button>
+                <button class="palette-item" type="button" data-block-type="tsubSignal">TSUB<br>Sous-refroidissement</button>
+                <button class="palette-item" type="button" data-block-type="pgvSignal">PGV<br>Échange thermique GV</button>
+                <button class="palette-item" type="button" data-block-type="residualPowerSignal">PRES<br>Chaleur résiduelle</button>
+                <button class="palette-item" type="button" data-block-type="pumpHeatSignal">GMPP<br>Chaleur des pompes</button>
+                <button class="palette-item" type="button" data-block-type="fDeltaHSignal">FΔH<br>Élévation d’enthalpie</button>
+                <button class="palette-item" type="button" data-block-type="cppLevelSignal">N CPP<br>Niveau primaire</button>
+                <button class="palette-item" type="button" data-block-type="risFlowSignal">QRIS<br>Injection livrée</button>
+                <button class="palette-item" type="button" data-block-type="pchauffSignal">PCHF<br>Chaufferettes réalisées</button>
+                <button class="palette-item" type="button" data-block-type="qaspSignal">QASP<br>Aspersion réalisée</button>
+                <button class="palette-item" type="button" data-block-type="qaspAuxSignal">QASP aux.<br>Aspersion RCV</button>
+                <button class="palette-item" type="button" data-block-type="imchSignal">IMCH<br>Immersion chaufferettes</button>
+                <button class="palette-item" type="button" data-block-type="qsvpSignal">QSVP<br>Débit soupapes PZR</button>
+              </div>
+            </div>
+            <div class="palette-group shared-signals">
+              <h3>Positions des grappes</h3>
+              <div class="palette-grid">
+                <button class="palette-item" type="button" data-block-type="posgSignal">Position R<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="g3CountSignal">Compteur GCP<br>Pas de chevauchement</button>
+                <button class="palette-item" type="button" data-block-type="gcpCalibrationSignal">Décalibrage GCP<br>% PN</button>
+                <button class="palette-item" type="button" data-block-type="rodG1Signal">Position G1<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="rodG2Signal">Position G2<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="rodN1Signal">Position N1<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="rodN2Signal">Position N2<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="rodSASignal">Position SA<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="rodSBSignal">Position SB<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="rodSCSignal">Position SC<br>Pas extraits</button>
+                <button class="palette-item" type="button" data-block-type="rodSDSignal">Position SD<br>Pas extraits</button>
+              </div>
+            </div>
+            <div class="palette-group shared-signals">
+              <h3>Mesures des GV</h3>
+              <div class="palette-grid">
+                <button class="palette-item" type="button" data-block-type="gv1LevelSignal">105MN<br>Niveau GV1</button>
+                <button class="palette-item" type="button" data-block-type="gv1SteamSignal">VAP1<br>Vapeur totale GV1</button>
+                <button class="palette-item" type="button" data-block-type="gv1PressureSignal">P GV1<br>Pression GV1</button>
+                <button class="palette-item" type="button" data-block-type="gv1FeedSignal">ARE1<br>Débit ARE GV1</button>
+                <button class="palette-item" type="button" data-block-type="gv1AsgSignal">ASG1<br>Débit ASG GV1</button>
+                <button class="palette-item" type="button" data-block-type="gv1DumpSignal">GCT-A1<br>Débit GCT-A GV1</button>
+                <button class="palette-item" type="button" data-block-type="gv1TurbineSteamSignal">VPU1<br>Débit VPU GV1</button>
+                <button class="palette-item" type="button" data-block-type="gv2LevelSignal">205MN<br>Niveau GV2</button>
+                <button class="palette-item" type="button" data-block-type="gv2SteamSignal">VAP2<br>Vapeur totale GV2</button>
+                <button class="palette-item" type="button" data-block-type="gv2PressureSignal">P GV2<br>Pression GV2</button>
+                <button class="palette-item" type="button" data-block-type="gv2FeedSignal">ARE2<br>Débit ARE GV2</button>
+                <button class="palette-item" type="button" data-block-type="gv2AsgSignal">ASG2<br>Débit ASG GV2</button>
+                <button class="palette-item" type="button" data-block-type="gv2DumpSignal">GCT-A2<br>Débit GCT-A GV2</button>
+                <button class="palette-item" type="button" data-block-type="gv2TurbineSteamSignal">VPU2<br>Débit VPU GV2</button>
+                <button class="palette-item" type="button" data-block-type="gv3LevelSignal">305MN<br>Niveau GV3</button>
+                <button class="palette-item" type="button" data-block-type="gv3SteamSignal">VAP3<br>Vapeur totale GV3</button>
+                <button class="palette-item" type="button" data-block-type="gv3PressureSignal">P GV3<br>Pression GV3</button>
+                <button class="palette-item" type="button" data-block-type="gv3FeedSignal">ARE3<br>Débit ARE GV3</button>
+                <button class="palette-item" type="button" data-block-type="gv3AsgSignal">ASG3<br>Débit ASG GV3</button>
+                <button class="palette-item" type="button" data-block-type="gv3DumpSignal">GCT-A3<br>Débit GCT-A GV3</button>
+                <button class="palette-item" type="button" data-block-type="gv3TurbineSteamSignal">VPU3<br>Débit VPU GV3</button>
+                <button class="palette-item" type="button" data-block-type="gv4LevelSignal">405MN<br>Niveau GV4</button>
+                <button class="palette-item" type="button" data-block-type="gv4SteamSignal">VAP4<br>Vapeur totale GV4</button>
+                <button class="palette-item" type="button" data-block-type="gv4PressureSignal">P GV4<br>Pression GV4</button>
+                <button class="palette-item" type="button" data-block-type="gv4FeedSignal">ARE4<br>Débit ARE GV4</button>
+                <button class="palette-item" type="button" data-block-type="gv4AsgSignal">ASG4<br>Débit ASG GV4</button>
+                <button class="palette-item" type="button" data-block-type="gv4DumpSignal">GCT-A4<br>Débit GCT-A GV4</button>
+                <button class="palette-item" type="button" data-block-type="gv4TurbineSteamSignal">VPU4<br>Débit VPU GV4</button>
+              </div>
+            </div>
+            <div class="palette-group shared-signals">
+              <h3>Consignes et signaux de conduite</h3>
+              <div class="palette-grid">
+                <button class="palette-item" type="button" data-block-type="pressureSetpointSignal">PREF manu<br>Pression · bar</button>
+                <button class="palette-item" type="button" data-block-type="pzrLevelSetpointSignal">NREF manu<br>Niveau PZR · %</button>
+                <button class="palette-item" type="button" data-block-type="nrefSignal">NREF<br>Référence niveau PZR</button>
+                <button class="palette-item" type="button" data-block-type="gcpPowerSignal">P GCP<br>Puissance recalée</button>
+                <button class="palette-item" type="button" data-block-type="gvSetpointSignal">NREF GV<br>Consigne niveaux</button>
+              </div>
+            </div>
+            <div class="palette-group shared-signals">
+              <h3>Information de protection</h3>
+              <div class="palette-grid">
+                <button class="palette-item" type="button" data-block-type="voltageSignal">TENSION<br>Manque de tension</button>
+                <button class="palette-item" type="button" data-block-type="aarSignal">AAR<br>État de l’ordre</button>
               </div>
             </div>
             <div class="palette-group operator-palette">
@@ -1511,41 +1597,6 @@
                 <button class="palette-item" type="button" data-block-type="curve" data-special-curve="nref">NREF<br>Programme niveau</button>
                 <button class="palette-item" type="button" data-block-type="curve" data-special-curve="g1">G1<br>Correction écart</button>
                 <button class="palette-item" type="button" data-block-type="curve" data-special-curve="g2">G2<br>Gain de charge</button>
-              </div>
-            </div>
-            <div class="palette-group shared-signals">
-              <h3>Positions des grappes</h3>
-              <div class="palette-grid">
-                <button class="palette-item" type="button" data-block-type="posgSignal">Position R<br>Pas extraits</button>
-                <button class="palette-item" type="button" data-block-type="g3CountSignal">Position GCP<br>Pas de chevauchement</button>
-                <button class="palette-item" type="button" data-block-type="gcpCalibrationSignal">Décalibrage GCP<br>% PN</button>
-              </div>
-            </div>
-            <div class="palette-group regul-only">
-              <h3>RGL et niveaux GV</h3>
-              <div class="palette-grid">
-                <button class="palette-item" type="button" data-block-type="pressureSetpointSignal">PREF manu<br>Pression · bar</button>
-                <button class="palette-item" type="button" data-block-type="pzrLevelSetpointSignal">NREF manu<br>Niveau PZR · %</button>
-                <button class="palette-item" type="button" data-block-type="gcpPowerSignal">P GCP<br>Puissance recalée</button>
-                <button class="palette-item" type="button" data-block-type="gvSetpointSignal">NREF GV<br>Consigne niveaux</button>
-                <button class="palette-item" type="button" data-block-type="gv1LevelSignal">105MN<br>Niveau GV1</button>
-                <button class="palette-item" type="button" data-block-type="gv2LevelSignal">205MN<br>Niveau GV2</button>
-                <button class="palette-item" type="button" data-block-type="gv3LevelSignal">305MN<br>Niveau GV3</button>
-                <button class="palette-item" type="button" data-block-type="gv4LevelSignal">405MN<br>Niveau GV4</button>
-                <button class="palette-item" type="button" data-block-type="gv1SteamSignal">VAP1<br>Vapeur GV1</button>
-                <button class="palette-item" type="button" data-block-type="gv2SteamSignal">VAP2<br>Vapeur GV2</button>
-                <button class="palette-item" type="button" data-block-type="gv3SteamSignal">VAP3<br>Vapeur GV3</button>
-                <button class="palette-item" type="button" data-block-type="gv4SteamSignal">VAP4<br>Vapeur GV4</button>
-              </div>
-            </div>
-            <div class="palette-group protect-only">
-              <h3>Information de protection</h3>
-              <div class="palette-grid">
-                <button class="palette-item" type="button" data-block-type="voltageSignal">TENSION<br>Présente / absente</button>
-                <button class="palette-item" type="button" data-block-type="plinSignal">PLIN<br>Puissance linéique max.</button>
-                <button class="palette-item" type="button" data-block-type="aarSignal">AAR<br>État de l’ordre</button>
-                <button class="palette-item" type="button" data-block-type="mp1Signal">002MP<br>Pression primaire</button>
-                <button class="palette-item" type="button" data-block-type="pow1">POW1<br>Puissance nucléaire</button>
               </div>
             </div>
             <div class="palette-group output-palette">
@@ -3127,6 +3178,47 @@
     }
 
     const BLOCK_TYPES = {
+      trefSignal: { label: "TREF", meaning: "Température de référence (°C)", role: "sensor" },
+      xenonSignal: { label: "XÉNON", meaning: "Antiréactivité du xénon (pcm)", role: "sensor" },
+      dpaxSignal: { label: "DPAX", meaning: "Déséquilibre axial (% PN)", role: "sensor" },
+      boronSignal: { label: "BORE", meaning: "Concentration primaire (ppm)", role: "sensor" },
+      tricSignal: { label: "T RIC", meaning: "Température moyenne de sortie cœur (°C)", role: "sensor" },
+      residualPowerSignal: { label: "PRES", meaning: "Chaleur résiduelle (% PN)", role: "sensor" },
+      pumpHeatSignal: { label: "GMPP", meaning: "Chaleur déposée par les pompes (MWth)", role: "sensor" },
+      fDeltaHSignal: { label: "FΔH", meaning: "Facteur d’élévation d’enthalpie", role: "sensor" },
+      cppLevelSignal: { label: "N CPP", meaning: "Niveau de l’inventaire primaire (m)", role: "sensor" },
+      risFlowSignal: { label: "QRIS", meaning: "Débit RIS réellement livré (kg/s)", role: "sensor" },
+      rodG1Signal: { label: "Position G1", meaning: "Position réelle du groupe G1 (pas extraits)", role: "sensor" },
+      rodG2Signal: { label: "Position G2", meaning: "Position réelle du groupe G2 (pas extraits)", role: "sensor" },
+      rodN1Signal: { label: "Position N1", meaning: "Position réelle du groupe N1 (pas extraits)", role: "sensor" },
+      rodN2Signal: { label: "Position N2", meaning: "Position réelle du groupe N2 (pas extraits)", role: "sensor" },
+      rodSASignal: { label: "Position SA", meaning: "Position réelle du groupe SA (pas extraits)", role: "sensor" },
+      rodSBSignal: { label: "Position SB", meaning: "Position réelle du groupe SB (pas extraits)", role: "sensor" },
+      rodSCSignal: { label: "Position SC", meaning: "Position réelle du groupe SC (pas extraits)", role: "sensor" },
+      rodSDSignal: { label: "Position SD", meaning: "Position réelle du groupe SD (pas extraits)", role: "sensor" },
+      gv1PressureSignal: { label: "P GV1", meaning: "Pression GV1 (bar abs.)", role: "sensor" },
+      gv1FeedSignal: { label: "ARE1", meaning: "Débit ARE GV1 (kg/s)", role: "sensor" },
+      gv1AsgSignal: { label: "ASG1", meaning: "Débit ASG GV1 (kg/s)", role: "sensor" },
+      gv1DumpSignal: { label: "GCT-A1", meaning: "Débit GCT-A GV1 (kg/s)", role: "sensor" },
+      gv1TurbineSteamSignal: { label: "VPU1", meaning: "Débit VPU GV1 (kg/s)", role: "sensor" },
+      gv2PressureSignal: { label: "P GV2", meaning: "Pression GV2 (bar abs.)", role: "sensor" },
+      gv2FeedSignal: { label: "ARE2", meaning: "Débit ARE GV2 (kg/s)", role: "sensor" },
+      gv2AsgSignal: { label: "ASG2", meaning: "Débit ASG GV2 (kg/s)", role: "sensor" },
+      gv2DumpSignal: { label: "GCT-A2", meaning: "Débit GCT-A GV2 (kg/s)", role: "sensor" },
+      gv2TurbineSteamSignal: { label: "VPU2", meaning: "Débit VPU GV2 (kg/s)", role: "sensor" },
+      gv3PressureSignal: { label: "P GV3", meaning: "Pression GV3 (bar abs.)", role: "sensor" },
+      gv3FeedSignal: { label: "ARE3", meaning: "Débit ARE GV3 (kg/s)", role: "sensor" },
+      gv3AsgSignal: { label: "ASG3", meaning: "Débit ASG GV3 (kg/s)", role: "sensor" },
+      gv3DumpSignal: { label: "GCT-A3", meaning: "Débit GCT-A GV3 (kg/s)", role: "sensor" },
+      gv3TurbineSteamSignal: { label: "VPU3", meaning: "Débit VPU GV3 (kg/s)", role: "sensor" },
+      gv4PressureSignal: { label: "P GV4", meaning: "Pression GV4 (bar abs.)", role: "sensor" },
+      gv4FeedSignal: { label: "ARE4", meaning: "Débit ARE GV4 (kg/s)", role: "sensor" },
+      gv4AsgSignal: { label: "ASG4", meaning: "Débit ASG GV4 (kg/s)", role: "sensor" },
+      gv4DumpSignal: { label: "GCT-A4", meaning: "Débit GCT-A GV4 (kg/s)", role: "sensor" },
+      gv4TurbineSteamSignal: { label: "VPU4", meaning: "Débit VPU GV4 (kg/s)", role: "sensor" },
+      pchauffSignal: { label: "PCHF", meaning: "Puissance réalisée des chaufferettes (kW)", role: "sensor" },
+      qaspSignal: { label: "QASP", meaning: "Ouverture réalisée de l’aspersion (%)", role: "sensor" },
+      qaspAuxSignal: { label: "QASP aux.", meaning: "Débit réalisé d’aspersion auxiliaire RCV (m³/h)", role: "sensor" },
       ptur: { label: "PTUR", meaning: "Signal puissance turbine (%)", role: "sensor" },
       pdem: { label: "PDEM", meaning: "Signal demande réseau (%)", role: "sensor" },
       pow1: { label: "POW1", meaning: "Capteur puissance nucléaire (%)", role: "sensor" },

@@ -10,7 +10,7 @@ const app=fs.readFileSync(path.join(__dirname,'../centurion-app.js'),'utf8');
 // Exécution de l'application entière : vrais événements et vrais pas physiques.
 // Seule la surface DOM/Canvas est remplacée ; aucune fonction applicative n'est extraite.
 function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {svgUpdates=true,autoModule=null}={}){
-  const ids=new Map(),nodes=[],frames=[],windowEvents={},messages=[],downloads=[];
+  const ids=new Map(),nodes=[],frames=[],windowEvents={},messages=[],downloads=[],intervals=new Map();let timerId=0;
   let now=0,currentSvg=svgSurface('synoptique-RCP-1300.svg');
   const attributes=tag=>Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(([,k,v])=>[k,v]));
   function matches(node,selector){
@@ -63,17 +63,47 @@ function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {s
   const context=vm.createContext({window:{CenturionEngine:engine,CenturionHistory:H,CenturionState:State,CenturionAuto:autoModule,devicePixelRatio:1,
     addEventListener:(name,fn)=>(windowEvents[name]??=[]).push(fn)},document,
     performance:{now:()=>now},requestAnimationFrame:fn=>frames.push(fn),
-    setInterval:()=>1,clearInterval(){},setTimeout:()=>1,clearTimeout(){},Blob,
+    setInterval(fn){const id=++timerId;intervals.set(id,fn);return id;},clearInterval(id){intervals.delete(id);},setTimeout:()=>1,clearTimeout(){},Blob,
     URL:{createObjectURL(blob){downloads.push(blob);return 'blob:test';},revokeObjectURL(){}},console});
   vm.runInContext(source,context,{filename:'centurion-app.js'});
   return {get:id=>ids.get(id),query:selector=>document.querySelector(selector),messages,downloads,get pendingFrames(){return frames.length;},
     receive(data,source){for(const fn of windowEvents.message||[])fn({data,source});},
     key(event){for(const fn of windowEvents.keydown||[])fn(event);},
     click:id=>ids.get(id).fire('click'),consumeCpu:milliseconds=>{now+=milliseconds;},
+    elapseReal(milliseconds){now+=milliseconds;for(const fn of [...intervals.values()])fn();},
     frame(milliseconds=100){now+=milliseconds;const callback=frames.shift();
       assert.ok(callback,'une trame doit être programmée');callback(now);},
     get snapshot(){return messages.findLast(m=>m.type==='centurion-state');}};
 }
+
+test('conduite perturbée : recherche, décompte, panne réelle, levée et réinitialisation depuis le pupitre',async()=>{
+  let model=E.make(),made=false;
+  const page=application(app,null,{...E,make:()=>{if(made)return model=E.make();made=true;return model;}});
+  assert.equal(page.get('equipmentFaultSelect').value,'heater');
+  assert.equal(page.get('startEquipmentFault').disabled,false);
+  page.get('equipmentFaultMode').value='off';await page.click('startEquipmentFault');
+  assert.deepEqual(model.controls.equipmentFaults,{});
+  page.elapseReal(4999);assert.deepEqual(model.controls.equipmentFaults,{});
+  page.elapseReal(1);assert.equal(model.controls.equipmentFaults.heater.mode,'off');
+  assert.equal(page.get('equipmentFaultBanner').hidden,false);
+  E.step(model,.1);assert.equal(model.state.heaterKW,0);
+  await page.click('clearEquipmentFaults');assert.deepEqual(model.controls.equipmentFaults,{});
+  assert.equal(page.get('equipmentFaultBanner').hidden,true);
+  page.get('equipmentFaultSearch').value='grappes';await page.get('equipmentFaultSearch').fire('input');
+  assert.equal(page.get('equipmentFaultSelect').value,'rod.R');
+  page.get('equipmentFaultMode').value='hold';await page.click('startEquipmentFault');page.elapseReal(5000);
+  assert.equal(model.controls.equipmentFaults['rod.R'].mode,'hold');
+  E.setEquipmentFault(model,'spray','off');E.initiate(model,'break',{areaCm2:300});
+  await page.get('equipmentFaultList').fire('click',{target:{closest:()=>({dataset:{clearFault:'rod.R'}})}});
+  assert.equal(model.controls.equipmentFaults['rod.R'],undefined);
+  assert.equal(model.controls.equipmentFaults.spray.mode,'off','levée individuelle sans réparer les autres équipements');
+  assert.equal(model.state.breakAreaCm2,300,'la levée d’une panne ne ferme pas la brèche');
+  await page.click('resetButton');assert.deepEqual(model.controls.equipmentFaults,{});
+  assert.equal(page.get('equipmentFaultBanner').hidden,true);
+  page.get('equipmentFaultSearch').value='introuvable';await page.get('equipmentFaultSearch').fire('input');
+  assert.equal(page.get('startEquipmentFault').disabled,true);
+  assert.equal(page.get('equipmentFaultSelect').value,'');
+});
 
 test('pupitre GMPP : déclenchement manuel disponible avec CC actifs, sans AAR ni IS',()=>{
   const model=E.make();let made=false;
