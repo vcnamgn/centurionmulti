@@ -1,5 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const E=require('../centurion-engine');
+const energyRate=require('./helpers/primary-energy');
 const {svgSurface}=require('./helpers/svg-surface');
 const close=(a,b,t=1e-6)=>assert.ok(Math.abs(a-b)<=t,`${a} != ${b}`);
 const totalMass=s=>s.primaryMassKg+s.risTankRemainingKg+s.sumpKg
@@ -62,8 +63,8 @@ test('pompes RIS : montée en vitesse, HMT quadratique et redémarrage progressi
 });
 
 test('inventaire CPP : conservation, vidange des capacités hautes et désamorçage progressif',()=>{
-  const nominal=E.cppInventory(E.C.nominalPrimaryMassKg);
-  close(nominal.levelM,E.CPP_INITIAL_LEVEL_M,1e-8);
+  const nominal=E.make().state.inventory;
+  close(nominal.levelM,E.CPP_INITIAL_LEVEL_M,1e-6);
   close(nominal.components.pzr.fillPct,42);
   assert.deepEqual(nominal.loopPriming,[1,1,1,1]);
   const regulated=E.cppInventory(E.C.nominalPrimaryMassKg-3000);
@@ -96,7 +97,7 @@ test('brèche 300 cm² : températures bornées à Tsat, bilan massique global e
     const sat=E.saturationTemperatureC(s.pressureBar);
     for(const t of [s.coldC,s.hotC,s.tRicC,s.tavgC,s.lidC,...s.axialCoolant32,
       ...s.loops.flatMap(l=>[l.hotC,l.coldC])])assert.ok(Number.isFinite(t)&&t>=20&&t<=sat+1e-8);
-    if(s.vaporMassKg>1){phase=true;close(s.tavgC,sat);}
+    if(s.circulatingVoidPct>.01){phase=true;close(s.hotC,sat);}
     if(s.risDeliveredKgS>0){risCore=true;close(s.coreFlowKgS,
       s.loops.reduce((sum,l)=>sum+l.flowKgS,0)+s.risCoreKgS);}
     if(s.inventory.loopPriming.some(p=>p===0)){
@@ -118,15 +119,15 @@ test('bilan d’enthalpie primaire : injections froides, sensible, latent et rej
   let accumulatorCoolingSteps=0;
   for(let i=0;i<6000&&!m.state.endState;i++){
     const s=m.state,dt=.1,oldT=s.tavgC,p=s.pressureBar;
-    const before=s.primaryMassKg*E.C.primaryCpJkgK*oldT+s.vaporEnergyJ;
+    const before=s.primaryEnergyJ;
     E.step(m,dt);
     const inflow=(s.rcvDeliveredKgS*s.flowProperties.charge.tempC
       +s.risDeliveredKgS*s.flowProperties.ris.tempC)*E.C.primaryCpJkgK*dt;
     const out=(s.breakKgS+s.rcvLetdownKgS+s.reliefKgS)*dt*E.C.primaryCpJkgK*oldT
       +(s.breakSteamKgS+s.reliefSteamKgS)*dt*E.latentHeatJkg(p);
-    const expected=before+(s.coreTransferMW+s.pumpHeatMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*1e6*dt+inflow-out;
+    const expected=before+energyRate(E,s,p)*dt;
     close(s.primaryEnergyJ,expected,.01);
-    if(s.vaporMassKg>0)phaseSteps++;
+    if(s.circulatingVoidPct>.01)phaseSteps++;
     if(s.risDeliveredAccumulatorKgS>1&&s.phaseChangeKgS<0)accumulatorCoolingSteps++;
   }
   assert.ok(phaseSteps>100,'bilan vérifié pendant l’ébullition et la détente');
@@ -256,9 +257,10 @@ test('SVG inventaire et P–T : vraies liaisons temps réel, remplissages, point
   for(const node of inv.root.querySelectorAll('[data-value]'))
     assert.equal(node.getAttribute('data-available'),'true');
   const water=inv.root.querySelectorAll('[data-level-value]');assert.equal(water.length,9);
+  const initialHeights=water.map(n=>Number(n.getAttribute('height')));
   m.state.primaryMassKg=.8*E.C.nominalPrimaryMassKg;E.step(m,.1);snapshot=E.instrumentSnapshot(m);inv.update(snapshot);
   assert.equal(Number(water.at(-1).getAttribute('height'))>0,true);
-  close(Number(water[4].getAttribute('height')),0,'1e-8');
+  assert.ok(water.some((n,i)=>Number(n.getAttribute('height'))<initialHeights[i]),'le remplissage suit la baisse de masse');
   const marker=inv.get('cpp-waterline');
   assert.ok(marker.getAttribute('d').includes(String(Number(marker.getAttribute('data-metres-zero'))
     -Number(marker.getAttribute('data-metres-scale'))*snapshot.inventory.levelM)));

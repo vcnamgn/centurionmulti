@@ -8,9 +8,9 @@
   const History=typeof module==='object'&&module.exports?require('./centurion-history.js'):window.CenturionHistory;
   const PzrCommands=typeof module==='object'&&module.exports?require('./centurion-cc-pzr.js'):window.CenturionPzrCommands;
   const Auto=typeof module==='object'&&module.exports?require('./centurion-auto.js'):window.CenturionAuto;
-  const FORMAT="Centurion-State",VERSION=1,REVISION="20261016-pzr-energy-v12";
+  const FORMAT="Centurion-State",VERSION=1,REVISION="20261016-separated-primary-v13";
   const MAX_STATE_BYTES=160*1024*1024;
-  const COMPATIBLE_REVISIONS=["20261008-pzr-v2","20261008-pzr-v3","20261008-breche-v4","20261008-gv-breches-v5","20261008-ris-inertie-v6","20261008-gmpp-niveau-v7","20261009-pzr-breche-v8","20261009-consignes-v9","20261009-charge-v10","20261015-equipment-faults-v11"];
+  const COMPATIBLE_REVISIONS=["20261008-pzr-v2","20261008-pzr-v3","20261008-breche-v4","20261008-gv-breches-v5","20261008-ris-inertie-v6","20261008-gmpp-niveau-v7","20261009-pzr-breche-v8","20261009-consignes-v9","20261009-charge-v10","20261015-equipment-faults-v11","20261016-pzr-energy-v12"];
   const LEGACY_REVISION="20261007-state-v1";
   const clone=value=>JSON.parse(JSON.stringify(value));
   function checkJson(value,path="fichier",depth=0){
@@ -58,6 +58,12 @@
     }
     range(s.time,0,1e9,"Horloge");range(s.primaryMassKg,1,1e8,"Masse primaire");
     range(s.pressureBar,1,E.C.primaryPressureMaxBar,"Pression primaire");
+    range(s.circulatingVoidPct,0,100,"Taux de vide circulant");
+    range(s.coreExchangeMWC,E.C.coreConductanceMWC*E.C.minimumCoreExchangeFactor,E.C.coreConductanceMWC,"Échange cœur");
+    range(s.thermalNodes.pzrMassKg,0,s.primaryMassKg,"Masse PZR");
+    if(Math.abs(s.thermalNodes.massKg-s.primaryMassKg)>1e-4
+      ||Math.abs(s.thermalNodes.bulkEnergyJ+s.thermalNodes.pzrEnergyJ+s.thermalNodes.referenceJ-s.primaryEnergyJ)>.01)
+      throw new Error("Bilans des volumes thermiques incohérents.");
     range(s.risPumpSpeedFraction,0,1,"Vitesse des pompes RIS");
     s.loops.forEach((loop,i)=>range(loop.forcedPrimingFraction,0,1,`Disponibilité d'aspiration GMPP ${i+1}`));
     range(u.breakAreaCm2,0,2000,"Section de brèche");
@@ -223,6 +229,14 @@
       raw.model.state.gv.forEach(migrateGv);
       for(const r of raw.certificateArchive?.records??[]){
         r.snapshot.gvAll.forEach(migrateGv);migrateGv(r.snapshot.gvState);
+      }
+      if(!s.thermalNodes)E.initializePrimaryThermalState(s);
+      for(const r of raw.certificateArchive?.records??[]){
+        const v=r.snapshot;
+        if(v.circulatingVoidPct===undefined)v.circulatingVoidPct=0;
+        if(v.circulatingVaporMassKg===undefined)v.circulatingVaporMassKg=0;
+        if(v.pzrVaporMassKg===undefined)v.pzrVaporMassKg=0;
+        if(v.coreExchangeMWC===undefined)v.coreExchangeMWC=E.C.coreConductanceMWC;
       }
       raw.engineRevision=REVISION;
     }

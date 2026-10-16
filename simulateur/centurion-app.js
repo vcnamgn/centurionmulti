@@ -365,6 +365,8 @@
     show("boardTurbine",`${fmt(s.turbinePct,1)} %`);
     show("boardPzrTemp",`${fmt(v.pzrTempC,1)} °C`);
     show("boardFuel",`${fmt(s.fuelC)} °C`);
+    show("boardVoid",`${fmt(s.circulatingVoidPct,2)} % vol.`);
+    show("boardCoreExchange",`${fmt(s.coreExchangeMWC,2)} MW/°C`);
     show("boardSubcool",`${fmt(s.subcoolingC,1)} °C`);
     show("boardGvPower",`${fmt(s.totalGvMW)} MWth`);
     show("boardPumpHeat",`${fmt(s.pumpHeatMW,1)} MWth`);

@@ -91,7 +91,9 @@ L'objet racine est `{ state, controls }`. Les fonctions d'évolution modifient c
 | `pressureBar` | bar absolus | Pression primaire |
 | `tavgC`, `hotC`, `coldC`, `tRicC`, `lidC`, `fuelC` | °C | Moyenne primaire, BC, BF, sortie cœur avant bypass, couvercle et combustible |
 | `primaryMassKg`, `vaporMassKg` | kg | Masse totale primaire et masse de vapeur retenue |
-| `primaryEnergyJ`, `vaporEnergyJ` | J | Énergie primaire et contribution latente |
+| `primaryEnergyJ`, `vaporEnergyJ` | J | Énergie totale suivie des deux volumes, parois PZR comprises, avec référence fixe ; contribution latente des deux stocks vapeur |
+| `thermalNodes` | kg ; J ; J/kg | Masses, énergies, référence et profil froide/chaude du circulant/PZR |
+| `circulatingVoidPct`, `coreExchangeMWC` | % vol. ; MW/°C | Vide circulant hors PZR et échange combustible–eau effectif |
 | `boronPpm`, `boronInventory` | ppm ; ppm·kg | Concentration du liquide et inventaire associé |
 | `rods.R`, `rods.G1`, … | pas extraits | 0 = entièrement inséré ; 260 = entièrement extrait |
 | `g3Count` | pas de chevauchement | Compteur condensé G1–G2–N1–N2 ; 780 au point tout extrait |
@@ -236,9 +238,19 @@ Le dessin de P(z) a une échelle fixe 0–2 ; les 32 barres PLIN utilisent 0–4
 
 ### 5.5 Combustible, primaire et changement de phase
 
-L'échange combustible–primaire est `Q = K × (TCRA − TMOY)`, avec K fixe à 10 MW/°C et capacité thermique combustible de 45 MJ/°C. La même puissance est retirée du combustible et ajoutée au primaire. Le combustible peut dépasser la température de saturation ; les températures d'eau sont limitées à cette saturation.
+L'échange combustible–primaire est `Q = K_effectif × (TCRA − TMOY)`, avec **K nominal = 10 MW/°C** et capacité thermique combustible de 45 MJ/°C. La même puissance est retirée du combustible et ajoutée au primaire. Le combustible peut dépasser la température de saturation ; les températures d'eau sont limitées à cette saturation.
 
-Le primaire a un inventaire nominal de 269 064 kg, Cp effectif 6 000 J/(kg·°C) et débit nominal total de 17 588 kg/s. Il n'est pas multiplié par quatre. Les bilans comptent les injections arrivées, les décharges, la brèche et les soupapes. La température moyenne est déduite de l'énergie ; l'énergie excédant le liquide saturé devient une contribution latente et une masse de vapeur.
+Le coefficient effectif utilise le taux volumique `alpha` du circulant, la couverture en eau `w` et le DNBR simplifié de l'état précédent :
+
+```text
+d = max(borne((1 − DNBR) / 0,8, 0, 1), alpha^4)
+f = max(0,03, w / [1 + alpha² × (1 + 12 × d)])
+K_effectif = 10 × f  [MW/°C]
+```
+
+À alpha = 0 et cœur couvert, le nominal reste inchangé. La dégradation est faible avec les premières bulles, et renforcée quand la marge critique passe sous l'unité ou que la vapeur devient dominante. Ces coefficients sont des hypothèses d'étude ; ce n'est pas une corrélation de film boiling. Le DNBR existant reste un proxy pression/débit/sous-refroidissement, complété par le facteur `1 / (1 + 2 × alpha)` ; **il ne calculait pas déjà une conductance thermique dégradée**. La température TCRA résulte toujours de son bilan dynamique, avec le même échange retiré au combustible et ajouté au fluide, sans perte d'énergie artificielle.
+
+Le primaire a un inventaire nominal de 269 064 kg, Cp effectif 6 000 J/(kg·°C) et débit nominal total de 17 588 kg/s. Il n'est pas multiplié par quatre. Les bilans comptent les injections arrivées, les décharges, la brèche et les soupapes. La température et les phases sont déduites des énergies des volumes thermiques séparés, décrits au §5.8 ; un excédent au-delà du liquide saturé devient une contribution latente et une masse de vapeur dans le volume concerné.
 
 La pression et la température de saturation utilisent les équations directes et inverses de la région 4 IF97. La densité liquide dépend de T et P (région 1 IF97 jusqu'à 350 °C) ; les densités saturées suivent SR1-86(1992). Au-delà de 350 °C, la correction de compression liquide est une extension d'étude, pas une implémentation de la région 3. Cp reste effectif et constant, et la chaleur latente primaire est interpolée : le bilan énergétique n'est donc pas une EOS IF97 complète.
 
@@ -310,94 +322,55 @@ Le débit ASG par GV interpole 127, 140, 152, 157 m³/h aux pressions 80, 60, 40
 
 ### 5.8 PZR et RCV
 
-#### Volume fini et effet piston
+#### Deux volumes thermiques et une pression commune
 
-La géométrie équivalente est recalée sur **269 064 kg à 306,5 °C et 155 bar**, avec niveau PZR 42 %. Sa capacité totale vaut environ **401,05 m³**. Pour l'inventaire, `V_liquide = M_liquide / rho(TMOY, P)` ; refroidir l'eau augmente sa densité et libère du volume. Un affichage à densité fixe pouvait donc annoncer un excès fictif dans un CPP refroidi.
+Le primaire circulant (cuve, branches, faisceaux) et le pressuriseur possèdent désormais des **masses et énergies distinctes**. La pression est commune, mais la température PZR n'est pas imposée à TMOY. Cette séparation permet aux chaufferettes de remonter la pression après un passage à saturation sans devoir porter tout le primaire à la nouvelle température de saturation. Le rôle des chaufferettes et de la ligne d'expansion est décrit dans la [référence publique sur le système primaire, §5.4.5](https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1793/initial/chapter5.pdf).
 
-À chaque sous-pas, le moteur conserve la masse injectée et recherche la pression satisfaisant :
-
-```text
-V_liquide(P, énergie) + V_vapeur_de_détente(P, énergie)
-  + max(0, V_poche × (P_ancien / P)^(1/n)
-      + C_corrective × (P_ancien − P) + ΔV_chaleur) = V_CPP
-```
-
-La poche équivalente représente l'effet piston : une insurge ou une dilatation la comprime, une outsurge la détend. `n = 1,2` est une hypothèse polytropique d'étude. Une fois le volume libre nul, le terme de poche disparaît ; la dépendance de `rho` à P gouverne la pression du circuit plein d'eau. L'algorithme utilise une recherche encadrée avec Newton, sans changer le sous-pas de 0,1 s à ×200.
-
-La fermeture tient compte de la compression de la poche et de la réponse de vapeur saturée, d'eau chaude et de parois capables de fournir ou absorber la chaleur d'un changement de phase. Une insurge comprime la vapeur ; une outsurge la détend, puis une partie de l'eau chaude se vaporise pour amortir la chute de pression. La stratification reste représentée par une capacité participante effective. Ces mécanismes sont décrits et comparés à des essais dans la [référence publique sur les transitoires de pressuriseur, chap. 2](https://publications.vtt.fi/pdf/tiedotteet/2006/T2339.pdf).
-
-Déplacement, compression et chaufferettes/aspersions sont traités dans **une seule équation implicite de pression**, avec la même compliance :
+Les états sont conservés dans `thermalNodes` : masse PZR, énergie PZR, énergie circulante, écart d'enthalpie froide/chaude et référence énergétique fixe. À chaque sous-pas de 0,1 s :
 
 ```text
-L = 1/rho_vapeur − 1/rho_liquide_saturé
-C_phase = C_thermique × (dTsat/dP) / Lv × L
-C_eq = C_liquide_CPP + C_vapeur_saturée + C_expansion_eau_chaude + C_phase
-C_corrective = max(0, C_eq − C_liquide_CPP − V_libre/(n × P_ancien))
-ΔV_chaleur = (Q_réserve / Lv) × L × Δt × disponibilité_de_phase
+M_circulant + M_PZR = M_CPP
+U_total = U_circulant + U_PZR + référence_constante
+V_circulant(P, M, U) = V_cuve_branches_faisceaux
+V_PZR(P, M, U) = V_pressuriseur
 ```
 
-`C_eq` est en m³/bar ; `Q_net` est ici en W et `Lv` en J/kg. `C_vapeur_saturée = V_libre / rho_vapeur × d(rho_vapeur)/dP` utilise la variation réelle de densité saturée, et non `V/(nP)`, réservé à la compression rapide. Le terme d'expansion de l'eau chaude est négatif : l'élévation de Tsat augmente son volume. La capacité participante vaut **156 MJ/°C au niveau nominal**, varie avec le niveau PZR et disparaît avec la poche. Ce calage correspond au gradient de pleine aspersion documenté, environ −0,15 bar/s. Au nominal, `C_eq ≈ 0,988 m³/bar` et le gain thermique vaut **0,00851 bar/(MW·s)**. Quand le CPP est plein, ces termes de phase s'annulent : la pression est alors déterminée par la compressibilité du liquide.
+Les énergies reçoivent les sources et les enthalpies réellement transportées. Un transfert de masse par la ligne d'expansion emporte l'énergie spécifique du volume donneur : la même énergie quitte un nœud et entre dans l'autre. Une recherche implicite de pression, avec répartition de masse entre volumes, ferme les deux capacités. Les injections et la brèche agissent sur le primaire circulant ; les soupapes et chaufferettes sur le PZR. Les aspersions déplacent de la chaleur du PZR vers le circulant et ne constituent pas une perte d'énergie externe.
 
-Le calcul n'intègre plus une seconde pression thermique avant de recomprimer la poche : cela comptait deux fois une partie de l'effet piston. La valeur sauvegardée `pzrThermalPressureBar` reste présente pour la compatibilité, mais suit désormais la pression réalisée. La capacité participante est une hypothèse du modèle réduit. Le travail de compression n'est pas ajouté une seconde fois comme une source externe de chaleur. Une tolérance volumique de **10⁻⁶ m³** évite qu'un résidu numérique dans un CPP plein amorce une poche fictive au pas suivant.
-
-Le bilan thermique conserve son calage nominal (288 kW, deux aspersions continues de 0,230 m³/h) et le gradient de pleine aspersion voisin de −0,15 bar/s une fois la réponse établie. Cette modélisation ne résout pas séparément les masses et enthalpies des couches chaude/froide du PZR : la poche de pilotage reste un volume compressible équivalent, sa masse propre n'est pas ajoutée au stock suivi. La masse « vapeur de détente » affichée correspond à celle du bilan sensible/latent du CPP. Ce modèle reste pédagogique.
-
-##### Énergie des chaufferettes et transition vers un CPP diphasique
-
-Les chaufferettes ne sont pas coupées par le passage de TMOY à saturation. L'ancien calcul ne conservait leur effet que dans `ΔV_chaleur` : lorsque la vapeur explicitement suivie occupait tout le volume libre, le gain de poche devenait nul et la chaleur électrique disparaissait. La correction conserve cette énergie dans le stock suivi lorsque cette poche ne représente plus la phase vapeur.
-
-Le modèle distingue le stock homogénéisé `U_CPP = M × Cp × TMOY + M_vapeur × Lv` et un **écart d'énergie de réserve PZR**, `pzrEnergyOffsetJ`, nul à l'initialisation. Ce dernier enregistre la chaleur reçue par la réserve thermique effective qui participe déjà à la fermeture de pression. C'est une référence relative, qui peut être négative ; ce n'est pas une enthalpie absolue ni un modèle multicouche du pressuriseur.
-
-Avec `H` la puissance électrique réalisée, `L` l'échange passif effectif vers l'extérieur et `S` le transfert par aspersion BF + auxiliaire RCV, en W :
+Le bilan global indépendant des transferts internes est :
 
 ```text
-Q_net = H − L − S
-a = V_poche / (V_poche + V_vapeur_suivie) × borne(V_libre / 0,4 m³, 0, 1)
-Q_réserve = a × Q_net
-Q_vers_CPP = S + (1 − a) × Q_net
-ΔU_CPP = bilan cœur/GMPP/GV/injections/rejets + Q_vers_CPP × Δt
-ΔU_réserve = Q_réserve × Δt
-Δ(U_CPP + U_réserve) = bilan cœur/GMPP/GV/injections/rejets + (H − L) × Δt
+ΔU_total = [Q_cœur + Q_GMPP − Q_GV + P_chaufferettes − P_passif] × Δt
+          + enthalpies des injections − enthalpies des rejets
 ```
 
-Les volumes sont évalués à l'état précédent : `V_libre = max(0, V_CPP − V_liquide − V_vapeur_suivie)` et `V_poche = min(V_libre, V_PZR)`. Si leur somme est négligeable, `a = 0`. Le raccordement sur les derniers 0,4 m³ reprend la disponibilité de phase existante et évite un changement brutal au remplissage. Seul `Q_réserve` alimente le terme de chaleur de la poche ; `Q_vers_CPP` entre une seule fois dans l'énergie passée au solveur masse/énergie/volume. La chaleur emportée par les rejets reste comptée dans leur enthalpie de sortie.
+Les enthalpies de vapeur rejetée comprennent Cp × Tsat + Lv ; les rejets liquides utilisent la température de leur volume source. La puissance des chaufferettes est celle réellement réalisée, y compris une défaillance d'équipement. Aucun plafonnement arbitraire de vitesse de pression n'est ajouté.
 
-Ainsi l'aspersion est un **transfert interne**, sans perte d'énergie globale fictive. Quand la poche équivalente disparaît, `a = 0` et `Q_vers_CPP = H − L` : la chaleur des chaufferettes reste présente, y compris dans un CPP saturé ou plein de liquide. À 30, 80 et 155 bar, les tests isolés retrouvent **250 kJ supplémentaires pour 2,5 MW pendant 0,1 s**, et une pression supérieure au cas sans chauffage. Une augmentation de pression peut condenser une partie de la vapeur en élevant Tsat ; il ne faut donc pas attendre systématiquement une hausse de masse vapeur.
+Le PZR possède une capacité effective de parois de **112,885 MJ/°C**, distincte de la capacité Cp de son fluide. C'est un calage d'étude de la réponse thermique, voisin du gradient documenté de −0,15 bar/s à pleine aspersion, et non une masse métallique mesurée. Son liquide et sa vapeur peuvent être à saturation ; rempli de liquide, il peut être sous-refroidi. Sa température réelle est utilisée par le synoptique, le tableau de bord et `tpzrSignal`.
 
-Au nominal, environ **32,39 kW** passent du PZR au stock primaire par l'aspersion continue, et **255,61 kW** représentent l'échange passif effectif. Cette dernière valeur est un calage, pas une perte mesurée. Les GV évacuent donc **3 841,03239 MW** (cœur + GMPP + transfert PZR), avec les mêmes température primaire, débit vapeur nominal et puissance réseau. Les historiques proposent les puissances transférée au CPP, stockée dans la réserve et échangée par aspersion. Le bilan explicite améliore la conservation énergétique ; la compliance PZR et l'équilibre homogénéisé restent des approximations d'étude.
+#### Profil circulant et vapeur volumique
 
-##### Brèche, condensation et passage à un CPP plein
+Le circulant est représenté par deux zones froide/chaude de même masse, d'énergies spécifiques `u − Δu/2` et `u + Δu/2`. Leur somme retrouve exactement son énergie moyenne. L'écart vise `Q_échangée / débit_cœur`, avec une relaxation liée au temps de transit ; il reste borné pour que la zone froide demeure à au moins 20 °C. Chaque zone résout sa part sensible/latente et son volume liquide/vapeur. La TMOY mesurée est la moyenne des températures froide et chaude. Cette discrétisation représente un profil global, sans calcul spatial détaillé des écoulements ou du glissement des phases.
 
-Le seuil de **5 % de niveau PZR**, qui supprimait la poche sur une horloge de **2 s**, est retiré : il provoquait une baisse de pression même à masse, température et énergie constantes. La poche équivalente est bornée au volume du PZR, environ 40,1 m³ ; si les boucles se découvrent, la fermeture doit aussi prendre en compte la vapeur de détente du bilan masse/énergie. La correction de compliance est multipliée par la fraction de volume libre attribuée à cette poche. Aucune masse, aucun bore ni aucune énergie du stock suivi n'est supprimé pour produire une baisse de pression.
-
-Avec une brèche et une eau sous-refroidie (plus de 1 °C de marge, moins de 1 kg de vapeur suivie), le moteur résout simultanément la contre-pression, les admissions RIS/RCV et le débit de brèche, sans seuil de 2 m³ de volume libre. Les débits sont évalués à une pression d'essai, les masses et enthalpies admises déterminent le nouvel état, puis la pression est recherchée pour fermer le volume. La recherche utilise Newton encadré ; aucune limitation arbitraire en bar/s n'est ajoutée. Les files de transit conservent les températures, concentrations et masses des parcelles, mais ne retardent pas la réaction hydraulique à la contre-pression. Une parcelle refusée reste en ligne ; un paquet BP bloqué ne bloque pas une admission MP possible.
-
-La fuite liquide utilise la pression locale à la brèche, y compris la hauteur d'eau au-dessus de son altitude schématique (8,7 m sur les branches BF/BC) :
+Le taux moyen affiché **VIDE CPP**, dans les informations calculées, vaut :
 
 ```text
-ΔP_locale = max(0, (P_CPP − 1 bar) × 100 000 + rho × g × hauteur_eau)
-q_liquide = Cd × section × sqrt(2 × rho × ΔP_locale)
+alpha = V_vapeur_circulante / (V_liquide_circulant + V_vapeur_circulante)
 ```
 
-`Cd = 0,68`, `g = 9,80665 m/s²`. La fraction mouillée varie entre les altitudes inférieure et supérieure de la branche. La partie découverte ne peut rejeter que de la vapeur effectivement présente ; le rejet vapeur est limité au stock disponible durant le sous-pas. À **1 bar absolu**, une brèche immergée reste donc débitante par gravité. Le plafond de débit critique d'étude n'est plus appliqué à l'eau froide : il se raccorde progressivement entre la température de saturation extérieure (environ 100 °C) et 5 °C au-dessus. Cette interpolation et le partage liquide/vapeur restent des approximations ; ils ne remplacent pas une corrélation qualifiée de débit critique diphasique.
+Il est exprimé en **% vol.**, inclut cuve, branches et faisceaux, et **exclut la vapeur normale du PZR**. Au permanent nominal, il vaut zéro malgré la bulle PZR. Il ne doit pas être confondu avec le titre massique `x = M_vapeur / M_mélange`. Le partage du débit de brèche utilise ce titre local chaud/froid et uniquement la vapeur disponible dans le circulant ; il ne prélève plus directement la vapeur du PZR. Les températures peuvent donc rester identiques à saturation tandis que le taux volumique change.
 
-Les parcelles déjà arrivées, consécutives et de même composition sont regroupées sans supprimer de masse, de bore ou d'enthalpie. Les fronts de composition et les dates d'arrivée futures restent séparés. Cela évite l'accumulation de milliers de reliquats infinitésimaux lors de la fin de vidange des accumulateurs. Les lots de calcul rendent aussi la main au navigateur après environ 30 ms ; les sous-pas physiques et CC restent à 0,1 s, tandis que l'accélération réellement atteinte dépend du coût du calcul.
+`vaporMassKg` devient explicitement la somme `circulatingVaporMassKg + pzrVaporMassKg`. La géométrie d'étude est recalée sur **269 064 kg, 306,5 °C, 155 bar et 42 % PZR**, en comptant la vapeur PZR et les densités froide/chaude : sa capacité totale vaut environ **404,036 m³**. Les masses des capacités affichées correspondent au liquide réellement présent et totalisent la masse primaire moins les deux stocks vapeur. Les hauteurs d'inventaire restent des niveaux liquides équivalents de la géométrie, sans modélisation fine du gonflement diphasique.
 
-**Sous 100 °C, une eau liquide peut rester à une pression élevée si le circuit est plein et les pompes injectent contre la brèche.** La pression n'est pas forcée à la saturation. À l'inverse, une poche équivalente dans un CPP vidé et refroidi ne doit pas maintenir à elle seule plusieurs dizaines de bars. La pression extérieure de brèche reste fixée à 1 bar absolu dans cet exercice ; la montée de pression pendant le remplissage d'un volume presque incompressible peut être rapide, mais le régime établi ne doit pas osciller à cause du délai de transit.
+Les graphiques et les deux bibliothèques CC proposent **VIDE CPP** (`voidSignal`, % vol.) et **K CŒUR** (`coreExchangeSignal`, MW/°C). Leurs canaux sont ajoutés à la fin des historiques compacts, sans réindexer les anciennes mesures. Aucun nouveau déclenchement électrique GMPP sur taux de vide n'est introduit ; le seuil de niveau CPP et les commandes existantes restent ceux du moteur.
 
-L'injection des accumulateurs à **20 °C** peut provoquer une baisse marquée de pression par condensation. Le réglage utilisateur retient **27 m³ d'eau + 20 m³ d'azote à 42 bar abs.**, exposant 1,35 et **`K/A² = 3 050 m⁻⁴`**, dans les plages de REF-01 §4.11. Le total arrondi de 47 m³ diffère des 47,6 m³ du tableau. La loi `ΔP = (K/A²) × q_massique² / (2 rho)` en Pa donne, à 40 bar CPP et réserve initiale, **1 304 m³/h par accumulateur, 5 215 m³/h pour les quatre**. K/A² comprend déjà la section. Le débit maximal peut survenir plus tard, lorsque la pression CPP a fortement diminué ; ce n'est pas un saut de débit à l'ouverture. Le mélange homogène instantané du CPP peut surestimer la vitesse de refroidissement et de condensation ; les fronts froids, les interfaces locales et la stratification accidentelle ne sont pas résolus. Le seuil d'isolement des accumulateurs mentionné dans la note n'est pas ajouté comme automatisme caché.
+#### Reprise d'états et limites
 
-Les essais dédiés contrôlent une brèche de 300 cm² sur 20 minutes, le bilan massique incluant lignes et réserves, les apports de bore et d'enthalpie, le régime froid plein, la fuite gravitaire à 1 bar, la découverte de la brèche, ainsi que la convergence entre des pas de 0,1 et 0,05 s. Dans l'essai froid plein à 90 °C, le résultat à 120 s est **6,905 bar et 79,88 °C**, avec moins de 0,00002 bar d'écart entre les deux sous-pas. RIS et brèche n'ont pas à être strictement égaux pendant le refroidissement : l'eau se contracte et l'injection nette augmente réellement la masse contenue. Ces essais complètent ceux de pleine aspersion et de rampes rapides ; ils ne constituent pas une qualification accidentelle du modèle.
+La révision `20261016-separated-primary-v13` accepte les sauvegardes antérieures. La reconstruction conserve leur masse totale, leur pression, leur température moyenne et leur énergie totale précédente (ancienne énergie primaire + ancienne réserve relative). La référence énergétique fixe absorbe le changement de décomposition ; elle ne fournit aucune puissance pendant le calcul. Le niveau PZR est conservé à saturation lorsque les masses et volumes le permettent. Les graphes, tuyaux, stocks et historiques passés restent présents ; le calcul suivant utilise les nouvelles lois. Les anciens instantanés de certificat reçoivent des champs compatibles, sans réécrire leur historique.
 
-Lors d'un arrêt, abaisser la consigne GCT-A de 88,6 à 65 bar peut augmenter fortement la chaleur évacuée par les GV, refroidir le primaire et vider le PZR par contraction. La correction du seuil de bas niveau ne supprime pas ce refroidissement. Un PZR devenu vide ne dispose plus de sa réserve normale d'eau chaude ; quelques MW de chaufferettes ne peuvent compenser arbitrairement un refroidissement secondaire de l'ordre du GW. Ce cas doit être distingué d'une dépressurisation spontanée à état thermique inchangé.
+Le cas de diagnostic fourni à 92,98 bar et 305,694 °C reprend avec son véritable CC actif. Après 30 minutes simulées, il atteint environ **113,6 bar**, TMOY **304,0 °C**, PZR **320,5 °C**, avec un taux de vide circulant voisin de **6,6 %**. Le chauffage peut agir sur la pression sans imposer Tsat à toute l'eau. Ces valeurs décrivent cette reprise particulière, pas une validation d'une manœuvre réelle.
 
-##### Vérification des rampes rapides
-
-Une rampe **50 points de % PN par minute**, entre 100 et 15 %, dure **102 s**. Le programme thermique correspondant passe de 306,5 à **298,595 °C**. À masse constante et 155 bar, le volume liquide passe de 377,56 à 368,89 m³ : environ **8,67 m³** quittent le PZR. Le phénomène s'inverse au réchauffement.
-
-Le banc de la boucle pression impose cette trajectoire de température et exécute les blocs réels de la solution CC-RÉGUL, avec les limites et vitesses des organes. Les deux rampes sont récupérées : minimum **146,88 bar** à la descente, maximum **158,84 bar** à la remontée, puis **154,53 / 155,74 bar** après leurs 600 s de palier, sans recours aux soupapes. Ce banc isole le PZR ; il ne démontre pas que la température du cœur suit instantanément ce programme.
-
-Le comportement global dépend de l'état neutronique de départ : avec la G3 conservée et la vitesse GCP de 72 pas/min, passer de 302,5 à 780 pas demande au minimum **398 s**, contre 102 s pour la rampe turbine. Après un long palier, l'empoisonnement xénon peut nécessiter une dilution ; R en butée ne peut rétablir seul la puissance. Une remontée rapide peut aussi déclencher PLIN >435 W/cm. **La récupération de pression ne vaut donc pas validation de l'ensemble de la manœuvre à 50 %/min.** G3, efficacités de groupes, coefficients modérateur/Doppler et protections PLIN restent inchangés.
+Les tests vérifient les bilans aux frontières, la séparation de la vapeur PZR, le chauffage après saturation, le gradient d'aspersion, le transfert combustible–eau dégradé et les reprises JSON. Le modèle conserve Cp effectif constant, la table Lv et une représentation d'équilibre simplifiée ; il ne constitue pas un code diphasique qualifié.
 
 #### Soupapes et aspersion
 

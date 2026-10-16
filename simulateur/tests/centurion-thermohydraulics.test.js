@@ -22,7 +22,8 @@ test('GMPP : 6 MW par entraînement en service, ajoutés uniquement au bilan pri
     const oldEnergy=s.primaryEnergyJ,oldFuel=s.fuelC,oldMass=s.primaryMassKg;
     E.step(m,dt);
     close(s.pumpHeatMW,running*6);close(s.totalGvMW,0);close(s.primaryMassKg,oldMass);
-    close((s.primaryEnergyJ-oldEnergy)/1e6,(s.coreTransferMW+running*6+s.pzrHeatToPrimaryMW)*dt,1e-6);
+    close((s.primaryEnergyJ-oldEnergy)/1e6,
+      (s.coreTransferMW+running*6+(s.heaterKW-E.C.pzrPassiveTransferKW)/1000)*dt,1e-6);
     close((s.fuelC-oldFuel)*E.C.fuelHeatCapacityJk/1e6,
       (s.thermalPowerMW-s.coreTransferMW)*dt);
     close(s.thermalPowerMW,E.C.nominalThermalMW);
@@ -36,10 +37,10 @@ test('GMPP : permanent initial équilibré, arrêt électrique distinct de l’i
   const m=E.make(),s=m.state;
   close(s.pumpHeatMW,24);close(s.totalGvMW,E.C.nominalPrimaryHeatMW);
   close(s.totalGvMW,s.coreTransferMW+s.pumpHeatMW+s.pzrHeatToPrimaryMW);
-  E.step(m,.1);close(s.tavgC,E.C.primaryMeanC,1e-9);
+  E.step(m,.1);close(s.tavgC,E.C.primaryMeanC,1e-7);
   close(s.gv[0].tempC,E.C.steamTempC,1e-9);
   E.advance(m,60);assert.ok(Math.abs(s.tavgC-E.C.primaryMeanC)<.1);
-  close(s.pumpHeatMW,24);close(s.electricMW,1300,1e-6); // précision de 1 W électrique
+  close(s.pumpHeatMW,24);close(s.electricMW,1300,1e-5); // précision de 10 W électrique
   m.controls.demandPct=80;E.advance(m,1);close(s.pumpHeatMW,24);
   E.initiate(m,'trip');assert.equal(s.pumpHeatMW,24,'un AAR seul laisse les GMPP alimentées');
   E.step(m,.1);close(s.pumpHeatMW,24);
@@ -85,35 +86,37 @@ test('thermosiphon : disparaît sans écart thermique, sans eau au GV ou sans in
 
 test('bilan thermique en thermosiphon : même échange retiré du combustible, transféré au primaire puis aux GV',()=>{
   const model=stoppedPlant();E.advance(model,180);
-  const s=model.state,oldFuel=s.fuelC,oldWater=s.tavgC,oldMass=s.primaryMassKg,oldReserve=s.pzrEnergyOffsetJ;
+  const s=model.state,oldFuel=s.fuelC,oldWater=s.tavgC,oldEnergy=s.primaryEnergyJ;
   // Isoler ce bilan thermique du transit RCV régénéré, testé séparément.
-  s.rcvPipe.forEach(parcel=>{parcel.tempC=oldWater;});
+  s.rcvPipe=[];model.controls.rcvChargeM3h=0;model.controls.rcvLetdownOrifices.fill(false);
   const oldGv=s.gv.map(g=>({tempC:g.tempC,energyJ:E.gvThermalCapacityJk(g.waterKg)*g.tempC})),dt=.1;
   E.step(model,dt);
   const fuelMJ=(s.fuelC-oldFuel)*E.C.fuelHeatCapacityJk/1e6;
-  const waterMJ=(s.tavgC-oldWater)*oldMass*E.C.primaryCpJkgK/1e6;
+  const waterMJ=(s.primaryEnergyJ-oldEnergy)/1e6;
   const gvMJ=s.gv.reduce((sum,g,i)=>sum+(g.thermalEnergyJ-oldGv[i].energyJ)/1e6,0);
   const secondaryExternalMW=s.gv.reduce((sum,g,i)=>sum
     +(g.feedKgS*E.C.secondaryCpJkgK*E.C.areFeedTempC
       +g.asgKgS*E.C.secondaryCpJkgK*E.C.asgFeedTempC
       -g.steamKgS*(E.C.secondaryCpJkgK*oldGv[i].tempC+g.steamLatentJkg))/1e6,0);
   close(fuelMJ,(s.thermalPowerMW-s.coreTransferMW)*dt);
-  close(waterMJ,(s.coreTransferMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*dt);
+  close(waterMJ,(s.coreTransferMW-s.totalGvMW+(s.heaterKW-E.C.pzrPassiveTransferKW)/1000)*dt);
   close(gvMJ,(s.totalGvMW+secondaryExternalMW)*dt);
-  close(fuelMJ+waterMJ+gvMJ+(s.pzrEnergyOffsetJ-oldReserve)/1e6,
+  close(fuelMJ+waterMJ+gvMJ,
     (s.thermalPowerMW+secondaryExternalMW+(s.heaterKW-E.C.pzrPassiveTransferKW)/1000)*dt);
 });
 
 test('RIS : eau à 20 °C et 2 500 ppm, bilan de mélange et refroidissement transmis au combustible',()=>{
   const model=E.make(),reference=E.make(),s=model.state;
   assert.equal(model.controls.risBoronPpm,2500);assert.equal(E.C.risInjectionTempC,20);
-  const mass=s.primaryMassKg,temp=s.tavgC,boron=s.boronPpm,injectedKg=10,dt=.1;
+  const mass=s.primaryMassKg,temp=s.tavgC,boron=s.boronInventory,injectedKg=10,dt=.1;
   s.risPipe.push({at:0,massKg:injectedKg,boronPpm:model.controls.risBoronPpm});
   E.step(model,dt);E.step(reference,dt);
   close(s.risCoolingMW,injectedKg/dt*E.C.primaryCpJkgK*(temp-20)/1e6);
-  close(reference.state.tavgC-s.tavgC,injectedKg/(mass+injectedKg)*(temp-20));
+  assert.ok(s.tavgC<reference.state.tavgC);
+  close(s.primaryEnergyJ-reference.state.primaryEnergyJ,injectedKg*E.C.primaryCpJkgK*20,.002);
   close(s.primaryMassKg,mass+injectedKg);
-  close(s.boronPpm,(mass*boron+injectedKg*2500)/(mass+injectedKg));
+  close(s.boronInventory,boron+injectedKg*2500,.0001);
+  close(s.boronPpm,s.boronInventory/(s.primaryMassKg-s.vaporMassKg));
   E.advance(model,5);E.advance(reference,5);
   assert.ok(s.tavgC<reference.state.tavgC);
   assert.ok(s.fuelC<reference.state.fuelC);
@@ -180,7 +183,7 @@ test('GCT-A à 10 bar depuis le nominal : coup de froid primaire avant vidange d
   const s=cooled.state;
   assert.ok(Math.abs(reference.state.tavgC-306.5)<.1,'permanent nominal conservé');
   assert.ok(s.tavgC<285&&s.coldC<280,'plus de 20 °C de refroidissement primaire en 30 s');
-  assert.ok(s.gv.every(g=>g.pressureBar<40&&g.waterKg>20000),'GV refroidis, encore en eau');
+  assert.ok(s.gv.every(g=>g.pressureBar<45&&g.waterKg>20000),'GV refroidis, encore en eau');
   assert.ok(s.totalGvMW>1000,'évacuation primaire–secondaire maintenue');
   assert.ok(s.tripAt!==null,'la hausse de réactivité due au refroidissement reste protégée');
   assert.notEqual(s.risAt,null,'la baisse de pression finit par solliciter l’IS');

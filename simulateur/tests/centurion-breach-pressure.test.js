@@ -1,5 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const E=require('../centurion-engine');
+const energyRate=require('./helpers/primary-energy');
 const near=(a,b,t=1e-6)=>assert.ok(Math.abs(a-b)<=t,`${a} ≠ ${b}`);
 const totalMass=s=>s.primaryMassKg+s.risTankRemainingKg+s.sumpKg
   +s.accumulatorsKg.reduce((a,b)=>a+b,0)
@@ -40,16 +41,16 @@ test('CPP froid plein : contre-pression RIS/brèche couplée, absence d’oscill
       near(s.boronInventory-boron,dt*(s.rcvDeliveredKgS*b.chargeBoronPpm+s.risDeliveredKgS*b.risBoronPpm
         -(s.breakLiquidKgS+s.rcvLetdownKgS+s.reliefLiquidKgS)*cb),.0001);
       const input=(s.rcvDeliveredKgS*b.chargeTempC+s.risDeliveredKgS*b.risTempC)*6000*dt;
-      near(s.primaryEnergyJ,energy+(s.coreTransferMW+s.pumpHeatMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*1e6*dt
-        +input-(s.breakKgS+s.rcvLetdownKgS+s.reliefKgS)*6000*T*dt,.002);
+      near(s.primaryEnergyJ,energy+energyRate(E,s,p)*dt,.002);
       if(i*dt>10)maxRate=Math.max(maxRate,Math.abs(s.pressureBar-p)/dt);
-      assert.ok(s.tavgC<100&&s.vaporMassKg===0);
+      assert.ok(s.tavgC<100&&s.circulatingVaporMassKg===0);
     }
     assert.ok(maxRate<.2,`variations sous 100 °C : ${maxRate} bar/s`);
     assert.ok(s.pressureBar>5&&s.pressureBar<10,'équilibre froid avec un orifice liquide, sans plafond diphasique');
     const b=E.primaryMassBalance(s);
     assert.ok(b.netKgS>0&&b.netKgS<30,'la contraction de l’eau demande encore une faible admission nette');
-    near(s.inventory.liquidVolumeM3,s.inventory.capacityM3,1e-6);
+    near(s.inventory.liquidVolumeM3+s.vaporMassKg/E.saturatedWaterDensities(E.saturationTemperatureC(s.pressureBar)).vapor,
+      s.inventory.capacityM3,1e-5);
     assert.equal(s.endState,null);results.push(s);
   }
   near(results[0].pressureBar,results[1].pressureBar,.01);
@@ -101,7 +102,8 @@ test('brèche 300 cm² sur 20 min : accumulateurs continus, régime froid stable
   assert.ok(m.state.pressureBar>5&&m.state.pressureBar<10);
   const balance=E.primaryMassBalance(m.state);
   assert.ok(balance.netKgS>0&&balance.netKgS<100,'le surplus RIS remplit réellement le volume libre');
-  near(m.state.inventory.liquidVolumeM3,m.state.inventory.capacityM3,1e-6);
+  near(m.state.inventory.liquidVolumeM3+m.state.vaporMassKg/E.saturatedWaterDensities(E.saturationTemperatureC(m.state.pressureBar)).vapor,
+    m.state.inventory.capacityM3,1e-5);
   assert.ok(m.state.risPipe.length<500,'les reliquats arrivés ne créent pas des milliers de parcelles');
 });
 
@@ -123,9 +125,7 @@ test('brèche immergée à 1 bar : fuite gravitaire liquide et conservation de m
   near(s.primaryMassKg-old,.1*flows.netKgS,1e-7);
   near(s.boronInventory-boron,.1*(s.risDeliveredKgS*flows.risBoronPpm
     +s.rcvDeliveredKgS*flows.chargeBoronPpm-(s.breakKgS+s.rcvLetdownKgS)*cb),1e-4);
-  near(s.primaryEnergyJ,U+.1*((s.coreTransferMW+s.pumpHeatMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*1e6
-    +(s.risDeliveredKgS*flows.risTempC+s.rcvDeliveredKgS*flows.chargeTempC)*6000
-    -(s.breakKgS+s.rcvLetdownKgS)*6000*T),.002);
+  near(s.primaryEnergyJ,U+.1*energyRate(E,s,1),.002);
 });
 
 test('brèche découverte : arrêt du prélèvement liquide sous son altitude, vapeur seulement si présente',()=>{
@@ -134,11 +134,11 @@ test('brèche découverte : arrêt du prélèvement liquide sous son altitude, v
   s.inventory=E.cppInventory(s.primaryMassKg,80,1);
   const dry=E.primaryBreakHydraulics(s);
   assert.equal(dry.wetFraction,0);near(dry.flowKgS,0);
-  s.vaporMassKg=50;s.pressureBar=2;
+  s.vaporMassKg=50;s.circulatingVaporMassKg=50;s.pressureBar=2;
   s.inventory=E.cppInventory(s.primaryMassKg-s.vaporMassKg,80,2);
   const steam=E.primaryBreakHydraulics(s);
   near(steam.liquidKgS,0);assert.ok(steam.steamKgS>0);near(steam.steamFraction,1);
-  s.vaporMassKg=.001;
+  s.vaporMassKg=.001;s.circulatingVaporMassKg=.001;
   const limited=E.primaryBreakHydraulics(s,s.pressureBar,.1);
   near(limited.liquidKgS,0);near(limited.steamKgS,.01);
   assert.ok(limited.flowKgS*.1<=s.vaporMassKg,'la fuite découverte ne fabrique pas de vapeur');

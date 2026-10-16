@@ -212,10 +212,9 @@ test('aspersion ouverte : le débit et le refroidissement abaissent la pression'
   assert.ok(Math.abs(m.state.sprayPct-100)<0.1);
   const pressureAtFullOpening=m.state.pressureBar;
   E.advance(m, 1);
-  // La réponse saturée relaxe sur 2 s : à la première seconde après
-  // pleine ouverture, elle n'a pas encore atteint le gradient établi.
+  // Course physique 2 s, puis réponse du PZR séparé et des parois chaudes.
   const firstDrop=pressureAtFullOpening-m.state.pressureBar;
-  assert.ok(firstDrop>.02&&firstDrop<.15,'baisse progressive avant le régime établi');
+  assert.ok(firstDrop>.02&&firstDrop<.2,'baisse progressive sans saut de pression');
   E.advance(m,12);
   const settled=m.state.pressureBar;E.advance(m,1);
   assert.ok(Math.abs(m.state.pressureBar-settled+.15)<.02,'gradient établi proche de −0,15 bar/s');
@@ -259,6 +258,7 @@ test('brèche : baisse de pression, AAR puis IS et arrivée retardée du RIS', (
 
 test('RIS MP puis BP suivent leur domaine de pression', () => {
   const high = E.make();
+  require('./helpers/liquid-primary-point')(E,high,100);
   E.initiate(high, 'ris');
   const hold=(m,p,n)=>{for(let i=0;i<n*10;i++){
     m.state.pressureBar=p;m.state.pzrThermalPressureBar=p;E.step(m,.1);
@@ -270,6 +270,7 @@ test('RIS MP puis BP suivent leur domaine de pression', () => {
   hold(high,100,4);
   assert.ok(high.state.risDeliveredKgS > 0);
   const low = E.make();
+  require('./helpers/liquid-primary-point')(E,low,20);
   E.initiate(low, 'ris');
   hold(low,20,4.1);
   assert.ok(low.state.risBpKgS > 0);

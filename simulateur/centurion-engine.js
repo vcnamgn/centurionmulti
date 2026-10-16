@@ -108,6 +108,10 @@
     // eau chaude participante + parois, sans assimiler cette capacité
     // effective à la seule masse liquide géométrique du PZR.
     pzrPhaseHeatCapacityJk: 156e6,
+    // Capacité effective des parois participantes : calage de la réponse du
+    // modèle séparé sur -0,15 bar/s à pleine aspersion au point nominal.
+    pzrWallHeatCapacityJk:112.885e6,
+    minimumCoreExchangeFactor:.03,
     breakCriticalFluxKgM2S: 25000,
     primaryDensityKgM3: 720, risWaterDensityKgM3: 1000,
     risInjectionTempC: 20, risBoronPpm: 2500, risTankVolumeM3: 2315,
@@ -203,8 +207,14 @@
   const CPP_CORE_BOTTOM_M=3.4, CPP_CORE_TOP_M=CPP_CORE_BOTTOM_M+C.activeFuelHeightM;
   const geometryFill=(g,h)=>clamp((h-g.bottom)/(g.top-g.bottom),0,1);
   const CPP_NOMINAL_DENSITY=liquidWaterDensityKgM3(C.primaryMeanC,C.primaryPressureBar);
-  const CPP_VOLUME_SCALE=C.nominalPrimaryMassKg/CPP_NOMINAL_DENSITY
-    /CPP_GEOMETRY.reduce((sum,g)=>sum+g.volume*geometryFill(g,CPP_INITIAL_LEVEL_M),0);
+  const NOMINAL_HALF_RISE=C.nominalThermalMW*1e6/(2*C.nominalPrimaryFlowKgS*C.primaryCpJkgK);
+  const NOMINAL_BULK_DENSITY=2/(1/liquidWaterDensityKgM3(C.primaryMeanC-NOMINAL_HALF_RISE,C.primaryPressureBar)
+    +1/liquidWaterDensityKgM3(C.primaryMeanC+NOMINAL_HALF_RISE,C.primaryPressureBar));
+  const NOMINAL_PZR_DENSITIES={...saturatedWaterDensities(saturationTemperatureC(C.primaryPressureBar)),
+    liquid:liquidWaterDensityKgM3(saturationTemperatureC(C.primaryPressureBar),C.primaryPressureBar)};
+  const CPP_VOLUME_SCALE=C.nominalPrimaryMassKg/(CPP_GEOMETRY.filter(g=>g.id!=="pzr")
+    .reduce((sum,g)=>sum+g.volume*NOMINAL_BULK_DENSITY,0)
+    +40*(.42*NOMINAL_PZR_DENSITIES.liquid+.58*NOMINAL_PZR_DENSITIES.vapor));
   const CPP_LOOP_CAPACITIES=CPP_GEOMETRY.filter(g=>g.id!=="pzr");
   const CPP_LOOP_VOLUME=CPP_LOOP_CAPACITIES.reduce((sum,g)=>sum+g.volume*CPP_VOLUME_SCALE,0);
   const CPP_LOOP_TOP_M=Math.max(...CPP_LOOP_CAPACITIES.map(g=>g.top));
@@ -361,6 +371,158 @@
       volumeResidualM3,
       thermalPressureBar:pressureBar,displacementM3,response};
   }
+  function thermalPhase(massKg,energyJ,p,wallCapacity=0) {
+    const m=Math.max(1e-9,massKg),sat=saturationTemperatureC(p),lv=latentHeatJkg(p);
+    const capacity=m*C.primaryCpJkgK+wallCapacity;
+    const tempC=Math.max(0,Math.min(sat,energyJ/capacity));
+    const vaporKg=clamp((energyJ-capacity*sat)/lv,0,m);
+    const rho=liquidWaterDensityKgM3(tempC,p),rhoV=saturatedWaterDensities(sat).vapor;
+    return {tempC,vaporKg,liquidKg:m-vaporKg,
+      volumeM3:(m-vaporKg)/rho+vaporKg/rhoV,
+      vaporVolumeM3:vaporKg/rhoV,liquidVolumeM3:(m-vaporKg)/rho};
+  }
+  function circulatingPhase(massKg,energyJ,p,spreadJkg=0) {
+    const m=Math.max(1e-6,massKg),mean=energyJ/m;
+    const spread=Math.min(Math.max(0,spreadJkg),2*Math.max(0,mean-20*C.primaryCpJkgK));
+    // Deux zones de même masse, froide/chaude. Leurs écarts d'enthalpie
+    // s'annulent exactement dans le stock ; la vapeur est comptée en volume.
+    const cold=thermalPhase(m/2,m/2*(mean-spread/2),p);
+    const hot=thermalPhase(m/2,m/2*(mean+spread/2),p);
+    const volumeM3=cold.volumeM3+hot.volumeM3,vaporVolumeM3=cold.vaporVolumeM3+hot.vaporVolumeM3;
+    return {cold,hot,tempC:(cold.tempC+hot.tempC)/2,
+      vaporKg:cold.vaporKg+hot.vaporKg,volumeM3,vaporVolumeM3,
+      liquidVolumeM3:cold.liquidVolumeM3+hot.liquidVolumeM3,
+      voidPct:100*vaporVolumeM3/Math.max(1e-9,volumeM3)};
+  }
+  function initializePrimaryThermalState(s) {
+    const p=s.pressureBar,t=s.tavgC,sat=saturationTemperatureC(p),cp=C.primaryCpJkgK;
+    const spread=Math.max(0,(s.hotC-s.coldC)*cp);
+    const oldTotal=(s.primaryEnergyJ??s.primaryMassKg*cp*t)+(s.pzrEnergyOffsetJ||0);
+    // À la reprise, conserver P, T, masse et énergie totale. La vapeur qui
+    // tient dans le PZR appartient à ce volume, pas aux boucles circulantes.
+    let lo=cp*Math.max(0,t-spread/cp),hi=cp*(sat+spread/cp)+latentHeatJkg(p);
+    for(let i=0;i<36;i++){
+      const mid=(lo+hi)/2;
+      if(circulatingPhase(1,mid,p,spread).tempC<t-1e-8)lo=mid;else hi=mid;
+    }
+    let specific=(lo+hi)/2,unit=circulatingPhase(1,specific,p,spread);
+    let bulkMass=Math.min(s.primaryMassKg,CPP_LOOP_VOLUME/unit.volumeM3);
+    if(Math.abs(t-sat)<1e-5&&spread<.1){
+      const density={...saturatedWaterDensities(sat),liquid:liquidWaterDensityKgM3(sat,p)};
+      const level=clamp(s.pzrLevelPct??0,0,100)/100;
+      const mp=CPP_PZR_VOLUME*(level*density.liquid+(1-level)*density.vapor);
+      const mb=s.primaryMassKg-mp;
+      const mv=(CPP_LOOP_VOLUME-mb/density.liquid)/(1/density.vapor-1/density.liquid);
+      if(mb>0&&mv>=0&&mv<=mb){
+        bulkMass=mb;specific=cp*sat+mv/mb*latentHeatJkg(p);
+        unit=circulatingPhase(1,specific,p,0);
+      }
+    }
+    const pzrMass=Math.max(0,s.primaryMassKg-bulkMass),density={...saturatedWaterDensities(sat),
+      liquid:liquidWaterDensityKgM3(sat,p)};
+    const pzrVapor=clamp((CPP_PZR_VOLUME-pzrMass/density.liquid)
+      /(1/density.vapor-1/density.liquid),0,pzrMass);
+    let pzrTemp=sat;
+    if(pzrMass>CPP_PZR_VOLUME*density.liquid){
+      let l=0,h=sat;
+      for(let i=0;i<32;i++){
+        const mid=(l+h)/2;
+        if(liquidWaterDensityKgM3(mid,p)>pzrMass/CPP_PZR_VOLUME)l=mid;else h=mid;
+      }
+      pzrTemp=(l+h)/2;
+    }
+    const pzrEnergy=(pzrMass*cp+C.pzrWallHeatCapacityJk)*pzrTemp+pzrVapor*latentHeatJkg(p);
+    s.thermalNodes={massKg:s.primaryMassKg,pressureBar:p,tempC:t,vaporKg:s.vaporMassKg,
+      pzrMassKg:pzrMass,pzrEnergyJ:pzrEnergy,bulkEnergyJ:bulkMass*specific,
+      referenceJ:oldTotal-bulkMass*specific-pzrEnergy,spreadJkg:spread};
+    s.pzrEnergyOffsetJ=0;
+    s.circulatingVoidPct=unit.voidPct;
+    s.coreExchangeFactor=1;s.coreExchangeMWC=C.coreConductanceMWC;
+    s.pzrTempC=pzrTemp;s.pzrVaporMassKg=pzrVapor;
+    s.circulatingVaporMassKg=unit.vaporKg*bulkMass;
+    s.hotC=unit.hot.tempC;s.coldC=unit.cold.tempC;
+    s.tRicC=Math.min(sat,s.coldC+C.corePowerFraction*(s.hotC-s.coldC)/(1-C.coreBypassFraction));
+    s.lidC=Math.min(sat,s.hotC);
+    for(const loop of s.loops){loop.hotC=s.hotC;loop.coldC=s.coldC;}
+    s.vaporMassKg=s.circulatingVaporMassKg+pzrVapor;
+    s.vaporEnergyJ=s.vaporMassKg*latentHeatJkg(p);
+    s.primaryEnergyJ=oldTotal;
+    s.thermalNodes.vaporKg=s.vaporMassKg;
+    s.inventory=primaryThermalInventory(s,circulatingPhase(bulkMass,bulkMass*specific,p,spread),
+      thermalPhase(pzrMass,pzrEnergy,p,C.pzrWallHeatCapacityJk));
+    s.pzrLevelPct=s.inventory.components.pzr.fillPct;s.coveragePct=s.inventory.coveragePct;
+    return s.thermalNodes;
+  }
+  function separatedPrimaryAdvance(s,massKg,bulkEnergyJ,pzrEnergyJ,dt,trialPressureBar=null,pzrOutKg=0) {
+    const node=s.thermalNodes,cp=C.primaryCpJkgK;
+    const pzrMass0=Math.max(0,node.pzrMassKg-pzrOutKg),bulkMass0=Math.max(1e-6,massKg-pzrMass0);
+    const bulkSpecific=bulkEnergyJ/bulkMass0;
+    const pzrPhase0=thermalPhase(pzrMass0,pzrEnergyJ,s.pressureBar,C.pzrWallHeatCapacityJk);
+    const pzrSpecific=cp*pzrPhase0.tempC
+      +(pzrPhase0.liquidKg<1?latentHeatJkg(s.pressureBar):0);
+    const evaluate=(p,mp)=>{
+      const dm=mp-pzrMass0,h=dm>=0?bulkSpecific:pzrSpecific;
+      const eb=bulkEnergyJ-dm*h,ep=pzrEnergyJ+dm*h;
+      const bulk=circulatingPhase(massKg-mp,eb,p,node.spreadJkg);
+      const pzr=thermalPhase(mp,ep,p,C.pzrWallHeatCapacityJk);
+      return {bulk,pzr,eb,ep,mp,p,r1:bulk.volumeM3-CPP_LOOP_VOLUME,r2:pzr.volumeM3-CPP_PZR_VOLUME};
+    };
+    const atPressure=p=>{
+      let mp=clamp(pzrMass0,1e-6,Math.max(1e-6,massKg-1e-6));
+      for(let i=0;i<10;i++){
+        const r=evaluate(p,mp);
+        if(Math.abs(r.r1)<1e-8)break;
+        const probe=Math.min(massKg-1e-6,mp+.1);
+        const slope=probe>mp?(evaluate(p,probe).r1-r.r1)/(probe-mp):-1e-3;
+        const next=clamp(mp-r.r1/(slope||-1e-3),1e-6,Math.max(1e-6,massKg-1e-6));
+        if(Math.abs(next-mp)<1e-8)break;
+        mp=next;
+      }
+      return evaluate(p,mp);
+    };
+    if(trialPressureBar!==null){const r=atPressure(trialPressureBar);return {...r,volumeResidualM3:r.r1+r.r2};}
+    let lo=1,hi=C.primaryPressureMaxBar,p=clamp(s.pressureBar,lo,hi),r=atPressure(p);
+    for(let i=0;i<28;i++){
+      r=atPressure(p);const residual=r.r1+r.r2;
+      if(Math.abs(residual)<1e-8)break;
+      if(residual>0)lo=p;else hi=p;
+      if(hi-lo<1e-7)break;
+      const probe=p+.01<hi?p+.01:p-.01>lo?p-.01:(lo+hi)/2;
+      const rProbe=atPressure(probe);
+      const slope=probe!==p?(rProbe.r1+rProbe.r2-residual)/(probe-p):0;
+      const next=slope<0?p-residual/slope:NaN;
+      p=Number.isFinite(next)&&next>lo&&next<hi?next:(lo+hi)/2;
+    }
+    r=atPressure(p);
+    return {...r,volumeResidualM3:r.r1+r.r2};
+  }
+  function primaryThermalInventory(s,bulk,pzr) {
+    const inv=cppInventory(bulk.liquidVolumeM3*liquidWaterDensityKgM3(s.tavgC,s.pressureBar),s.tavgC,s.pressureBar);
+    const pzrFill=clamp(pzr.liquidVolumeM3/CPP_PZR_VOLUME,0,1);
+    inv.components.pzr={massKg:pzr.liquidKg,fillPct:100*pzrFill,bottomM:18.1,topM:30.1};
+    const actualBulkLiquid=s.primaryMassKg-s.thermalNodes.pzrMassKg-bulk.vaporKg;
+    const sum=Object.entries(inv.components).reduce((n,[id,g])=>n+(id==='pzr'?0:g.massKg),0);
+    for(const [id,g] of Object.entries(inv.components))if(id!=='pzr')g.massKg*=actualBulkLiquid/Math.max(1e-9,sum);
+    inv.densityKgM3=actualBulkLiquid/Math.max(1e-9,bulk.liquidVolumeM3);
+    inv.pzrLevelM=pzr.liquidKg>1e-6?18.1+12*pzrFill:0;
+    inv.levelM=Math.max(inv.loopLevelM,inv.pzrLevelM);
+    inv.coveragePct=100*clamp((inv.loopLevelM-CPP_CORE_BOTTOM_M)/C.activeFuelHeightM,0,1);
+    inv.liquidMassKg=s.primaryMassKg-bulk.vaporKg-pzr.vaporKg;
+    inv.liquidVolumeM3=bulk.liquidVolumeM3+pzr.liquidVolumeM3;
+    inv.steamSpaceM3=Math.max(0,CPP_TOTAL_VOLUME-inv.liquidVolumeM3);
+    inv.overfillKg=Math.max(0,(bulk.volumeM3+pzr.volumeM3-CPP_TOTAL_VOLUME)*inv.densityKgM3);
+    if(inv.overfillKg<.001)inv.overfillKg=0;
+    return inv;
+  }
+  function coreExchangeRegime(s) {
+    const alpha=clamp((s.circulatingVoidPct||0)/100,0,1);
+    const crisis=Math.max(clamp((1-(s.dnbr??1.65))/.8,0,1),alpha**4);
+    // Pas de chute d'échange à la première bulle : dégradation progressive,
+    // renforcée lorsque le proxy de flux critique passe sous l'unité.
+    const wet=clamp((s.coveragePct??100)/100,0,1);
+    return Math.max(C.minimumCoreExchangeFactor,
+      wet/(1+alpha*alpha*(1+12*crisis)));
+  }
   // Chaleur latente : interpolation de valeurs vapeur saturée (kJ/kg).
   // Cp effectif reste celui du modèle nominal ; ce n'est pas une EOS diphasique.
   function latentHeatJkg(p) {
@@ -430,7 +592,7 @@
     if(s.pressureBar<25||s.pressureBar>31)reasons.push("25 ≤ P ≤ 31 bar abs.");
     if(!reactorOperatingState(s).neutronPowerNearZero)
       reasons.push("puissance neutronique ≤ 0,01 % PN");
-    if(s.inventory.levelM<CPP_CORE_TOP_M)reasons.push("cœur couvert");
+    if(Math.min(s.inventory.levelM,s.inventory.loopLevelM)<CPP_CORE_TOP_M)reasons.push("cœur couvert");
     if(s.endState==="melted")reasons.push("cœur endommagé");
     return {allowed:reasons.length===0,reasons};
   }
@@ -874,6 +1036,10 @@
         timeScaleXenon: 1
       }
     };
+    model.state.hotC=C.primaryMeanC+NOMINAL_HALF_RISE;model.state.coldC=C.primaryMeanC-NOMINAL_HALF_RISE;
+    for(const loop of model.state.loops){loop.hotC=model.state.hotC;loop.coldC=model.state.coldC;}
+    initializePrimaryThermalState(model.state);
+    model.state.boronInventory=(model.state.primaryMassKg-model.state.vaporMassKg)*model.state.boronPpm;
     updateAxial(model.state,model.controls,0);
     return model;
   }
@@ -1302,7 +1468,8 @@
     const flowFactor=Math.sqrt(Math.max(0,s.coreFlowFraction));
     // Proxy de flux critique : pression, débit et sous-refroidissement LOCAL.
     // Ce n'est pas WRB1. La normalisation fixe nominale sera appliquée ensuite.
-    const dnbrRaw32=hotChannelTemp32.map((temp,i)=>pressureFactor*flowFactor
+    const voidPenalty=1/(1+2*clamp((s.circulatingVoidPct||0)/100,0,1));
+    const dnbrRaw32=hotChannelTemp32.map((temp,i)=>pressureFactor*flowFactor*voidPenalty
       *Math.max(0.1,satTempC-temp+5)/Math.max(30,linearWcm32[i]));
     return {fxy32,linearWcm32,fDeltaH,fq:Math.max(...q32),hotChannelTemp32,
       hotChannelEnthalpy32:hotChannelTemp32.map(temp=>temp*C.primaryCpJkgK/1000),
@@ -1491,19 +1658,23 @@
     const liquidFlux=lerp(fluxOrifice,Math.min(fluxOrifice,fluxLimit),flashingFraction);
     // Une ouverture découverte rejette la vapeur réellement présente,
     // sans continuer à prélever un liquide situé au-dessous de la brèche.
-    const vaporFlow=s.vaporMassKg>0
+    const circulatingVapor=s.circulatingVaporMassKg??s.vaporMassKg;
+    const vaporFlow=circulatingVapor>0
       ? secondaryBreakFlowKgS(s.breakAreaCm2,p,saturationTemperatureC(p)) : 0;
     const wetFlow=s.breakAreaCm2*1e-4*liquidFlux*wetFraction;
     const steamDensity=saturatedWaterDensities(saturationTemperatureC(p)).vapor;
-    const vaporVolume=s.vaporMassKg/Math.max(.1,steamDensity);
-    const liquidVolume=Math.max(1,s.primaryMassKg-s.vaporMassKg)/density;
-    const wetSteamFraction=clamp(vaporVolume/(liquidVolume+vaporVolume),0,1)
-      *(s.breakBranch==='chaude'?.7:.15);
+    const bulkMass=Math.max(1,s.primaryMassKg-(s.thermalNodes?.pzrMassKg||0));
+    const phase=s.thermalNodes?circulatingPhase(bulkMass,s.thermalNodes.bulkEnergyJ,p,s.thermalNodes.spreadJkg):null;
+    const local=phase&&(s.breakBranch==='chaude'?phase.hot:phase.cold);
+    // Le partage des débits sortants est massique. Ne pas confondre le titre
+    // vapeur (kg/kg) avec le taux volumique de vide (m³/m³).
+    const wetSteamFraction=local?clamp(local.vaporKg/(bulkMass/2),0,1)
+      :clamp(circulatingVapor/Math.max(1,s.primaryMassKg),0,1);
     const liquidKgS=wetFlow*(1-wetSteamFraction);
     const steamDemand=wetFlow*wetSteamFraction+(1-wetFraction)*vaporFlow;
     // Une brèche découverte ne peut consommer davantage de vapeur que le
     // stock disponible pendant ce pas. Le liquide reste compté séparément.
-    const steamKgS=dt>0?Math.min(steamDemand,s.vaporMassKg/dt):steamDemand;
+    const steamKgS=dt>0?Math.min(steamDemand,circulatingVapor/dt):steamDemand;
     const flowKgS=liquidKgS+steamKgS;
     return {flowKgS,liquidKgS,steamKgS,steamFraction:flowKgS>0?steamKgS/flowKgS:0,density,
       localPressureBar,hydrostaticBar,elevationM,wetFraction};
@@ -1524,10 +1695,9 @@
     // Un seuil sur le volume libre ferait basculer brutalement entre deux
     // réponses hydrauliques. Le transit des
     // parcelles conserve T/CB, mais ne retarde pas la réponse hydraulique de 4 s.
-    if(s.breakAreaCm2<=0||s.vaporMassKg>1
+    if(s.breakAreaCm2<=0||s.circulatingVaporMassKg>1
       ||s.tavgC>=saturationTemperatureC(s.pressureBar)-1)return s.pressureBar;
     const before={massKg:s.primaryMassKg,vaporKg:s.vaporMassKg,tempC:s.tavgC,pressureBar:s.pressureBar};
-    const oldEnergy=s.primaryMassKg*C.primaryCpJkgK*s.tavgC+s.vaporEnergyJ;
     const letdown=rcvLetdownM3h(model)*liquidWaterDensityKgM3(s.tavgC,s.pressureBar)/3600;
     const sprayTransferMW=(s.sprayCoolingKW+s.auxiliarySprayCoolingKW)/1000;
     const pzrHeatMW=(s.heaterKW-C.pzrPassiveTransferKW)/1000-sprayTransferMW;
@@ -1537,10 +1707,11 @@
         rcvPumpCapacityM3h(p)*liquidWaterDensityKgM3(s.tavgC,p)/3600*dt,null,true);
       const out=(breakFlowKgS(s,p,dt)+letdown+s.reliefKgS)*dt;
       const mass=s.primaryMassKg+ris.massKg+charge.massKg-out;
-      const energy=oldEnergy+(coreTransferMW+s.pumpHeatMW-s.totalGvMW+sprayTransferMW)*1e6*dt
-        +ris.energyJ+charge.energyJ-out*C.primaryCpJkgK*s.tavgC;
-      return advancePrimaryPressure(before,mass,energy,pzrHeatMW,s.reliefSteamKgS,
-        s.pzrThermalPressureBar,s.pzrLevelPct,dt,p).volumeResidualM3;
+      const bulkEnergy=s.thermalNodes.bulkEnergyJ+(coreTransferMW+s.pumpHeatMW-s.totalGvMW+sprayTransferMW)*1e6*dt
+        +ris.energyJ+charge.energyJ-(out-s.reliefKgS*dt)*C.primaryCpJkgK*s.tavgC;
+      const pzrEnergy=s.thermalNodes.pzrEnergyJ+pzrHeatMW*1e6*dt
+        -s.reliefKgS*dt*C.primaryCpJkgK*s.pzrTempC-s.reliefSteamKgS*dt*latentHeatJkg(s.pressureBar);
+      return separatedPrimaryAdvance(s,mass,bulkEnergy,pzrEnergy,dt,p,s.reliefKgS*dt).volumeResidualM3;
     };
     let lo=1,hi=C.primaryPressureMaxBar,p=clamp(s.pressureBar,lo,hi);
     if(residual(lo)<=0)return lo;
@@ -1759,7 +1930,8 @@
     'risPumpSpeedFraction',
     ...Array.from({length:4},(_,i)=>[`accumulatorsKg.${i}`,`accumulatorNitrogenBar.${i}`,`accumulatorFlowsKgS.${i}`]).flat(),
     ...Array.from({length:4},(_,i)=>`loops.${i}.forcedPrimingFraction`),
-    'pzrHeatToPrimaryMW','pzrHeatReserveMW','sprayCoolingKW','pzrEnergyOffsetJ'
+    'pzrHeatToPrimaryMW','pzrHeatReserveMW','sprayCoolingKW','pzrEnergyOffsetJ',
+    'circulatingVoidPct','circulatingVaporMassKg','pzrVaporMassKg','coreExchangeMWC','coreExchangeFactor','pzrTempC'
   ];
   function historyPoint(model) {
     const s=model.state;
@@ -1770,7 +1942,7 @@
       residualPower:100*s.decayMW/C.nominalThermalMW,
       pumpHeatMW:s.pumpHeatMW,
       cold:s.coldC,tavg:s.tavgC,hot:s.hotC,tric:s.tRicC,
-      pzrTemp:saturationTemperatureC(s.pressureBar),reactivity:s.reactivityPcm,
+      pzrTemp:s.pzrTempC,reactivity:s.reactivityPcm,
       pressure:s.pressureBar,gvPressure:s.gv.map(g=>g.pressureBar),
       boron:s.boronPpm,gv:s.gv.map(g=>g.levelPct),
       gvTemp:s.gv.map(g=>g.tempC),pzrLevel:s.pzrLevelPct,
@@ -1819,6 +1991,12 @@
     const s=model.state,u=model.controls;
     dt=clamp(Number(dt)||0,0,0.1);
     if (!dt||s.endState) return s;
+    const node=s.thermalNodes;
+    // Compatibilité avec les états de diagnostic construits par l'API : une
+    // modification explicite de M/P/T exige de reconstruire les deux volumes.
+    if(!node||Math.abs(node.massKg-s.primaryMassKg)>1e-5||Math.abs(node.pressureBar-s.pressureBar)>1e-6
+      ||Math.abs(node.tempC-s.tavgC)>1e-6||Math.abs(node.vaporKg-s.vaporMassKg)>1e-5)
+      initializePrimaryThermalState(s);
     updateSetpointRamps(model,dt);
     updateTurbineDemand(model,dt);
     s.trefC=297.2+9.3*turbineLoadTargetPct(model)/100;
@@ -1851,7 +2029,6 @@
     s.thermalPowerMW=s.fissionMW+s.decayMW;
 
     // Les quatre boucles partagent l'inventaire global, sans le multiplier par quatre.
-    s.inventory=cppInventory(Math.max(0,s.primaryMassKg-s.vaporMassKg),s.tavgC,s.pressureBar);
     s.coveragePct=s.inventory.coveragePct;
     if(s.inventory.loopLevelM<=C.primaryPumpLowLevelM)
       stopPrimaryPumps(s,`Arrêt GMPP : niveau CPP ${s.inventory.loopLevelM.toFixed(2)} m ≤ ${C.primaryPumpLowLevelM} m · risque de cavitation (hypothèse d'étude)`);
@@ -1906,7 +2083,9 @@
     s.coreFlowFraction=clamp(s.loops.reduce((a,l)=>a+l.flowKgS,0)/C.nominalPrimaryFlowKgS,0,1);
     // Loi globale à K fixe : le transfert ne s'annule pas à l'arrêt des GMPP.
     // Le même échange est retiré du combustible et ajouté au primaire.
-    const coreTransferMW=C.coreConductanceMWC*(s.fuelC-s.tavgC);
+    s.coreExchangeFactor=coreExchangeRegime(s);
+    s.coreExchangeMWC=C.coreConductanceMWC*s.coreExchangeFactor;
+    const coreTransferMW=s.coreExchangeMWC*(s.fuelC-s.tavgC);
     s.coreTransferMW=coreTransferMW;
     updateGv(s,u,dt);
     const fuelDelta=(s.thermalPowerMW-coreTransferMW)*1e6*dt/C.fuelHeatCapacityJk;
@@ -2008,7 +2187,7 @@
     s.reliefStageKgS=s.reliefStageKgS.map(q=>q*outScale);
     s.rcvLetdownKgS=letdown*outScale;
     const outMass=(s.breakKgS+s.rcvLetdownKgS+s.reliefKgS)*dt;
-    const oldTemp=s.tavgC,oldLatent=s.vaporEnergyJ;
+    const oldTemp=s.tavgC;
     const latent=latentHeatJkg(s.pressureBar);
     s.breakSteamKgS=s.breakKgS*breach.steamFraction;
     s.breakLiquidKgS=s.breakKgS-s.breakSteamKgS;
@@ -2018,10 +2197,11 @@
     s.flowProperties.breakSteam={tempC:saturationTemperatureC(s.pressureBar),boronPpm:0};
     // PZR plein : la soupape évacue du liquide, pas une vapeur fictive.
     // Transition continue sur les derniers 0,4 m³ de poche équivalente.
-    const reliefSteamFraction=clamp(s.inventory.steamSpaceM3/.4,0,1);
+    const reliefSteamFraction=clamp(s.pzrVaporMassKg
+      /Math.max(1e-9,saturatedWaterDensities(saturationTemperatureC(s.pressureBar)).vapor*.4),0,1);
     s.reliefSteamKgS=s.reliefKgS*reliefSteamFraction;
     s.reliefLiquidKgS=s.reliefKgS-s.reliefSteamKgS;
-    s.flowProperties.relief={tempC:lerp(oldTemp,saturationTemperatureC(s.pressureBar),reliefSteamFraction),
+    s.flowProperties.relief={tempC:s.pzrTempC,
       boronPpm:s.boronPpm*(1-reliefSteamFraction)};
     const steamOut=(s.breakSteamKgS+s.reliefSteamKgS)*dt;
     const liquidOut=outMass-steamOut;
@@ -2030,22 +2210,12 @@
     s.risCoolingMW=(arrivedRis.massKg*C.primaryCpJkgK*oldTemp-arrivedRis.energyJ)/dt/1e6;
     // Conservation de l'énergie : l'eau injectée apporte son enthalpie,
     // la vapeur sortante emporte Cp*T + Lv. Aucun refroidissement forfaitaire.
-    const oldEnergy=oldMass*C.primaryCpJkgK*oldTemp+oldLatent;
-    const outgoingEnergy=outMass*C.primaryCpJkgK*oldTemp+steamOut*latent;
-    const netEnergy=oldEnergy+(coreTransferMW+s.pumpHeatMW-s.totalGvMW)*1e6*dt
-      +arrivedRis.energyJ+arrivedRcv.energyJ-outgoingEnergy;
+    const bulkOutgoingJ=((s.breakLiquidKgS+s.rcvLetdownKgS)*C.primaryCpJkgK*oldTemp
+      +s.breakSteamKgS*(C.primaryCpJkgK*saturationTemperatureC(s.pressureBar)+latent))*dt;
+    const pzrOutgoingJ=(s.reliefKgS*C.primaryCpJkgK*s.pzrTempC+s.reliefSteamKgS*latent)*dt;
+    const bulkEnergy=s.thermalNodes.bulkEnergyJ+(coreTransferMW+s.pumpHeatMW-s.totalGvMW)*1e6*dt
+      +arrivedRis.energyJ+arrivedRcv.energyJ-bulkOutgoingJ;
     const pBefore=s.pressureBar;
-    const circulation=Math.max(0,s.coreFlowKgS);
-    const satBefore=saturationTemperatureC(pBefore);
-    const outletRiseFactor=C.corePowerFraction/(1-C.coreBypassFraction)-.5;
-    const maxRise=Math.max(0,Math.min(2*(oldTemp-20),(satBefore-oldTemp)/outletRiseFactor));
-    const sensibleLimit=circulation*C.primaryCpJkgK*maxRise/1e6;
-    const vaporHeatMW=Math.max(0,coreTransferMW-sensibleLimit);
-    // Équilibre homogénéisé du stock : une bulle locale peut se condenser
-    // dans le liquide sous-refroidi. Aucune vapeur ne reste stockée à T<Tsat.
-    s.vaporEnergyJ=Math.max(0,netEnergy-s.primaryMassKg*C.primaryCpJkgK*satBefore);
-    let candidateTemp=Math.min(satBefore,netEnergy/(s.primaryMassKg*C.primaryCpJkgK));
-    s.tavgC=Math.max(20,candidateTemp);
     // Collecte simplifiée dans le puisard pour la recirculation : la vapeur
     // rejetée se condense à l'enthalpie sensible, chaleur latente vers l'enceinte.
     const collected=(s.breakKgS+s.reliefKgS)*dt;
@@ -2111,30 +2281,35 @@
     const before={massKg:oldMass,vaporKg:oldVaporMass,tempC:oldTemp,pressureBar:pBefore};
     // L'aspersion transfère de la chaleur de la réserve PZR vers le stock
     // primaire ; elle ne retire aucune énergie du CPP vers l'extérieur.
-    const pressure=advancePrimaryPressure(before,s.primaryMassKg,netEnergy+sprayTransferMW*1e6*dt,pzrNetHeatMW,
-      s.reliefSteamKgS,s.pzrThermalPressureBar,s.pzrLevelPct,dt);
-    const finalEnergy=pressure.energyJ;
-    s.pzrHeatToPrimaryMW=sprayTransferMW+pressure.bulkHeatMW;
-    s.pzrHeatReserveMW=pressure.reserveHeatMW;
-    s.pzrEnergyOffsetJ+=s.pzrHeatReserveMW*1e6*dt;
-    s.pzrThermalPressureBar=pressure.thermalPressureBar;
-    s.pressureBar=pressure.pressureBar;
+    const bulkMass=Math.max(1,s.primaryMassKg-s.thermalNodes.pzrMassKg);
+    const targetSpread=s.coreFlowKgS>1?Math.max(0,coreTransferMW)*1e6/s.coreFlowKgS:0;
+    const residenceS=Math.max(1,bulkMass/Math.max(1,s.coreFlowKgS)/4);
+    s.thermalNodes.spreadJkg+=(targetSpread-s.thermalNodes.spreadJkg)*(-Math.expm1(-dt/residenceS));
+    const pressure=separatedPrimaryAdvance(s,s.primaryMassKg,bulkEnergy+sprayTransferMW*1e6*dt,
+      s.thermalNodes.pzrEnergyJ+pzrNetHeatMW*1e6*dt-pzrOutgoingJ,dt,null,s.reliefKgS*dt);
+    s.pzrHeatToPrimaryMW=(pressure.eb-bulkEnergy)/dt/1e6;
+    s.pzrHeatReserveMW=(pressure.ep-s.thermalNodes.pzrEnergyJ+pzrOutgoingJ)/dt/1e6;
+    s.thermalNodes.bulkEnergyJ=pressure.eb;s.thermalNodes.pzrEnergyJ=pressure.ep;
+    s.thermalNodes.pzrMassKg=pressure.mp;
+    s.pzrThermalPressureBar=pressure.p;
+    s.pressureBar=pressure.p;
     s.pzrPistonBarS=(s.pressureBar-pBefore)/dt;
     s.saturationC=saturationTemperatureC(s.pressureBar);
     // Détente : l'énergie excédant le liquide saturé produit de la vapeur.
     // Elle reste dans l'inventaire jusqu'à condensation ou rejet.
-    s.vaporEnergyJ=Math.max(0,finalEnergy-s.primaryMassKg*C.primaryCpJkgK*s.saturationC);
-    s.tavgC=Math.min(s.saturationC,Math.max(20,finalEnergy/(s.primaryMassKg*C.primaryCpJkgK)));
-    s.vaporMassKg=Math.min(s.primaryMassKg-1,s.vaporEnergyJ/latentHeatJkg(s.pressureBar));
+    s.tavgC=pressure.bulk.tempC;s.pzrTempC=pressure.pzr.tempC;
+    s.circulatingVoidPct=pressure.bulk.voidPct;
+    s.circulatingVaporMassKg=pressure.bulk.vaporKg;s.pzrVaporMassKg=pressure.pzr.vaporKg;
+    s.vaporMassKg=pressure.bulk.vaporKg+pressure.pzr.vaporKg;
     s.vaporEnergyJ=s.vaporMassKg*latentHeatJkg(s.pressureBar);
     s.primaryMassRateKgS=(s.primaryMassKg-oldMass)/dt;
     s.vaporMassRateKgS=(s.vaporMassKg-oldVaporMass)/dt;
     // Transfert interne liquide ↔ vapeur : inclut détente et condensation.
     // Ce terme ne s'ajoute pas une seconde fois à la fuite totale de brèche.
     s.phaseChangeKgS=s.vaporMassRateKgS+s.breakSteamKgS+s.reliefSteamKgS;
-    s.primaryEnergyJ=s.primaryMassKg*C.primaryCpJkgK*s.tavgC+s.vaporEnergyJ;
+    s.primaryEnergyJ=pressure.eb+pressure.ep+s.thermalNodes.referenceJ;
     s.boronPpm=clamp(s.boronInventory/Math.max(1,s.primaryMassKg-s.vaporMassKg),0,C.reaBoronPpm);
-    s.inventory=cppInventory(Math.max(0,s.primaryMassKg-s.vaporMassKg),s.tavgC,s.pressureBar);
+    s.inventory=primaryThermalInventory(s,pressure.bulk,pressure.pzr);
     s.coveragePct=s.inventory.coveragePct;
     s.pzrLevelPct=s.inventory.components.pzr.fillPct;
     // L'inventaire a changé pendant ce pas. Un sommet maintenant découvert
@@ -2149,13 +2324,12 @@
     s.coreFlowKgS=s.loops.reduce((sum,l)=>sum+l.flowKgS,0)+s.risCoreKgS;
     s.coreFlowFraction=clamp(s.loops.reduce((sum,l)=>sum+l.flowKgS,0)/C.nominalPrimaryFlowKgS,0,1);
     const primaryFlow=s.coreFlowKgS;
-    const maxDelta=Math.max(0,Math.min(2*(s.tavgC-20),(s.saturationC-s.tavgC)/outletRiseFactor));
-    const deltaT=primaryFlow>1?Math.min(maxDelta,Math.max(0,coreTransferMW-vaporHeatMW)*1e6
-      /(primaryFlow*C.primaryCpJkgK)):0;
+    s.hotC=pressure.bulk.hot.tempC;s.coldC=pressure.bulk.cold.tempC;
+    const deltaT=s.hotC-s.coldC;
     s.sensibleCoreMW=primaryFlow*C.primaryCpJkgK*deltaT/1e6;
-    s.vaporizationKgS=Math.max(0,coreTransferMW-s.sensibleCoreMW)*1e6/latentHeatJkg(s.pressureBar);
-    s.hotC=Math.min(s.saturationC,s.tavgC+deltaT/2);
-    s.coldC=Math.max(20,s.tavgC-deltaT/2);
+    s.vaporizationKgS=primaryFlow*Math.max(0,
+      pressure.bulk.hot.vaporKg/Math.max(1,(s.primaryMassKg-pressure.mp)/2)
+        -pressure.bulk.cold.vaporKg/Math.max(1,(s.primaryMassKg-pressure.mp)/2));
     // T RIC est la sortie moyenne du cœur avant mélange avec les 7 % de bypass.
     // Les branches chaudes mesurent, elles, la sortie de cuve après mélange.
     s.tRicC=Math.min(s.saturationC,s.coldC+C.corePowerFraction*deltaT/(1-C.coreBypassFraction));
@@ -2166,6 +2340,8 @@
       loop.hotC=clamp(s.hotC+asymmetry,20,s.saturationC);
       loop.coldC=clamp(s.coldC-asymmetry,20,s.saturationC);
     }
+    Object.assign(s.thermalNodes,{massKg:s.primaryMassKg,pressureBar:s.pressureBar,
+      tempC:s.tavgC,vaporKg:s.vaporMassKg});
     updateAxial(s,u,dt);
     s.ptOutside=isPtOutside(s);
     updateCoreDamageWarning(s,dt);
@@ -2175,7 +2351,7 @@
   }
   function updateCoreDamageWarning(s,dt) {
     const reason=s.peakLinearWcm>590?"Puissance linéique supérieure à 590 W/cm."
-      :s.inventory.levelM<CPP_CORE_TOP_M?"Dénoyage du haut du cœur.":"";
+      :Math.min(s.inventory.levelM,s.inventory.loopLevelM)<CPP_CORE_TOP_M?"Dénoyage du haut du cœur.":"";
     if(!reason){s.coreDamageWarning=null;return;}
     if(!s.coreDamageWarning){
       s.coreDamageWarning={elapsedS:0,remainingS:C.coreDamageDelayS,reason};
@@ -2306,7 +2482,7 @@
     const rBelowLimit=s.tripAt===null&&s.rods.R<s.rLimitPas-0.5;
     return {gv,gvState:gvAll[gv-1],gvAll,loops,operatingState:reactorOperatingState(s),
       power:s.powerPct,demand:s.demandPct,pressure:s.pressureBar,
-      pzrLevel:s.pzrLevelPct,nref:s.nrefPct,pzrTempC:saturationTemperatureC(s.pressureBar),
+      pzrLevel:s.pzrLevelPct,nref:s.nrefPct,pzrTempC:s.pzrTempC,
       sprayPct:s.sprayPct,sprayFlowM3h:s.sprayFlowM3h,heaterKW:s.heaterKW,
       auxiliarySprayM3h:s.auxiliarySprayM3h,totalSprayFlowM3h:s.totalSprayFlowM3h,
       primaryPumpsStopped:s.primaryPumpsStopped,primaryPumpStopAt:s.primaryPumpStopAt,
@@ -2318,6 +2494,8 @@
       inventory:s.inventory,primaryMassKg:s.primaryMassKg,massBalance:primaryMassBalance(s),
       primaryFlow:primaryFlowDiagnostics(model),
       vaporMassKg:s.vaporMassKg,vaporizationKgS:s.vaporizationKgS,
+      circulatingVoidPct:s.circulatingVoidPct,circulatingVaporMassKg:s.circulatingVaporMassKg,
+      pzrVaporMassKg:s.pzrVaporMassKg,coreExchangeMWC:s.coreExchangeMWC,
       saturationC:saturationTemperatureC(s.pressureBar),risCoreKgS:s.risCoreKgS,
       accumulatorsKg:[...s.accumulatorsKg],accumulatorNitrogenBar:[...s.accumulatorNitrogenBar],
       accumulatorFlowsKgS:[...s.accumulatorFlowsKgS],accumulatorKgS:s.accumulatorKgS,
@@ -2397,11 +2575,13 @@
       for(const [suffix,key] of [["Feed","feedKgS"],["Asg","asgKgS"],["Dump","dumpKgS"],["TurbineSteam","turbineSteamKgS"]])
         values[`gv${g.index}${suffix}Signal`]=[g[key],"kg/s"];
     }
+    Object.assign(values,{voidSignal:[s.circulatingVoidPct,"% vol."],coreExchangeSignal:[s.coreExchangeMWC,"MW/°C"]});
     return values;
   }
   return { C,G3,ROD_NAMES,ROD_WORTH_PCM,AXIAL_ROD_ABSORPTION,TRANSIENTS,make,step,advance,
     CPP_GEOMETRY,CPP_CORE_TOP_M,CPP_CORE_BOTTOM_M,CPP_INITIAL_LEVEL_M,HISTORY_PATHS,historyPoint,
     cppInventory,liquidWaterDensityKgM3,saturatedWaterDensities,rcvPumpCapacityM3h,solvePrimaryPressure,pzrEquilibriumResponse,advancePrimaryPressure,primaryBreakHydraulics,
+    initializePrimaryThermalState,
     latentHeatJkg,gvThermalCapacityJk,gvLatentHeatJkg,secondaryBreakFlowKgS,accumulatorFlowKgS,ptLimits,reactorOperatingState,isPtOutside,rraConditions,connectRra,setRisOperation,commandAllRods,tripPrimaryPumps,
     instrumentSnapshot,controlSignals,primaryMassBalance,primaryFlowDiagnostics,TURBINE_MANUAL_RATES,setManualTurbineDemand,
     SETPOINT_RATES,SETPOINT_CONTROLS,setManualSetpoint,

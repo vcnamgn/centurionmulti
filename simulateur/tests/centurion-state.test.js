@@ -133,9 +133,11 @@ test('migration état v1 : nouvelle densité sans perte de masse, puis reprise d
   const m=E.make(),s=m.state;
   s.primaryMassKg=288919.9433620741;s.pressureBar=129.39650007044798;s.tavgC=235.44715534379134;
   s.boronInventory=s.primaryMassKg*s.boronPpm;
+  E.initializePrimaryThermalState(s);
   const editors={regul:snapshot(editorSurface()),protect:snapshot(editorSurface('protect'))};
   const raw=State.write(E,m,editors,ui,null);
   raw.engineRevision='20261007-state-v1';
+  delete raw.model.state.thermalNodes;
   for(const key of ['rcvChargeM3h','rcvDeliveredM3h','rcvDemandM3h','rcvCapacityM3h',
     'pzrThermalPressureBar','pzrPistonBarS','reliefSteamKgS','reliefLiquidKgS'])delete raw.model.state[key];
   for(const key of ['densityKgM3','liquidVolumeM3','capacityM3','steamSpaceM3','compressedLiquidKg'])
@@ -268,9 +270,10 @@ test('sauvegarde avec certificat : conditions RRA variables de zéro à cinq, re
   const editors={regul:snapshot(editorSurface()),protect:snapshot(editorSurface('protect'))};
   for(let count=0;count<=5;count++){
     const m=E.make(),s=m.state;
-    s.tavgC=count>=1?300:150;s.pressureBar=count>=2?155:28;s.powerPct=count>=3?100:0;
+    s.tavgC=count>=1?200:150;s.pressureBar=count>=2?155:28;s.powerPct=count>=3?100:0;
     if(count>=4){s.primaryMassKg=1000;s.inventory=E.cppInventory(1000,s.tavgC,s.pressureBar);}
     if(count===5)s.endState='melted';
+    E.initializePrimaryThermalState(s);
     assert.equal(E.rraConditions(s).reasons.length,count);
     const archive=Cert.createArchive(E);archive.observe(m);
     const raw=State.write(E,m,editors,ui,archive.save());

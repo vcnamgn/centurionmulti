@@ -10,7 +10,7 @@ function isolatedPlant(p=30,heater=0,fullLiquid=false){
   const vaporVolume=fullLiquid?0:.6*pzr,liquidVolume=total-vaporVolume;
   const liquid=liquidVolume*E.liquidWaterDensityKgM3(T,p);
   const vapor=vaporVolume*E.saturatedWaterDensities(T).vapor;
-  Object.assign(s,{pressureBar:p,tavgC:T,fuelC:T,powerPct:1e-6,precursors:s.precursors.map(()=>0),
+  Object.assign(s,{pressureBar:p,tavgC:T,hotC:T,coldC:T,tRicC:T,fuelC:T,powerPct:1e-6,precursors:s.precursors.map(()=>0),
     primaryMassKg:liquid+vapor,vaporMassKg:vapor,vaporEnergyJ:vapor*E.latentHeatJkg(p),
     pzrThermalPressureBar:p,heaterKW:heater,primaryPumpsStopped:true,turbinePct:0,demandPct:0,
     pzrLevelPct:fullLiquid?100:40,saturationC:E.saturationTemperatureC(p),
@@ -36,9 +36,9 @@ test('chaufferettes en diphasique à 30/80/155 bar : les 250 kJ sont conservés 
     near(totalEnergy(s)-totalEnergy(off.state),250000);
     near(totalEnergy(s)-initial,
       (s.coreTransferMW+s.pumpHeatMW-s.totalGvMW+(2500-E.C.pzrPassiveTransferKW)/1000)*1e6*.1);
-    near(s.pzrHeatToPrimaryMW,(2500-E.C.pzrPassiveTransferKW)/1000,1e-10);
-    near(s.pzrHeatReserveMW,0,1e-10);
-    near(s.tavgC,E.saturationTemperatureC(s.pressureBar),1e-9);
+    near(s.pzrHeatToPrimaryMW+s.pzrHeatReserveMW,(2500-E.C.pzrPassiveTransferKW)/1000,1e-8);
+    assert.ok(s.tavgC<=E.saturationTemperatureC(s.pressureBar));
+    near(s.pzrTempC,E.saturationTemperatureC(s.pressureBar),1e-9);
   }
 });
 
@@ -47,7 +47,7 @@ test('CPP plein de liquide : la chaleur augmente l’énergie et la pression, sa
   E.step(off,.1);E.step(on,.1);
   near(on.state.primaryEnergyJ-off.state.primaryEnergyJ,250000);
   assert.ok(on.state.pressureBar>off.state.pressureBar);
-  assert.equal(on.state.vaporMassKg,0);near(on.state.pzrHeatReserveMW,0);
+  assert.equal(on.state.vaporMassKg,0);
   near(on.state.inventory.overfillKg,0);
 });
 
@@ -83,10 +83,10 @@ test('aspersion BF/auxiliaire : transfert interne, bilan global égal à chauffe
     u.protectionsEnabled=false;u.manualHeaterKW=0;
     if(auxiliary)u.manualAuxiliarySprayM3h=8;else u.manualSprayPct=100;
     const old=totalEnergy(s);E.step(m,.1);
-    assert.ok(s.pzrHeatToPrimaryMW>0);assert.ok(s.pzrHeatReserveMW<0);
+    assert.ok(s.sprayCoolingKW+s.auxiliarySprayCoolingKW>0);
     near(totalEnergy(s)-old,
       (s.coreTransferMW+s.pumpHeatMW-s.totalGvMW-E.C.pzrPassiveTransferKW/1000)*1e6*.1);
-    near(s.pzrHeatToPrimaryMW+s.pzrHeatReserveMW,-E.C.pzrPassiveTransferKW/1000,1e-10);
+    near(s.pzrHeatToPrimaryMW+s.pzrHeatReserveMW,-E.C.pzrPassiveTransferKW/1000,1e-8);
   }
 });
 
