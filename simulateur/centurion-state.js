@@ -8,9 +8,9 @@
   const History=typeof module==='object'&&module.exports?require('./centurion-history.js'):window.CenturionHistory;
   const PzrCommands=typeof module==='object'&&module.exports?require('./centurion-cc-pzr.js'):window.CenturionPzrCommands;
   const Auto=typeof module==='object'&&module.exports?require('./centurion-auto.js'):window.CenturionAuto;
-  const FORMAT="Centurion-State",VERSION=1,REVISION="20261015-equipment-faults-v11";
+  const FORMAT="Centurion-State",VERSION=1,REVISION="20261016-pzr-energy-v12";
   const MAX_STATE_BYTES=160*1024*1024;
-  const COMPATIBLE_REVISIONS=["20261008-pzr-v2","20261008-pzr-v3","20261008-breche-v4","20261008-gv-breches-v5","20261008-ris-inertie-v6","20261008-gmpp-niveau-v7","20261009-pzr-breche-v8","20261009-consignes-v9","20261009-charge-v10"];
+  const COMPATIBLE_REVISIONS=["20261008-pzr-v2","20261008-pzr-v3","20261008-breche-v4","20261008-gv-breches-v5","20261008-ris-inertie-v6","20261008-gmpp-niveau-v7","20261009-pzr-breche-v8","20261009-consignes-v9","20261009-charge-v10","20261015-equipment-faults-v11"];
   const LEGACY_REVISION="20261007-state-v1";
   const clone=value=>JSON.parse(JSON.stringify(value));
   function checkJson(value,path="fichier",depth=0){
@@ -170,6 +170,16 @@
       if(raw.model.controls.manualTurbineRatePctMin===undefined)raw.model.controls.manualTurbineRatePctMin=5;
     }
     const oldRevision=raw.engineRevision!==REVISION;
+    if(oldRevision&&raw.model?.state){
+      const s=raw.model.state;
+      // Le bilan PZR n'était pas enregistré : référence relative à la reprise,
+      // sans réécrire l'énergie primaire, les stocks ou les historiques passés.
+      if(s.pzrEnergyOffsetJ===undefined)s.pzrEnergyOffsetJ=0;
+      if(s.pzrHeatToPrimaryMW===undefined)s.pzrHeatToPrimaryMW=0;
+      if(s.pzrHeatReserveMW===undefined)s.pzrHeatReserveMW=0;
+      if(s.sprayCoolingKW===undefined)s.sprayCoolingKW=(s.sprayFlowKgS||0)*E.C.primaryCpJkgK
+        *Math.max(0,E.saturationTemperatureC(s.pressureBar)-(s.loops[0].coldC+s.loops[1].coldC)/2)/1000;
+    }
     if(oldRevision&&raw.model?.controls?.equipmentFaults===undefined)raw.model.controls.equipmentFaults={};
     if(oldRevision){
       const u=raw.model.controls,s=raw.model.state;

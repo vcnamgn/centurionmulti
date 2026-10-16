@@ -1,6 +1,6 @@
 # Centurion — note de conception
 
-Version documentaire du 15 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
+Version documentaire du 16 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
 
 ## 1. Objet et périmètre
 
@@ -333,7 +333,7 @@ L = 1/rho_vapeur − 1/rho_liquide_saturé
 C_phase = C_thermique × (dTsat/dP) / Lv × L
 C_eq = C_liquide_CPP + C_vapeur_saturée + C_expansion_eau_chaude + C_phase
 C_corrective = max(0, C_eq − C_liquide_CPP − V_libre/(n × P_ancien))
-ΔV_chaleur = (Q_net / Lv) × L × Δt
+ΔV_chaleur = (Q_réserve / Lv) × L × Δt × disponibilité_de_phase
 ```
 
 `C_eq` est en m³/bar ; `Q_net` est ici en W et `Lv` en J/kg. `C_vapeur_saturée = V_libre / rho_vapeur × d(rho_vapeur)/dP` utilise la variation réelle de densité saturée, et non `V/(nP)`, réservé à la compression rapide. Le terme d'expansion de l'eau chaude est négatif : l'élévation de Tsat augmente son volume. La capacité participante vaut **156 MJ/°C au niveau nominal**, varie avec le niveau PZR et disparaît avec la poche. Ce calage correspond au gradient de pleine aspersion documenté, environ −0,15 bar/s. Au nominal, `C_eq ≈ 0,988 m³/bar` et le gain thermique vaut **0,00851 bar/(MW·s)**. Quand le CPP est plein, ces termes de phase s'annulent : la pression est alors déterminée par la compressibilité du liquide.
@@ -341,6 +341,30 @@ C_corrective = max(0, C_eq − C_liquide_CPP − V_libre/(n × P_ancien))
 Le calcul n'intègre plus une seconde pression thermique avant de recomprimer la poche : cela comptait deux fois une partie de l'effet piston. La valeur sauvegardée `pzrThermalPressureBar` reste présente pour la compatibilité, mais suit désormais la pression réalisée. La capacité participante est une hypothèse du modèle réduit. Le travail de compression n'est pas ajouté une seconde fois comme une source externe de chaleur. Une tolérance volumique de **10⁻⁶ m³** évite qu'un résidu numérique dans un CPP plein amorce une poche fictive au pas suivant.
 
 Le bilan thermique conserve son calage nominal (288 kW, deux aspersions continues de 0,230 m³/h) et le gradient de pleine aspersion voisin de −0,15 bar/s une fois la réponse établie. Cette modélisation ne résout pas séparément les masses et enthalpies des couches chaude/froide du PZR : la poche de pilotage reste un volume compressible équivalent, sa masse propre n'est pas ajoutée au stock suivi. La masse « vapeur de détente » affichée correspond à celle du bilan sensible/latent du CPP. Ce modèle reste pédagogique.
+
+##### Énergie des chaufferettes et transition vers un CPP diphasique
+
+Les chaufferettes ne sont pas coupées par le passage de TMOY à saturation. L'ancien calcul ne conservait leur effet que dans `ΔV_chaleur` : lorsque la vapeur explicitement suivie occupait tout le volume libre, le gain de poche devenait nul et la chaleur électrique disparaissait. La correction conserve cette énergie dans le stock suivi lorsque cette poche ne représente plus la phase vapeur.
+
+Le modèle distingue le stock homogénéisé `U_CPP = M × Cp × TMOY + M_vapeur × Lv` et un **écart d'énergie de réserve PZR**, `pzrEnergyOffsetJ`, nul à l'initialisation. Ce dernier enregistre la chaleur reçue par la réserve thermique effective qui participe déjà à la fermeture de pression. C'est une référence relative, qui peut être négative ; ce n'est pas une enthalpie absolue ni un modèle multicouche du pressuriseur.
+
+Avec `H` la puissance électrique réalisée, `L` l'échange passif effectif vers l'extérieur et `S` le transfert par aspersion BF + auxiliaire RCV, en W :
+
+```text
+Q_net = H − L − S
+a = V_poche / (V_poche + V_vapeur_suivie) × borne(V_libre / 0,4 m³, 0, 1)
+Q_réserve = a × Q_net
+Q_vers_CPP = S + (1 − a) × Q_net
+ΔU_CPP = bilan cœur/GMPP/GV/injections/rejets + Q_vers_CPP × Δt
+ΔU_réserve = Q_réserve × Δt
+Δ(U_CPP + U_réserve) = bilan cœur/GMPP/GV/injections/rejets + (H − L) × Δt
+```
+
+Les volumes sont évalués à l'état précédent : `V_libre = max(0, V_CPP − V_liquide − V_vapeur_suivie)` et `V_poche = min(V_libre, V_PZR)`. Si leur somme est négligeable, `a = 0`. Le raccordement sur les derniers 0,4 m³ reprend la disponibilité de phase existante et évite un changement brutal au remplissage. Seul `Q_réserve` alimente le terme de chaleur de la poche ; `Q_vers_CPP` entre une seule fois dans l'énergie passée au solveur masse/énergie/volume. La chaleur emportée par les rejets reste comptée dans leur enthalpie de sortie.
+
+Ainsi l'aspersion est un **transfert interne**, sans perte d'énergie globale fictive. Quand la poche équivalente disparaît, `a = 0` et `Q_vers_CPP = H − L` : la chaleur des chaufferettes reste présente, y compris dans un CPP saturé ou plein de liquide. À 30, 80 et 155 bar, les tests isolés retrouvent **250 kJ supplémentaires pour 2,5 MW pendant 0,1 s**, et une pression supérieure au cas sans chauffage. Une augmentation de pression peut condenser une partie de la vapeur en élevant Tsat ; il ne faut donc pas attendre systématiquement une hausse de masse vapeur.
+
+Au nominal, environ **32,39 kW** passent du PZR au stock primaire par l'aspersion continue, et **255,61 kW** représentent l'échange passif effectif. Cette dernière valeur est un calage, pas une perte mesurée. Les GV évacuent donc **3 841,03239 MW** (cœur + GMPP + transfert PZR), avec les mêmes température primaire, débit vapeur nominal et puissance réseau. Les historiques proposent les puissances transférée au CPP, stockée dans la réserve et échangée par aspersion. Le bilan explicite améliore la conservation énergétique ; la compliance PZR et l'équilibre homogénéisé restent des approximations d'étude.
 
 ##### Brèche, condensation et passage à un CPP plein
 
@@ -668,6 +692,8 @@ La révision `20261008-gmpp-niveau-v7` sépare l'aspiration du débit forcé de 
 La révision `20261009-pzr-breche-v8` corrige la fermeture de pression et la fuite primaire liquide. Elle conserve le format des tableaux et accepte les sauvegardes v1 à v7, sans modifier leurs graphes, historiques, stocks ni parcelles. Les anciennes valeurs restent dans l'historique ; les nouvelles lois s'appliquent à la reprise. La mémoire `pzrThermalPressureBar` suit alors la pression réalisée. Aucun état utilisateur joint pour diagnostic n'est publié avec le projet.
 
 La révision `20261009-consignes-v9` conserve les cibles, pentes, modes des trois consignes et l'ordre de fermeture RCV. Les fichiers v1 à v8 reçoivent des rampes inactives à 5 unités/minute, sans modifier leurs références historiques, stocks ou tuyaux. Les chaînes PZR reconnues du graphe repris reçoivent les RCI et le relais bas niveau, en conservant les mémoires des blocs existants. Les nouvelles sources CC sont ajoutées à la fin des mesures compactes pour conserver les indices des historiques antérieurs.
+
+La révision `20261016-pzr-energy-v12` ajoute la réserve thermique relative PZR et les puissances de transfert, sans changer le format général. Les sauvegardes v1 à v11 restent lisibles : l'écart de réserve prend zéro à la reprise, puisque l'ancien moteur ne le mémorisait pas. Les masses, températures, énergie primaire existante, graphes CC et historiques sont conservés. Les nouveaux canaux sont ajoutés à la fin de la liste compacte ; leur valeur n'est pas inventée pour les points historiques antérieurs.
 
 La révision `20261009-charge-v10` accepte également les sauvegardes v9. Les chaînes de charge fournies et reconnues reçoivent la correction +60 et les bornes externes de saturation, en conservant les mémoires existantes. Les graphes étudiants personnalisés restent conservés. La source de capacité RCV est ajoutée à la fin des signaux ; les tableaux historiques antérieurs ne sont pas réindexés.
 

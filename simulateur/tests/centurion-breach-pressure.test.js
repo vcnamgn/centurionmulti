@@ -40,7 +40,7 @@ test('CPP froid plein : contre-pression RIS/brèche couplée, absence d’oscill
       near(s.boronInventory-boron,dt*(s.rcvDeliveredKgS*b.chargeBoronPpm+s.risDeliveredKgS*b.risBoronPpm
         -(s.breakLiquidKgS+s.rcvLetdownKgS+s.reliefLiquidKgS)*cb),.0001);
       const input=(s.rcvDeliveredKgS*b.chargeTempC+s.risDeliveredKgS*b.risTempC)*6000*dt;
-      near(s.primaryEnergyJ,energy+(s.coreTransferMW+s.pumpHeatMW-s.totalGvMW)*1e6*dt
+      near(s.primaryEnergyJ,energy+(s.coreTransferMW+s.pumpHeatMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*1e6*dt
         +input-(s.breakKgS+s.rcvLetdownKgS+s.reliefKgS)*6000*T*dt,.002);
       if(i*dt>10)maxRate=Math.max(maxRate,Math.abs(s.pressureBar-p)/dt);
       assert.ok(s.tavgC<100&&s.vaporMassKg===0);
@@ -123,7 +123,7 @@ test('brèche immergée à 1 bar : fuite gravitaire liquide et conservation de m
   near(s.primaryMassKg-old,.1*flows.netKgS,1e-7);
   near(s.boronInventory-boron,.1*(s.risDeliveredKgS*flows.risBoronPpm
     +s.rcvDeliveredKgS*flows.chargeBoronPpm-(s.breakKgS+s.rcvLetdownKgS)*cb),1e-4);
-  near(s.primaryEnergyJ,U+.1*((s.coreTransferMW+s.pumpHeatMW-s.totalGvMW)*1e6
+  near(s.primaryEnergyJ,U+.1*((s.coreTransferMW+s.pumpHeatMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*1e6
     +(s.risDeliveredKgS*flows.risTempC+s.rcvDeliveredKgS*flows.chargeTempC)*6000
     -(s.breakKgS+s.rcvLetdownKgS)*6000*T),.002);
 });

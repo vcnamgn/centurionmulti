@@ -84,14 +84,17 @@
   // Coefficient global combustible–primaire retenu pour l'étude : 10 MW/°C.
   const coreExchangeMWC = 10;
   const nominalCoreThermalMW = 3817, primaryPumpHeatMWPerUnit = 6;
-  const nominalPrimaryHeatMW = nominalCoreThermalMW + 4*primaryPumpHeatMWPerUnit;
+  const nominalSprayCoolingKW=0.46*liquidWaterDensityKgM3(288.4,155)/3600*6000
+    *(saturationTemperatureC(155)-288.4)/1000;
+  const nominalPrimaryHeatMW = nominalCoreThermalMW + 4*primaryPumpHeatMWPerUnit
+    +nominalSprayCoolingKW/1000;
   // Garder le débit vapeur nominal ; son enthalpie effective inclut désormais
   // la chaleur des GMPP évacuée par les GV, en plus de celle du cœur.
   const nominalSteamKgSPerGV = nominalCoreThermalMW*1e6/(4*1.8e6);
   const steamEnthalpyJkg = nominalPrimaryHeatMW*1e6/(4*nominalSteamKgSPerGV);
   const C = Object.freeze({
     nominalThermalMW: nominalCoreThermalMW, nominalElectricMW: 1300,
-    primaryPumpHeatMWPerUnit, nominalPrimaryHeatMW,
+    primaryPumpHeatMWPerUnit, nominalPrimaryHeatMW, nominalSprayCoolingKW,
     nominalPrimaryMassKg: 269064, nominalPrimaryFlowKgS: 17588,
     primaryCpJkgK: 6000, coreBypassFraction: 0.07,
     corePowerFraction: 0.99, fuelHeatCapacityJk: 45e6,
@@ -121,8 +124,7 @@
     nominalSprayPct: 0, nominalHeaterKW: 288,
     // À 155 bar, 288 kW de chaufferettes compensent l'échange passif et
     // le refroidissement des deux lignes d'aspersion continue (0,46 m³/h).
-    pzrPassiveTransferKW: 288-0.46*liquidWaterDensityKgM3(288.4,155)/3600*6000
-      *(saturationTemperatureC(155)-288.4)/1000,
+    pzrPassiveTransferKW: 288-nominalSprayCoolingKW,
     // Calage sur le gradient documenté de -0,15 bar/s à pleine aspersion.
     pressureHeatGainBarPerMWs: 0.15/(250*liquidWaterDensityKgM3(288.4,155)/3600*6000
       *(saturationTemperatureC(155)-288.4)/1e6),
@@ -334,15 +336,28 @@
       liquidCompliance,steamCompliance,hotWaterExpansion,phaseCompliance,phaseCapacityJk:phaseCapacity};
   }
   function advancePrimaryPressure(before,massKg,energyJ,pzrHeatMW,reliefSteamKgS,thermalPressureBar,levelPct,dt,trialPressureBar=null) {
+    const vaporVolume=before.vaporKg/saturatedWaterDensities(saturationTemperatureC(before.pressureBar)).vapor;
     const oldVolume=(before.massKg-before.vaporKg)/liquidWaterDensityKgM3(before.tempC,before.pressureBar)
-      +before.vaporKg/saturatedWaterDensities(saturationTemperatureC(before.pressureBar)).vapor;
+      +vaporVolume;
+    const freeVolume=Math.max(0,CPP_TOTAL_VOLUME-oldVolume);
+    const pocketVolume=Math.min(freeVolume,CPP_PZR_VOLUME);
+    // Deux représentations thermiques coexistent : la poche PZR équivalente
+    // et la vapeur explicitement suivie par M/U/V. Répartir la chaleur entre
+    // elles, sans la perdre lorsque la seconde occupe tout le volume libre.
+    // CPP plein de liquide : toute la chaleur réchauffe le liquide suivi.
+    const reserveFraction=vaporVolume+pocketVolume>1e-6
+      ?pocketVolume/(vaporVolume+pocketVolume)*clamp(freeVolume/.4,0,1):0;
+    const bulkFraction=1-reserveFraction;
+    const bulkHeatMW=bulkFraction*pzrHeatMW;
+    const reserveHeatMW=(1-bulkFraction)*pzrHeatMW;
+    energyJ+=bulkHeatMW*1e6*dt;
     const displacementM3=primaryPhaseAt(massKg,energyJ,before.pressureBar).volumeM3-oldVolume;
     const response=pzrEquilibriumResponse(before,Math.max(0,CPP_TOTAL_VOLUME-oldVolume),levelPct);
-    const effectiveHeatMW=pzrHeatMW-reliefSteamKgS*latentHeatJkg(before.pressureBar)/1e6;
+    const effectiveHeatMW=reserveHeatMW-reliefSteamKgS*latentHeatJkg(before.pressureBar)/1e6;
     const volumeResidualM3=trialPressureBar===null?null
       :primaryPressureEquation(before,massKg,energyJ,effectiveHeatMW,dt)(trialPressureBar);
     const pressureBar=trialPressureBar??solvePrimaryPressure(before,massKg,energyJ,effectiveHeatMW,dt);
-    return {pressureBar,
+    return {pressureBar,energyJ,bulkHeatMW,reserveHeatMW,
       volumeResidualM3,
       thermalPressureBar:pressureBar,displacementM3,response};
   }
@@ -719,6 +734,10 @@
       vaporMassKg:0, vaporEnergyJ:0, vaporizationKgS:0, sensibleCoreMW:C.nominalThermalMW,
       primaryMassRateKgS:0,vaporMassRateKgS:0,phaseChangeKgS:0,
       primaryEnergyJ:C.nominalPrimaryMassKg*C.primaryCpJkgK*C.primaryMeanC,
+      // Écart d'énergie de la réserve PZR effective depuis l'initialisation.
+      // S'ajoute au stock primaire suivi ; zéro est une référence, pas un vide.
+      pzrEnergyOffsetJ:0,pzrHeatToPrimaryMW:nominalSprayCoolingKW/1000,pzrHeatReserveMW:0,
+      sprayCoolingKW:nominalSprayCoolingKW,
       lidC:324.6, saturationC:saturationTemperatureC(C.primaryPressureBar),
       breakLiquidKgS:0,breakSteamKgS:0,risCoreKgS:0,coreFlowKgS:C.nominalPrimaryFlowKgS,
       sumpKg:0,sumpBoron:0,sumpEnergyJ:0,sumpTempC:20,sumpBoronPpm:C.risBoronPpm,easCoolingMW:0,
@@ -1510,14 +1529,15 @@
     const before={massKg:s.primaryMassKg,vaporKg:s.vaporMassKg,tempC:s.tavgC,pressureBar:s.pressureBar};
     const oldEnergy=s.primaryMassKg*C.primaryCpJkgK*s.tavgC+s.vaporEnergyJ;
     const letdown=rcvLetdownM3h(model)*liquidWaterDensityKgM3(s.tavgC,s.pressureBar)/3600;
-    const pzrHeatMW=(s.heaterKW-C.pzrPassiveTransferKW)/1000;
+    const sprayTransferMW=(s.sprayCoolingKW+s.auxiliarySprayCoolingKW)/1000;
+    const pzrHeatMW=(s.heaterKW-C.pzrPassiveTransferKW)/1000-sprayTransferMW;
     const residual=p=>{
       const ris=deliverPipe(s.risPipe,s.time,null,Infinity,risAdmissionLimits(s,u,p,dt),true);
       const charge=deliverPipe(s.rcvPipe,s.time,null,
         rcvPumpCapacityM3h(p)*liquidWaterDensityKgM3(s.tavgC,p)/3600*dt,null,true);
       const out=(breakFlowKgS(s,p,dt)+letdown+s.reliefKgS)*dt;
       const mass=s.primaryMassKg+ris.massKg+charge.massKg-out;
-      const energy=oldEnergy+(coreTransferMW+s.pumpHeatMW-s.totalGvMW)*1e6*dt
+      const energy=oldEnergy+(coreTransferMW+s.pumpHeatMW-s.totalGvMW+sprayTransferMW)*1e6*dt
         +ris.energyJ+charge.energyJ-out*C.primaryCpJkgK*s.tavgC;
       return advancePrimaryPressure(before,mass,energy,pzrHeatMW,s.reliefSteamKgS,
         s.pzrThermalPressureBar,s.pzrLevelPct,dt,p).volumeResidualM3;
@@ -1738,7 +1758,8 @@
       .map(k=>`gv.${i}.${k}`)).flat(),
     'risPumpSpeedFraction',
     ...Array.from({length:4},(_,i)=>[`accumulatorsKg.${i}`,`accumulatorNitrogenBar.${i}`,`accumulatorFlowsKgS.${i}`]).flat(),
-    ...Array.from({length:4},(_,i)=>`loops.${i}.forcedPrimingFraction`)
+    ...Array.from({length:4},(_,i)=>`loops.${i}.forcedPrimingFraction`),
+    'pzrHeatToPrimaryMW','pzrHeatReserveMW','sprayCoolingKW','pzrEnergyOffsetJ'
   ];
   function historyPoint(model) {
     const s=model.state;
@@ -2071,7 +2092,7 @@
       : (s.loops[0].coldC+s.loops[1].coldC)/2;
     s.sprayFlowKgS=s.sprayFlowM3h*liquidWaterDensityKgM3(spraySourceC,s.pressureBar)/3600;
     const saturationC=saturationTemperatureC(s.pressureBar);
-    const sprayCoolingKW=s.sprayFlowKgS*C.primaryCpJkgK
+    s.sprayCoolingKW=s.sprayFlowKgS*C.primaryCpJkgK
       *Math.max(0,saturationC-spraySourceC)/1000;
     // Détour de la charge directe vers le PZR : même masse et même bore,
     // déjà comptés dans arrivedRcv. Ni débit supplémentaire, ni HMT GMPP.
@@ -2085,18 +2106,25 @@
     s.totalSprayFlowM3h=s.sprayFlowM3h+s.auxiliarySprayM3h;
     // Échange passif effectif calibré au point nominal ; sa valeur reste
     // une hypothèse, distincte du débit d'aspersion documenté.
-    const pzrNetHeatMW=(s.heaterKW-C.pzrPassiveTransferKW-sprayCoolingKW-s.auxiliarySprayCoolingKW)/1000;
+    const sprayTransferMW=(s.sprayCoolingKW+s.auxiliarySprayCoolingKW)/1000;
+    const pzrNetHeatMW=(s.heaterKW-C.pzrPassiveTransferKW)/1000-sprayTransferMW;
     const before={massKg:oldMass,vaporKg:oldVaporMass,tempC:oldTemp,pressureBar:pBefore};
-    const pressure=advancePrimaryPressure(before,s.primaryMassKg,netEnergy,pzrNetHeatMW,
+    // L'aspersion transfère de la chaleur de la réserve PZR vers le stock
+    // primaire ; elle ne retire aucune énergie du CPP vers l'extérieur.
+    const pressure=advancePrimaryPressure(before,s.primaryMassKg,netEnergy+sprayTransferMW*1e6*dt,pzrNetHeatMW,
       s.reliefSteamKgS,s.pzrThermalPressureBar,s.pzrLevelPct,dt);
+    const finalEnergy=pressure.energyJ;
+    s.pzrHeatToPrimaryMW=sprayTransferMW+pressure.bulkHeatMW;
+    s.pzrHeatReserveMW=pressure.reserveHeatMW;
+    s.pzrEnergyOffsetJ+=s.pzrHeatReserveMW*1e6*dt;
     s.pzrThermalPressureBar=pressure.thermalPressureBar;
     s.pressureBar=pressure.pressureBar;
     s.pzrPistonBarS=(s.pressureBar-pBefore)/dt;
     s.saturationC=saturationTemperatureC(s.pressureBar);
     // Détente : l'énergie excédant le liquide saturé produit de la vapeur.
     // Elle reste dans l'inventaire jusqu'à condensation ou rejet.
-    s.vaporEnergyJ=Math.max(0,netEnergy-s.primaryMassKg*C.primaryCpJkgK*s.saturationC);
-    s.tavgC=Math.min(s.saturationC,Math.max(20,netEnergy/(s.primaryMassKg*C.primaryCpJkgK)));
+    s.vaporEnergyJ=Math.max(0,finalEnergy-s.primaryMassKg*C.primaryCpJkgK*s.saturationC);
+    s.tavgC=Math.min(s.saturationC,Math.max(20,finalEnergy/(s.primaryMassKg*C.primaryCpJkgK)));
     s.vaporMassKg=Math.min(s.primaryMassKg-1,s.vaporEnergyJ/latentHeatJkg(s.pressureBar));
     s.vaporEnergyJ=s.vaporMassKg*latentHeatJkg(s.pressureBar);
     s.primaryMassRateKgS=(s.primaryMassKg-oldMass)/dt;

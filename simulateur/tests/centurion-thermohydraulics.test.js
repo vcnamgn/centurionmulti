@@ -22,7 +22,7 @@ test('GMPP : 6 MW par entraînement en service, ajoutés uniquement au bilan pri
     const oldEnergy=s.primaryEnergyJ,oldFuel=s.fuelC,oldMass=s.primaryMassKg;
     E.step(m,dt);
     close(s.pumpHeatMW,running*6);close(s.totalGvMW,0);close(s.primaryMassKg,oldMass);
-    close((s.primaryEnergyJ-oldEnergy)/1e6,(s.coreTransferMW+running*6)*dt,1e-6);
+    close((s.primaryEnergyJ-oldEnergy)/1e6,(s.coreTransferMW+running*6+s.pzrHeatToPrimaryMW)*dt,1e-6);
     close((s.fuelC-oldFuel)*E.C.fuelHeatCapacityJk/1e6,
       (s.thermalPowerMW-s.coreTransferMW)*dt);
     close(s.thermalPowerMW,E.C.nominalThermalMW);
@@ -34,12 +34,12 @@ test('GMPP : 6 MW par entraînement en service, ajoutés uniquement au bilan pri
 
 test('GMPP : permanent initial équilibré, arrêt électrique distinct de l’inertie et du thermosiphon',()=>{
   const m=E.make(),s=m.state;
-  close(s.pumpHeatMW,24);close(s.totalGvMW,3841);
-  close(s.totalGvMW,s.coreTransferMW+s.pumpHeatMW);
+  close(s.pumpHeatMW,24);close(s.totalGvMW,E.C.nominalPrimaryHeatMW);
+  close(s.totalGvMW,s.coreTransferMW+s.pumpHeatMW+s.pzrHeatToPrimaryMW);
   E.step(m,.1);close(s.tavgC,E.C.primaryMeanC,1e-9);
   close(s.gv[0].tempC,E.C.steamTempC,1e-9);
   E.advance(m,60);assert.ok(Math.abs(s.tavgC-E.C.primaryMeanC)<.1);
-  close(s.pumpHeatMW,24);close(s.electricMW,1300);
+  close(s.pumpHeatMW,24);close(s.electricMW,1300,1e-6); // précision de 1 W électrique
   m.controls.demandPct=80;E.advance(m,1);close(s.pumpHeatMW,24);
   E.initiate(m,'trip');assert.equal(s.pumpHeatMW,24,'un AAR seul laisse les GMPP alimentées');
   E.step(m,.1);close(s.pumpHeatMW,24);
@@ -85,7 +85,7 @@ test('thermosiphon : disparaît sans écart thermique, sans eau au GV ou sans in
 
 test('bilan thermique en thermosiphon : même échange retiré du combustible, transféré au primaire puis aux GV',()=>{
   const model=stoppedPlant();E.advance(model,180);
-  const s=model.state,oldFuel=s.fuelC,oldWater=s.tavgC,oldMass=s.primaryMassKg;
+  const s=model.state,oldFuel=s.fuelC,oldWater=s.tavgC,oldMass=s.primaryMassKg,oldReserve=s.pzrEnergyOffsetJ;
   // Isoler ce bilan thermique du transit RCV régénéré, testé séparément.
   s.rcvPipe.forEach(parcel=>{parcel.tempC=oldWater;});
   const oldGv=s.gv.map(g=>({tempC:g.tempC,energyJ:E.gvThermalCapacityJk(g.waterKg)*g.tempC})),dt=.1;
@@ -98,9 +98,10 @@ test('bilan thermique en thermosiphon : même échange retiré du combustible, t
       +g.asgKgS*E.C.secondaryCpJkgK*E.C.asgFeedTempC
       -g.steamKgS*(E.C.secondaryCpJkgK*oldGv[i].tempC+g.steamLatentJkg))/1e6,0);
   close(fuelMJ,(s.thermalPowerMW-s.coreTransferMW)*dt);
-  close(waterMJ,(s.coreTransferMW-s.totalGvMW)*dt);
+  close(waterMJ,(s.coreTransferMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*dt);
   close(gvMJ,(s.totalGvMW+secondaryExternalMW)*dt);
-  close(fuelMJ+waterMJ+gvMJ,(s.thermalPowerMW+secondaryExternalMW)*dt);
+  close(fuelMJ+waterMJ+gvMJ+(s.pzrEnergyOffsetJ-oldReserve)/1e6,
+    (s.thermalPowerMW+secondaryExternalMW+(s.heaterKW-E.C.pzrPassiveTransferKW)/1000)*dt);
 });
 
 test('RIS : eau à 20 °C et 2 500 ppm, bilan de mélange et refroidissement transmis au combustible',()=>{

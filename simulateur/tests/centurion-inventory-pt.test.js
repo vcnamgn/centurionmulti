@@ -124,7 +124,7 @@ test('bilan d’enthalpie primaire : injections froides, sensible, latent et rej
       +s.risDeliveredKgS*s.flowProperties.ris.tempC)*E.C.primaryCpJkgK*dt;
     const out=(s.breakKgS+s.rcvLetdownKgS+s.reliefKgS)*dt*E.C.primaryCpJkgK*oldT
       +(s.breakSteamKgS+s.reliefSteamKgS)*dt*E.latentHeatJkg(p);
-    const expected=before+(s.coreTransferMW+s.pumpHeatMW-s.totalGvMW)*1e6*dt+inflow-out;
+    const expected=before+(s.coreTransferMW+s.pumpHeatMW-s.totalGvMW+s.pzrHeatToPrimaryMW)*1e6*dt+inflow-out;
     close(s.primaryEnergyJ,expected,.01);
     if(s.vaporMassKg>0)phaseSteps++;
     if(s.risDeliveredAccumulatorKgS>1&&s.phaseChangeKgS<0)accumulatorCoolingSteps++;
