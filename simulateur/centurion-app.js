@@ -198,7 +198,7 @@
       releasePtProbe();
       svgDoc=null;
       $("diagramZoomValue").textContent="100 %";
-      $("diagramObject").data=svgFiles[name]+"?v="+(name==="pt"?"20261016-pt-temperatures":"20261009-pt-probe");
+      $("diagramObject").data=svgFiles[name]+"?v="+(name==="pt"?"20261016-pt-fine":"20261009-pt-probe");
     } else if(name!=="core") {
       decorateSvg();
       updateSvg();

@@ -872,7 +872,7 @@
       "file": "simulateur/centurion-app.js",
       "title": "Application",
       "description": "Horloge, commandes, arbitrage CC et présentation.",
-      "sha256": "b9e112174c294782550722df1244a7945d0b1a6f1ca8d02d0a04e5aaed05d6a8",
+      "sha256": "1c96266731ce7481132ced5ec599fad95b2fa9274af639894f21bcda1bc5b68b",
       "functions": [
         {
           "name": "activateView",
@@ -1856,7 +1856,7 @@
       "file": "simulateur/centurion-certificate.js",
       "title": "Certificats",
       "description": "Archives des événements, captures SVG et export PNG/PDF local.",
-      "sha256": "c0627ba32f2a5a5799c68f633c19d024a6a2c18bac2d239298df579e8c6daf0e",
+      "sha256": "75c2fa25dea2e1df7f8f76ce741fb3f778280615c1332b89579571c1164924f4",
       "functions": [
         {
           "name": "duration",

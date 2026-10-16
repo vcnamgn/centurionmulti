@@ -98,7 +98,7 @@
     };
     const trail=ptTrail(model);
     const traces=[["-cold","cold",s.coldC,"#2685cc"],["-hot","hot",s.hotC,"#e7414d"],["","tavg",s.tavgC,"#299d69"]]
-      .map(([suffix,key,temperature,color])=>`<path id="pt-trace${suffix}" d="${path(trail.map(p=>[p[key],p.pressure]))}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>
+      .map(([suffix,key,temperature,color])=>`<path id="pt-trace${suffix}" d="${path(trail.map(p=>[p[key],p.pressure]))}" fill="none" stroke="${color}" stroke-width="${suffix?1.25:2.5}" stroke-linejoin="round"/>
         <circle id="pt-point${suffix}" cx="${x(temperature)}" cy="${y(s.pressureBar)}" r="${suffix?5.5:7}" fill="${color}" stroke="white" stroke-width="2"/>`).join("");
     const temperatures=Array.from({length:38},(_,i)=>i*10),pressures=Array.from({length:19},(_,i)=>i*10);
     const gridX=temperatures.map(t=>`<path data-grid-temperature="${t}" d="M${x(t)} 100V710" class="grid${t%50===0?' major':''}"/>`).join("");
@@ -110,9 +110,9 @@
       <style>text{font-family:Segoe UI,Arial,sans-serif;fill:#24465c;font-size:15px}.title{font-size:27px;font-weight:700}.small{fill:#587489}.tick{font-size:12px}.grid{fill:none;stroke:#7da3b6;stroke-width:.8;stroke-opacity:.24}.grid.major{stroke-width:1.1;stroke-opacity:.4}</style>
       <rect width="1280" height="850" fill="white"/>
       <text x="38" y="45" class="title">Diagramme P–T</text><text x="38" y="74" class="small">Pression primaire absolue · températures primaires</text>
-      <g class="small"><path d="M620 74H642" stroke="#2685cc" stroke-width="3"/><text x="650" y="79">Branche froide</text>
-      <path d="M820 74H842" stroke="#299d69" stroke-width="3"/><text x="850" y="79">Tmoy</text>
-      <path d="M970 74H992" stroke="#e7414d" stroke-width="3"/><text x="1000" y="79">Branche chaude</text></g>
+      <g class="small"><path d="M620 74H642" stroke="#2685cc" stroke-width="1.25"/><text x="650" y="79">Branche froide</text>
+      <path d="M820 74H842" stroke="#299d69" stroke-width="2.5"/><text x="850" y="79">Tmoy</text>
+      <path d="M970 74H992" stroke="#e7414d" stroke-width="1.25"/><text x="1000" y="79">Branche chaude</text></g>
       <rect x="1050" y="23" width="178" height="36" rx="8" fill="#eef7fb"/><text x="1066" y="47">État</text><text x="1121" y="48" font-size="21" font-weight="700">${operating.code}</text>
       ${labels}<path d="M105 100V710H1165" fill="none" stroke="#24465c" stroke-width="2.5"/>
       <text x="40" y="94" font-size="18">bar abs.</text><text x="1020" y="773" font-size="18">Températures · °C</text>

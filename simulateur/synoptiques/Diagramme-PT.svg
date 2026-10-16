@@ -116,11 +116,11 @@
        class="small"
        id="text20">Pression primaire absolue · températures primaires</text>
     <g id="pt-legend" class="small">
-      <path d="M620 74H642" stroke="#2685cc" stroke-width="3" id="pt-legend-cold-line" />
+      <path d="M620 74H642" stroke="#2685cc" stroke-width="1.25" id="pt-legend-cold-line" />
       <text x="650" y="79" class="small" id="pt-legend-cold">Branche froide</text>
-      <path d="M820 74H842" stroke="#299d69" stroke-width="3" id="pt-legend-mean-line" />
+      <path d="M820 74H842" stroke="#299d69" stroke-width="2.5" id="pt-legend-mean-line" />
       <text x="850" y="79" class="small" id="pt-legend-mean">Tmoy</text>
-      <path d="M970 74H992" stroke="#e7414d" stroke-width="3" id="pt-legend-hot-line" />
+      <path d="M970 74H992" stroke="#e7414d" stroke-width="1.25" id="pt-legend-hot-line" />
       <text x="1000" y="79" class="small" id="pt-legend-hot">Branche chaude</text>
     </g>
     <rect
@@ -493,8 +493,8 @@
      inkscape:groupmode="layer"
      inkscape:label="05 · Traces et points temps réel"
      clip-path="url(#pt-clip)">
-    <path id="pt-trace-cold" fill="none" stroke="#2685cc" stroke-width="2.5" stroke-linejoin="round" />
-    <path id="pt-trace-hot" fill="none" stroke="#e7414d" stroke-width="2.5" stroke-linejoin="round" />
+    <path id="pt-trace-cold" fill="none" stroke="#2685cc" stroke-width="1.25" stroke-linejoin="round" />
+    <path id="pt-trace-hot" fill="none" stroke="#e7414d" stroke-width="1.25" stroke-linejoin="round" />
     <path
        id="pt-trace"
        fill="none"
