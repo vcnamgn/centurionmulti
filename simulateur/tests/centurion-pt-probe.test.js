@@ -57,6 +57,27 @@ test('Défiger : parent vérifié, reprise du survol, sortie du graphique et bor
   assert.equal(s.get('pt-probe').getAttribute('visibility'),'hidden');
 });
 
+test('trois températures : points à la même pression, couleurs et absence de valeurs reconstruites',()=>{
+  const surface=svgSurface('Diagramme-PT.svg'),snapshot=E.instrumentSnapshot(E.make());
+  surface.update({...snapshot,ptHistory:[
+    {tavg:300,hot:320,cold:280,pressure:155},
+    {tavg:290,pressure:140}, // Ancien point sans mesures de branches : interrompre les courbes.
+    {tavg:280,hot:300,cold:260,pressure:130}
+  ]});
+  for(const [suffix,key,color] of [['','tavgC','#299d69'],['-hot','hotC','#e7414d'],['-cold','coldC','#2685cc']]){
+    const point=surface.get('pt-point'+suffix),trace=surface.get('pt-trace'+suffix);
+    close(Number(point.getAttribute('cx')),105+snapshot[key]/370*1060);
+    close(Number(point.getAttribute('cy')),710-snapshot.pressure/180*610);
+    assert.equal(point.getAttribute('fill'),color);assert.equal(trace.getAttribute('stroke'),color);
+    assert.doesNotMatch(trace.getAttribute('d'),/NaN|undefined/);
+    if(suffix){assert.equal((trace.getAttribute('d').match(/M/g)||[]).length,2);assert.doesNotMatch(trace.getAttribute('d'),/L/);}
+  }
+  assert.match(surface.get('pt-value-hot').textContent,/TBC .* °C/);
+  assert.match(surface.get('pt-value-cold').textContent,/TBF .* °C/);
+  delete snapshot.hotC;surface.update(snapshot);
+  assert.equal(surface.get('pt-point-hot').style.display,'none');
+});
+
 test('zoom et déplacement : coordonnées correctes après zoom, un glissement ne fige pas le réticule',()=>{
   const s=svgSurface('Diagramme-PT.svg');
   s.receive({type:'centurion-svg-viewport-command',action:'in'});
@@ -85,6 +106,11 @@ test('certificat : même grille 10/10 au-dessus du domaine, sans réticule de le
   assert.equal((exported.match(/data-grid-pressure=/g)||[]).length,19);
   assert.ok(exported.indexOf('fill="#e4f4ee"')<exported.indexOf('data-grid-temperature='));
   assert.doesNotMatch(exported,/id="pt-probe"/);
+  for(const [suffix,color] of [['','#299d69'],['-hot','#e7414d'],['-cold','#2685cc']]){
+    assert.match(exported,new RegExp(`id="pt-trace${suffix}"[^>]*stroke="${color}"`));
+    assert.match(exported,new RegExp(`id="pt-point${suffix}"[^>]*fill="${color}"`));
+  }
+  assert.doesNotMatch(exported,/NaN|undefined/);
 });
 
 test('pupitre réel : état du bouton Défiger, source vérifiée, commande et libération à Réinitialiser',()=>{
@@ -107,4 +133,29 @@ test('pupitre réel : état du bouton Défiger, source vérifiée, commande et l
   page.receive(data,page.get('diagramObject').contentWindow);page.click('resetButton');
   assert.equal(page.get('ptProbeRelease').disabled,true);
   assert.equal(page.get('ptProbeStatus').textContent,'Survoler · cliquer pour figer');
+});
+
+test('pupitre P–T : périodes conservées, trois traces et messages limités aux cinq mesures utiles',async()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../centurion.html'),'utf8');
+  const app=fs.readFileSync(path.resolve(__dirname,'../centurion-app.js'),'utf8');
+  const startup=fs.readFileSync(path.resolve(__dirname,'centurion-startup.test.js'),'utf8');
+  const ctx=vm.createContext({E,H,State,app,html,vm,assert,svgSurface,Blob});
+  vm.runInContext(startup.slice(startup.indexOf('function application('),startup.indexOf('\ntest('))
+    +'globalThis.application=application;',ctx);
+  const model=E.make(),point=E.historyPoint(model);model.state.time=28800;
+  model.state.history=Array.from({length:28800},(_,i)=>({...point,t:i}));
+  const page=ctx.application(app,null,{...E,make:()=>model});
+  page.query('.diagram-tab[data-diagram="pt"]').click();
+  for(const span of [300,1800,3600,14400]){
+    page.get('ptTrailWindow').value=String(span);await page.get('ptTrailWindow').fire('change');
+    const trail=page.snapshot.ptHistory;
+    assert.ok(trail.length<=1201&&trail.length>1);
+    assert.ok(trail[0].t>=model.state.time-span);
+    for(const p of trail)assert.deepEqual(Array.from(Object.keys(p).sort()),['cold','hot','pressure','t','tavg']);
+    const last=trail.at(-1);
+    assert.equal(last.hot,model.state.hotC);assert.equal(last.cold,model.state.coldC);
+    assert.equal(last.tavg,model.state.tavgC);assert.equal(last.pressure,model.state.pressureBar);
+  }
+  assert.equal(model.state.history.length,28800,'l’historique général reste complet');
+  assert.ok(model.state.history[0].detail.length>100,'les mesures détaillées restent disponibles aux graphiques');
 });

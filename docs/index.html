@@ -45,6 +45,7 @@
 <p>Les couplages utilisent ainsi des états successifs à l&#39;intérieur du pas. Il ne s&#39;agit pas d&#39;une résolution simultanée de toutes les équations. <code>advance(model, seconds, dt)</code> est un outil de calcul sans interface : il répète les sous-pas physiques et n&#39;exécute pas les graphes CC du navigateur.</p>
 <h3 id="historiques-et-temporisations">Historiques et temporisations</h3>
 <p>Un échantillon est enregistré environ chaque seconde simulée ; la mémoire conserve au plus 28 800 échantillons, soit environ 8 h. Les fenêtres de 5 min à 4 h filtrent cette mémoire sans changer le pas physique. Le journal conserve les 240 derniers événements.</p>
+<p>Chaque échantillon enrichi comprend environ 400 valeurs numériques, y compris les mesures détaillées et les sources CC. Un essai de stockage de 28 800 échantillons nominaux indépendants occupe environ 147 Mio de tas JavaScript sous Node.js, hors DOM, graphiques et captures ; le JSON compact correspondant approche 100 Mio. Ces ordres de grandeur dépendent des valeurs et du moteur JavaScript. Le transfert au synoptique P–T est limité à 1 200 points historiques plus le point courant, avec seulement cinq champs par point : temps, pression, TMOY, TBC et TBF. Il ne recopie pas les détails ni les signaux CC et ne réduit pas l&#39;historique général conservé.</p>
 <p>L&#39;onglet <strong>Graphique</strong> propose 279 variables : mesures physiques, températures/débits des quatre boucles et GV, actionneurs, stocks d&#39;eau, poisons, composantes de réactivité et les 48 sources transmises aux ateliers CC. Les huit listes historiques sont des présélections modifiables. La recherche accepte nom, repère, nom interne, famille et unité. Une courbe peut être masquée sans être retirée ; couleur, échelle adaptative ou bornes fixes se règlent dans sa ligne. Chaque courbe visible dispose d&#39;un axe de sa couleur, à gauche. Au-delà de la largeur disponible, les axes et courbes se parcourent horizontalement. La limite de 32 courbes simultanées évite une image Canvas excessivement large.</p>
 <p>L&#39;aperçu montre tout l&#39;historique conservé et une fenêtre de sélection. Glisser les bords règle début/fin ; glisser le centre déplace la fenêtre ; tracer une nouvelle sélection hors de la fenêtre choisit une période. Les champs HH:MM:SS, deux glissières et boutons précédent/suivant offrent aussi une navigation clavier. <strong>Revenir au direct</strong> fait avancer la fenêtre avec la simulation. Une période choisie reste fixe, indépendamment du curseur de lecture.</p>
 <p>Le curseur lit l&#39;échantillon réel le plus proche, sans interpolation temporelle. La ligne verticale est commune aux deux graphes, et les valeurs sont affichées près des axes et dans la liste. Un clic, Entrée ou le bouton <strong>Figer le curseur</strong> conserve l&#39;instant et ses valeurs ; <strong>Défiger</strong> reprend le suivi. Les flèches gauche/droite parcourent les échantillons. Le tableau figé contient les courbes visibles plus la réactivité du panneau inférieur. <strong>Copier le tableau</strong> produit du texte tabulé avec virgule décimale, prêt pour un tableur ; une zone sélectionnable prend le relais si le presse-papiers n&#39;est pas disponible. Le graphe de réactivité possède une échelle indépendante, des graduations et des bandes visuelles ±200/±300 pcm, sans créer de protection supplémentaire.</p>
@@ -244,7 +245,7 @@ total          = (L3 − L0) × 60 / dt</code></pre>
       data-decimals=&quot;1&quot; data-unit=&quot;bar abs.&quot;&gt;—&lt;/text&gt;</code></pre>
 <p>Une valeur absente/non finie apparaît sous forme de tiret. Les éléments portent aussi <code>data-current-value</code>, utile à la vérification de cohérence. La vue Grappes conserve des liaisons par identifiant dans le pont ; toutes les vues ne sont donc pas encore exclusivement sémantiques.</p>
 <h3 id="diagramme-p-t-grille-lecture-et-retouches">Diagramme P–T : grille, lecture et retouches</h3>
-<p>La grille est graduée tous les <strong>10 °C</strong> de 0 à 370 °C et tous les <strong>10 bar</strong> de 0 à 180 bar. Elle se superpose légèrement au domaine autorisé ; les limites vertes et la trace rouge restent distinctes. La même graduation figure sur le certificat.</p>
+<p>La grille est graduée tous les <strong>10 °C</strong> de 0 à 370 °C et tous les <strong>10 bar</strong> de 0 à 180 bar. Elle se superpose légèrement au domaine autorisé. Trois températures du primaire sont représentées à la même pression : <strong>TMOY en vert</strong>, <strong>branche chaude en rouge</strong> et <strong>branche froide en bleu</strong>, chacune avec son point courant et sa trace sur la période sélectionnée. Il s&#39;agit des températures globales du moteur, indépendantes de la boucle choisie dans le pupitre. La même représentation figure sur le certificat, sur quatre heures. Les limites de domaine et le clignotement restent évalués sur TMOY ; les deux branches ne changent pas la règle de surveillance. Une température absente d&#39;un ancien point n&#39;est pas reconstruite et interrompt sa trace.</p>
 <p>Le survol affiche un réticule et les coordonnées du pointeur sur les deux axes. Un clic dans le graphique fige cette lecture ; <strong>Défiger</strong> reprend le suivi. Un glissement conserve le déplacement du synoptique et ne fige pas un point. Les coordonnées tiennent compte du zoom et du cadrage. Cette lecture n&#39;altère ni le point physique, ni l&#39;historique, ni les consignes. Une réinitialisation, un chargement d&#39;état ou un changement de synoptique libère le réticule ; il ne figure pas sur les certificats.</p>
 <p><code>simulateur/synoptiques/Diagramme-PT.svg</code> conserve huit calques nommés pour Inkscape : fond, domaines, grille, limites, trace, axes, légendes et réticule. Le domaine et les graduations sont présents dans le fichier sans exécuter JavaScript. Les identifiants <code>pt-*</code>, les attributs <code>data-*</code> et le lien vers le pont SVG portent les liaisons temps réel ; les retouches graphiques doivent les conserver. <code>pt-plot-area</code> indique les coordonnées du graphique et les bornes physiques utilisées pour projeter les mesures et lire le pointeur.</p>
 <h2 id="8-etats-incidents-et-fin-de-partie">8. États, incidents et fin de partie</h2>
@@ -673,154 +674,154 @@ node scripts/check-docs.mjs</code></pre>
 <p>Application : publie la projection instrumentale vers la vue SVG, avec ses éventuelles traces.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L263">simulateur/centurion-app.js:263</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="releaseptprobe application réinitialise le bouton et la lecture p–t puis demande au svg de libérer le réticule. aucun effet sur les mesures ou les commandes physiques.">
 <summary><code>releasePtProbe()</code><span class="badge ">interne</span></summary>
-<p>Réinitialise le bouton et la lecture P–T puis demande au SVG de libérer le réticule. Aucun effet sur les mesures ou les commandes physiques.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L277">simulateur/centurion-app.js:277</a></p></details>
+<p>Réinitialise le bouton et la lecture P–T puis demande au SVG de libérer le réticule. Aucun effet sur les mesures ou les commandes physiques.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L281">simulateur/centurion-app.js:281</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="renderinventorybalance application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderInventoryBalance()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L282">simulateur/centurion-app.js:282</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L286">simulateur/centurion-app.js:286</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="renderboard application application : affiche mesures réalisées, informations calculées, alarmes et positions.">
 <summary><code>renderBoard()</code><span class="badge ">interne</span></summary>
-<p>Application : affiche mesures réalisées, informations calculées, alarmes et positions.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L318">simulateur/centurion-app.js:318</a></p></details>
+<p>Application : affiche mesures réalisées, informations calculées, alarmes et positions.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L322">simulateur/centurion-app.js:322</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="renderalarms application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderAlarms(s,g,l)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L397">simulateur/centurion-app.js:397</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L401">simulateur/centurion-app.js:401</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="renderalarmtable application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderAlarmTable()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L415">simulateur/centurion-app.js:415</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L419">simulateur/centurion-app.js:419</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="setmodelpage application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>setModelPage(page)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L419">simulateur/centurion-app.js:419</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L423">simulateur/centurion-app.js:423</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="setmodeldetailpage application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>setModelDetailPage(page)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L424">simulateur/centurion-app.js:424</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L428">simulateur/centurion-app.js:428</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="rendersignals application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderSignals()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L432">simulateur/centurion-app.js:432</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L436">simulateur/centurion-app.js:436</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="renderaxial application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderAxial()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L465">simulateur/centurion-app.js:465</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L469">simulateur/centurion-app.js:469</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="drawcorecharts application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>drawCoreCharts()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L472">simulateur/centurion-app.js:472</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L476">simulateur/centurion-app.js:476</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="drawhistory application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>drawHistory()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L656">simulateur/centurion-app.js:656</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L660">simulateur/centurion-app.js:660</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="drawloadprogramchart application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>drawLoadProgramChart()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L659">simulateur/centurion-app.js:659</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L663">simulateur/centurion-app.js:663</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="rendertransientcontrols application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderTransientControls()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L684">simulateur/centurion-app.js:684</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L688">simulateur/centurion-app.js:688</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="render application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>render()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L711">simulateur/centurion-app.js:711</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L715">simulateur/centurion-app.js:715</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="faultvaluelabel application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>faultValueLabel(equipment,value)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L890">simulateur/centurion-app.js:890</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L894">simulateur/centurion-app.js:894</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="renderequipmentfaults application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderEquipmentFaults()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L894">simulateur/centurion-app.js:894</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L898">simulateur/centurion-app.js:898</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="bindequipmentfaults application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindEquipmentFaults()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L916">simulateur/centurion-app.js:916</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L920">simulateur/centurion-app.js:920</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="bindnumber application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindNumber(id,callback)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L954">simulateur/centurion-app.js:954</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L958">simulateur/centurion-app.js:958</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="bindnumericinputs application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindNumericInputs(target,callback,selector=null)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L957">simulateur/centurion-app.js:957</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L961">simulateur/centurion-app.js:961</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="bindmodelparameters application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindModelParameters()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L985">simulateur/centurion-app.js:985</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L989">simulateur/centurion-app.js:989</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="rendermanualextras application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderManualExtras()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1005">simulateur/centurion-app.js:1005</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1009">simulateur/centurion-app.js:1009</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="changemanualroverride application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>changeManualROverride(enabled)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1029">simulateur/centurion-app.js:1029</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1033">simulateur/centurion-app.js:1033</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="bindmanualextras application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindManualExtras()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1039">simulateur/centurion-app.js:1039</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1043">simulateur/centurion-app.js:1043</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="editorsignals application application : délègue la projection des sources à controlsignals, sans duplication des mesures.">
 <summary><code>editorSignals()</code><span class="badge ">interne</span></summary>
-<p>Application : délègue la projection des sources à controlSignals, sans duplication des mesures.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1066">simulateur/centurion-app.js:1066</a></p></details>
+<p>Application : délègue la projection des sources à controlSignals, sans duplication des mesures.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1070">simulateur/centurion-app.js:1070</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="editorbridge application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>editorBridge(mode)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1070">simulateur/centurion-app.js:1070</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1074">simulateur/centurion-app.js:1074</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="dispatcheditor application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>dispatchEditor(mode,payload)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1074">simulateur/centurion-app.js:1074</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1078">simulateur/centurion-app.js:1078</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="sendeditortick application application : envoie dt et les signaux communs aux deux éditeurs prêts.">
 <summary><code>sendEditorTick(dt=0)</code><span class="badge ">interne</span></summary>
-<p>Application : envoie dt et les signaux communs aux deux éditeurs prêts.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1080">simulateur/centurion-app.js:1080</a></p></details>
+<p>Application : envoie dt et les signaux communs aux deux éditeurs prêts.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1084">simulateur/centurion-app.js:1084</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="advancecontrolledstep application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>advanceControlledStep()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1092">simulateur/centurion-app.js:1092</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1096">simulateur/centurion-app.js:1096</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="finishccstep application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>finishCcStep(tick)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1111">simulateur/centurion-app.js:1111</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1115">simulateur/centurion-app.js:1115</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="receiveccstepoutput application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>receiveCcStepOutput(message)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1118">simulateur/centurion-app.js:1118</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1122">simulateur/centurion-app.js:1122</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="advancesimulationtime application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>advanceSimulationTime()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1129">simulateur/centurion-app.js:1129</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1133">simulateur/centurion-app.js:1133</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="connecteditor application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>connectEditor(mode,id)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1144">simulateur/centurion-app.js:1144</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1148">simulateur/centurion-app.js:1148</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="setregulationactive application application : active/désactive la commande cc-régul ; synchronise le repli manuel sur les actionneurs réalisés.">
 <summary><code>setRegulationActive(enabled,notifyEditor=true)</code><span class="badge ">interne</span></summary>
-<p>Application : active/désactive la commande CC-RÉGUL ; synchronise le repli manuel sur les actionneurs réalisés.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1150">simulateur/centurion-app.js:1150</a></p></details>
+<p>Application : active/désactive la commande CC-RÉGUL ; synchronise le repli manuel sur les actionneurs réalisés.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1154">simulateur/centurion-app.js:1154</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="setprotectionactive application application : commande cc-protect et fixe le mode de protection par graphe.">
 <summary><code>setProtectionActive(enabled,notifyEditor=true)</code><span class="badge ">interne</span></summary>
-<p>Application : commande CC-PROTECT et fixe le mode de protection par graphe.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1173">simulateur/centurion-app.js:1173</a></p></details>
+<p>Application : commande CC-PROTECT et fixe le mode de protection par graphe.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1177">simulateur/centurion-app.js:1177</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="applyeditoroutputs application application : traduit les sorties finies des ateliers actifs en commandes du moteur ; aar/is/asg sont mémorisés.">
 <summary><code>applyEditorOutputs(message)</code><span class="badge ">interne</span></summary>
-<p>Application : traduit les sorties finies des ateliers actifs en commandes du moteur ; AAR/IS/ASG sont mémorisés.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1184">simulateur/centurion-app.js:1184</a></p></details>
+<p>Application : traduit les sorties finies des ateliers actifs en commandes du moteur ; AAR/IS/ASG sont mémorisés.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1188">simulateur/centurion-app.js:1188</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="handleeditormessage application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>handleEditorMessage(data)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1217">simulateur/centurion-app.js:1217</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1221">simulateur/centurion-app.js:1221</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="statestatus application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>stateStatus(text,error=false)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1239">simulateur/centurion-app.js:1239</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1243">simulateur/centurion-app.js:1243</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="editorstatecommand application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>editorStateCommand(mode,type,saved)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1242">simulateur/centurion-app.js:1242</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1246">simulateur/centurion-app.js:1246</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="waitforccidle application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>waitForCcIdle()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1256">simulateur/centurion-app.js:1256</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1260">simulateur/centurion-app.js:1260</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="saveeditors application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>saveEditors()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1264">simulateur/centurion-app.js:1264</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1268">simulateur/centurion-app.js:1268</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="stateui application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>stateUi()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1268">simulateur/centurion-app.js:1268</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1272">simulateur/centurion-app.js:1272</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="savesimulationstate application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>saveSimulationState()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1275">simulateur/centurion-app.js:1275</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1279">simulateur/centurion-app.js:1279</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="loadsimulationstate application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>loadSimulationState(file)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1291">simulateur/centurion-app.js:1291</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1295">simulateur/centurion-app.js:1295</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="restorestateui application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>restoreStateUi(ui)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1327">simulateur/centurion-app.js:1327</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1331">simulateur/centurion-app.js:1331</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="renderpzrleveltrend application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderPzrLevelTrend()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1347">simulateur/centurion-app.js:1347</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1351">simulateur/centurion-app.js:1351</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="rendersetpointcontrols application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>renderSetpointControls()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1371">simulateur/centurion-app.js:1371</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1375">simulateur/centurion-app.js:1375</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="bindsetpointcontrols application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindSetpointControls()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1388">simulateur/centurion-app.js:1388</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1392">simulateur/centurion-app.js:1392</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="bindcontrols application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindControls()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1411">simulateur/centurion-app.js:1411</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1415">simulateur/centurion-app.js:1415</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="syncinputs application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>syncInputs()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1615">simulateur/centurion-app.js:1615</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1619">simulateur/centurion-app.js:1619</a></p></details>
 <details class="api-function" data-module="1" data-public="false" data-search="frame application fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>frame(now)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1654">simulateur/centurion-app.js:1654</a></p></details></section><section class="api-module" id="module-2"><h3>Historiques</h3><p>Catalogue des mesures, courbes libres, axes, période sélectionnée et tableau figé. <a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-history.js">Fichier source</a></p>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1658">simulateur/centurion-app.js:1658</a></p></details></section><section class="api-module" id="module-2"><h3>Historiques</h3><p>Catalogue des mesures, courbes libres, axes, période sélectionnée et tableau figé. <a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-history.js">Fichier source</a></p>
 <details class="api-function" data-module="2" data-public="false" data-search="parsetime historiques fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>parseTime(text)</code><span class="badge ">interne</span></summary>
 <p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-history.js#L18">simulateur/centurion-history.js:18</a></p></details>
@@ -967,22 +968,22 @@ node scripts/check-docs.mjs</code></pre>
 <p>Pont SVG : lit les chemins data-*, remplit valeurs, niveaux et états, applique les alarmes de la projection.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L161">simulateur/centurion-svg-bridge.js:161</a></p></details>
 <details class="api-function" data-module="3" data-public="false" data-search="bindnavigation pont svg fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindNavigation()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L260">simulateur/centurion-svg-bridge.js:260</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L273">simulateur/centurion-svg-bridge.js:273</a></p></details>
 <details class="api-function" data-module="3" data-public="false" data-search="destination pont svg fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>destination(label)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L273">simulateur/centurion-svg-bridge.js:273</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L286">simulateur/centurion-svg-bridge.js:286</a></p></details>
 <details class="api-function" data-module="3" data-public="false" data-search="arrowgroup pont svg fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>arrowGroup(text)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L282">simulateur/centurion-svg-bridge.js:282</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L295">simulateur/centurion-svg-bridge.js:295</a></p></details>
 <details class="api-function" data-module="3" data-public="false" data-search="navigate pont svg fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>navigate(target)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L290">simulateur/centurion-svg-bridge.js:290</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L303">simulateur/centurion-svg-bridge.js:303</a></p></details>
 <details class="api-function" data-module="3" data-public="false" data-search="bindarrows pont svg fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>bindArrows()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L299">simulateur/centurion-svg-bridge.js:299</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L312">simulateur/centurion-svg-bridge.js:312</a></p></details>
 <details class="api-function" data-module="3" data-public="false" data-search="updaterods pont svg arbitre aar, manœuvre globale, surcharge r, sorties cc et manuel ; applique vitesses et compteur gcp.">
 <summary><code>updateRods(data)</code><span class="badge ">interne</span></summary>
-<p>Arbitre AAR, manœuvre globale, surcharge R, sorties CC et manuel ; applique vitesses et compteur GCP.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L330">simulateur/centurion-svg-bridge.js:330</a></p></details></section><section class="api-module" id="module-4"><h3>Certificats</h3><p>Archives des événements, captures SVG et export PNG/PDF local. <a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js">Fichier source</a></p>
+<p>Arbitre AAR, manœuvre globale, surcharge R, sorties CC et manuel ; applique vitesses et compteur GCP.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L343">simulateur/centurion-svg-bridge.js:343</a></p></details></section><section class="api-module" id="module-4"><h3>Certificats</h3><p>Archives des événements, captures SVG et export PNG/PDF local. <a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js">Fichier source</a></p>
 <details class="api-function" data-module="4" data-public="false" data-search="duration certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>duration(seconds)</code><span class="badge ">interne</span></summary>
 <p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L11">simulateur/centurion-certificate.js:11</a></p></details>
@@ -1018,43 +1019,43 @@ node scripts/check-docs.mjs</code></pre>
 <p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L87">simulateur/centurion-certificate.js:87</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="coresvg certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>coreSvg(record,E)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L120">simulateur/centurion-certificate.js:120</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L136">simulateur/centurion-certificate.js:136</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="loadimage certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>loadImage(url)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L140">simulateur/centurion-certificate.js:140</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L156">simulateur/centurion-certificate.js:156</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="rasterize certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>rasterize(svg,width=1400)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L144">simulateur/centurion-certificate.js:144</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L160">simulateur/centurion-certificate.js:160</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="capturesvg certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>captureSvg(file,snapshot,signal)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L151">simulateur/centurion-certificate.js:151</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L167">simulateur/centurion-certificate.js:167</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="receive certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>receive(event)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L174">simulateur/centurion-certificate.js:174</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L190">simulateur/centurion-certificate.js:190</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="fit certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>fit(ctx,image,x,y,w,h)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L190">simulateur/centurion-certificate.js:190</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L206">simulateur/centurion-certificate.js:206</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="wrap certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>wrap(ctx,text,x,y,width,lineHeight)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L194">simulateur/centurion-certificate.js:194</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L210">simulateur/centurion-certificate.js:210</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="compose certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>compose(summary,screen,thumbnails,created,layout)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L202">simulateur/centurion-certificate.js:202</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L218">simulateur/centurion-certificate.js:218</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="create certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>create({E,getModel,svgFiles,ptCurves,prepare})</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L250">simulateur/centurion-certificate.js:250</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L266">simulateur/centurion-certificate.js:266</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="observe certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>observe(model)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L254">simulateur/centurion-certificate.js:254</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L270">simulateur/centurion-certificate.js:270</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="outputs certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>outputs(enabled)</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L264">simulateur/centurion-certificate.js:264</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L280">simulateur/centurion-certificate.js:280</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="open certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>open()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L265">simulateur/centurion-certificate.js:265</a></p></details>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L281">simulateur/centurion-certificate.js:281</a></p></details>
 <details class="api-function" data-module="4" data-public="false" data-search="generate certificats fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>generate()</code><span class="badge ">interne</span></summary>
-<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L270">simulateur/centurion-certificate.js:270</a></p></details></section><section class="api-module" id="module-5"><h3>États JSON</h3><p>Sauvegarde complète, validation et reprise locale pour le débogage. <a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-state.js">Fichier source</a></p>
+<p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L286">simulateur/centurion-certificate.js:286</a></p></details></section><section class="api-module" id="module-5"><h3>États JSON</h3><p>Sauvegarde complète, validation et reprise locale pour le débogage. <a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-state.js">Fichier source</a></p>
 <details class="api-function" data-module="5" data-public="false" data-search="checkjson états json fonction interne. voir le corps et les appels dans le fichier source.">
 <summary><code>checkJson(value,path=&quot;fichier&quot;,depth=0)</code><span class="badge ">interne</span></summary>
 <p>Fonction interne. Voir le corps et les appels dans le fichier source.</p><p><a href="https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-state.js#L16">simulateur/centurion-state.js:16</a></p></details>

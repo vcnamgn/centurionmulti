@@ -2,6 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),vm=require('node:vm');
 const E=require('../centurion-engine.js');
 const {svgSurface}=require('./helpers/svg-surface');
+const liquidPoint=require('./helpers/liquid-primary-point');
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'../synoptiques/liaisons.json'),'utf8'));
 const format=(v,d=0)=>Number(v).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const read=(o,p)=>p.split('.').reduce((v,k)=>v?.[k],o);
@@ -57,7 +58,10 @@ test('ensemble des mesures : initialisation, commande manuelle, évolution, AAR/
   assert.equal(pzr.get('soupape-3-ouverture').textContent,'Étage 3 · 100 %');
   assert.equal(rcp.get('texte-193').textContent,'CHARGE RCV · 24,0 m³/h');
   assert.ok(s.gv.some(g=>g.dumpKgS>0),'le cas sollicite réellement GCT-A');
-  model.state.pressureBar=80;E.initiate(model,'ris');E.initiate(model,'asg',{source:'cc-protect'});E.advance(model,80);verify();
+  // Isoler l'ordre IS : les soupapes de l'essai précédent sont refermées et
+  // le point à 80 bar est sous-refroidi, sans provoquer de cavitation parasite.
+  model.controls.manualReliefStages=[false,false,false];liquidPoint(E,model,80);
+  E.initiate(model,'ris');E.initiate(model,'asg',{source:'cc-protect'});E.advance(model,80);verify();
   assert.ok(s.risDeliveredKgS>0,'injection parvenue au primaire');
   const displayed=Number(getBound(rcp,'ris-1-debit').getAttribute('data-current-value'));
   assert.ok(Math.abs(displayed-s.risDeliveredKgS*3.6/4)<1e-9,'RIS : conversion eau à 20 °C, pas eau primaire à chaud');

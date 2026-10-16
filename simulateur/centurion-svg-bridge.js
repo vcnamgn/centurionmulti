@@ -245,16 +245,29 @@
     }
     if(kind==="pt") {
       const {x,y}=ptPlot();
-      const path=points=>points.map((v,i)=>`${i?"L":"M"}${x(v[0]).toFixed(2)} ${y(v[1]).toFixed(2)}`).join(" ");
+      const path=points=>{
+        let connected=false;
+        return points.map(v=>{
+          if(!v.every(Number.isFinite)){connected=false;return "";}
+          const command=connected?"L":"M";connected=true;
+          return `${command}${x(v[0]).toFixed(2)} ${y(v[1]).toFixed(2)}`;
+        }).filter(Boolean).join(" ");
+      };
       const write=(id,points)=>document.getElementById(id)?.setAttribute("d",path(points));
       const curves=data.ptCurves||{lower:[],upper:[],saturation:[]};
       write("pt-lower",curves.lower);write("pt-upper",curves.upper);write("pt-saturation",curves.saturation);
       const polygon=[...curves.lower,...[...curves.upper].reverse()];
       document.getElementById("pt-domain")?.setAttribute("d",path(polygon)+" Z");
-      write("pt-trace",(data.ptHistory||[]).map(p=>[p.tavg,p.pressure]));
-      const point=document.getElementById("pt-point");
-      point?.setAttribute("cx",String(x(data.tavgC)));point?.setAttribute("cy",String(y(data.pressure)));
-      point?.setAttribute("data-flow-alarm",String(Boolean(data.alarms.pt)));
+      for(const [suffix,historyKey,currentKey] of [["-cold","cold","coldC"],["-hot","hot","hotC"],["","tavg","tavgC"]]){
+        write(`pt-trace${suffix}`,(data.ptHistory||[]).map(p=>[p[historyKey],p.pressure]));
+        const point=document.getElementById(`pt-point${suffix}`);
+        const available=Number.isFinite(data[currentKey])&&Number.isFinite(data.pressure);
+        if(point){
+          point.style.display=available?"":"none";
+          if(available){point.setAttribute("cx",String(x(data[currentKey])));point.setAttribute("cy",String(y(data.pressure)));}
+        }
+      }
+      document.getElementById("pt-point")?.setAttribute("data-flow-alarm",String(Boolean(data.alarms.pt)));
     }
   }
   function bindNavigation(){

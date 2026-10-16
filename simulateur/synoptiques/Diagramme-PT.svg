@@ -114,7 +114,15 @@
        x="38"
        y="67.314339"
        class="small"
-       id="text20">Pression primaire absolue · température moyenne · trace historique rouge</text>
+       id="text20">Pression primaire absolue · températures primaires</text>
+    <g id="pt-legend" class="small">
+      <path d="M620 74H642" stroke="#2685cc" stroke-width="3" id="pt-legend-cold-line" />
+      <text x="650" y="79" class="small" id="pt-legend-cold">Branche froide</text>
+      <path d="M820 74H842" stroke="#299d69" stroke-width="3" id="pt-legend-mean-line" />
+      <text x="850" y="79" class="small" id="pt-legend-mean">Tmoy</text>
+      <path d="M970 74H992" stroke="#e7414d" stroke-width="3" id="pt-legend-hot-line" />
+      <text x="1000" y="79" class="small" id="pt-legend-hot">Branche chaude</text>
+    </g>
     <rect
        x="1050"
        y="23"
@@ -483,20 +491,24 @@
   <g
      id="pt-layer-trace"
      inkscape:groupmode="layer"
-     inkscape:label="05 · Trace et point temps réel"
+     inkscape:label="05 · Traces et points temps réel"
      clip-path="url(#pt-clip)">
+    <path id="pt-trace-cold" fill="none" stroke="#2685cc" stroke-width="2.5" stroke-linejoin="round" />
+    <path id="pt-trace-hot" fill="none" stroke="#e7414d" stroke-width="2.5" stroke-linejoin="round" />
     <path
        id="pt-trace"
        fill="none"
-       stroke="#e7414d"
+       stroke="#299d69"
        stroke-width="2.5"
        stroke-linejoin="round" />
+    <circle id="pt-point-cold" cx="931.22" cy="184.72" r="5.5" fill="#2685cc" stroke="#fff" stroke-width="2" />
+    <circle id="pt-point-hot" cx="1034.94" cy="184.72" r="5.5" fill="#e7414d" stroke="#fff" stroke-width="2" />
     <circle
        id="pt-point"
        cx="983.08"
        cy="184.72"
        r="7"
-       fill="#e7414d"
+       fill="#299d69"
        stroke="#fff"
        stroke-width="2" />
   </g>
@@ -858,9 +870,9 @@
        id="text158"
        style="font-size:16px">bar abs.</text>
     <text
-       x="1080"
+       x="1020"
        y="768"
-       id="text160">TMOY · °C</text>
+       id="text160">Températures · °C</text>
     <rect
        id="pt-plot-area"
        x="105"
@@ -923,9 +935,12 @@
        data-value="tavgC"
        data-template="TMOY {value} °C"
        data-decimals="1"
+       style="fill:#299d69"
        id="text174">TMOY 306,5 °C</text>
+    <text x="268" y="800" class="small" style="fill:#2685cc" data-value="coldC" data-template="TBF {value} °C" data-decimals="1" id="pt-value-cold">TBF 288,4 °C</text>
+    <text x="482" y="800" class="small" style="fill:#e7414d" data-value="hotC" data-template="TBC {value} °C" data-decimals="1" id="pt-value-hot">TBC 324,6 °C</text>
     <text
-       x="268"
+       x="696"
        y="800"
        class="small"
        data-value="pressure"
@@ -933,16 +948,16 @@
        data-decimals="1"
        id="text176">P 155,0 bar abs.</text>
     <text
-       x="482"
-       y="800"
+       x="56"
+       y="823"
        class="small"
        data-text-value="operatingState.ptRule"
        id="text178">RP · 297,2–307,5 °C · 150–160 bar</text>
     <text
-       x="56"
+       x="700"
        y="823"
        class="small"
-       id="text180">Vert : domaines standards · pointillés : saturation</text>
+       id="text180">Fond vert : domaines · pointillés : saturation</text>
   </g>
   <g
      id="pt-probe"
@@ -996,7 +1011,7 @@
   </g>
   <script
      href="../centurion-svg-bridge.js?v=20261009-pt-probe"
-     xlink:href="../centurion-svg-bridge.js?v=20261009-pt-probe"
+     xlink:href="../centurion-svg-bridge.js?v=20261016-pt-temperatures"
      id="script195" />
   <metadata
      id="metadata1016">

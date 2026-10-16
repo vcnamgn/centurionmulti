@@ -198,7 +198,7 @@
       releasePtProbe();
       svgDoc=null;
       $("diagramZoomValue").textContent="100 %";
-      $("diagramObject").data=svgFiles[name]+"?v="+(name==="pt"?"20261009-pt-retouches":"20261009-pt-probe");
+      $("diagramObject").data=svgFiles[name]+"?v="+(name==="pt"?"20261016-pt-temperatures":"20261009-pt-probe");
     } else if(name!=="core") {
       decorateSvg();
       updateSvg();
@@ -267,8 +267,12 @@
       const span=Number($("ptTrailWindow").value)||300;
       const points=model.state.history.filter(p=>p.t>=model.state.time-span);
       const stride=Math.max(1,Math.ceil(points.length/1200));
-      extra.ptHistory=points.filter((_,i)=>i%stride===0);
-      extra.ptHistory.push({t:model.state.time,tavg:model.state.tavgC,pressure:model.state.pressureBar});
+      // Le SVG reçoit seulement ses cinq mesures, sans recopier les centaines
+      // de valeurs de chaque échantillon de l'historique général.
+      extra.ptHistory=points.filter((_,i)=>i%stride===0)
+        .map(p=>({t:p.t,tavg:p.tavg,hot:p.hot,cold:p.cold,pressure:p.pressure}));
+      extra.ptHistory.push({t:model.state.time,tavg:model.state.tavgC,
+        hot:model.state.hotC,cold:model.state.coldC,pressure:model.state.pressureBar});
       extra.ptCurves=ptCurves;
     }
     try { $("diagramObject").contentWindow?.postMessage({type:"centurion-state",

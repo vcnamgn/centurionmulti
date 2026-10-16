@@ -46,8 +46,8 @@
   function ptTrail(model){
     const s=model.state,points=(s.history||[]).filter(p=>p.t>=s.time-14400);
     const stride=Math.max(1,Math.ceil(points.length/1200));
-    return points.filter((_,i)=>i%stride===0).map(p=>({t:p.t,tavg:p.tavg,pressure:p.pressure}))
-      .concat({t:s.time,tavg:s.tavgC,pressure:s.pressureBar});
+    return points.filter((_,i)=>i%stride===0).map(p=>({t:p.t,tavg:p.tavg,hot:p.hot,cold:p.cold,pressure:p.pressure}))
+      .concat({t:s.time,tavg:s.tavgC,hot:s.hotC,cold:s.coldC,pressure:s.pressureBar});
   }
   function createArchive(E){
     let current=null,records=new Map(),seen={},minimum=Infinity;
@@ -88,7 +88,18 @@
     // Le diagramme du certificat dépend des données, jamais d'un SVG déjà
     // chargé ni du zoom de la vue. Les mêmes courbes alimentent les deux vues.
     const s=model.state,x=t=>105+t/370*1060,y=p=>710-p/180*610;
-    const path=points=>points.map((p,i)=>`${i?"L":"M"}${x(p[0]).toFixed(2)} ${y(p[1]).toFixed(2)}`).join(" ");
+    const path=points=>{
+      let connected=false;
+      return points.map(p=>{
+        if(!p.every(Number.isFinite)){connected=false;return "";}
+        const command=connected?"L":"M";connected=true;
+        return `${command}${x(p[0]).toFixed(2)} ${y(p[1]).toFixed(2)}`;
+      }).filter(Boolean).join(" ");
+    };
+    const trail=ptTrail(model);
+    const traces=[["-cold","cold",s.coldC,"#2685cc"],["-hot","hot",s.hotC,"#e7414d"],["","tavg",s.tavgC,"#299d69"]]
+      .map(([suffix,key,temperature,color])=>`<path id="pt-trace${suffix}" d="${path(trail.map(p=>[p[key],p.pressure]))}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle id="pt-point${suffix}" cx="${x(temperature)}" cy="${y(s.pressureBar)}" r="${suffix?5.5:7}" fill="${color}" stroke="white" stroke-width="2"/>`).join("");
     const temperatures=Array.from({length:38},(_,i)=>i*10),pressures=Array.from({length:19},(_,i)=>i*10);
     const gridX=temperatures.map(t=>`<path data-grid-temperature="${t}" d="M${x(t)} 100V710" class="grid${t%50===0?' major':''}"/>`).join("");
     const gridY=pressures.map(p=>`<path data-grid-pressure="${p}" d="M105 ${y(p)}H1165" class="grid${p%50===0?' major':''}"/>`).join("");
@@ -98,10 +109,13 @@
     return `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="850" viewBox="0 0 1280 850">
       <style>text{font-family:Segoe UI,Arial,sans-serif;fill:#24465c;font-size:15px}.title{font-size:27px;font-weight:700}.small{fill:#587489}.tick{font-size:12px}.grid{fill:none;stroke:#7da3b6;stroke-width:.8;stroke-opacity:.24}.grid.major{stroke-width:1.1;stroke-opacity:.4}</style>
       <rect width="1280" height="850" fill="white"/>
-      <text x="38" y="45" class="title">Diagramme P–T</text><text x="38" y="74" class="small">Pression primaire absolue · température moyenne · trace historique rouge</text>
+      <text x="38" y="45" class="title">Diagramme P–T</text><text x="38" y="74" class="small">Pression primaire absolue · températures primaires</text>
+      <g class="small"><path d="M620 74H642" stroke="#2685cc" stroke-width="3"/><text x="650" y="79">Branche froide</text>
+      <path d="M820 74H842" stroke="#299d69" stroke-width="3"/><text x="850" y="79">Tmoy</text>
+      <path d="M970 74H992" stroke="#e7414d" stroke-width="3"/><text x="1000" y="79">Branche chaude</text></g>
       <rect x="1050" y="23" width="178" height="36" rx="8" fill="#eef7fb"/><text x="1066" y="47">État</text><text x="1121" y="48" font-size="21" font-weight="700">${operating.code}</text>
       ${labels}<path d="M105 100V710H1165" fill="none" stroke="#24465c" stroke-width="2.5"/>
-      <text x="40" y="94" font-size="18">bar abs.</text><text x="1108" y="773" font-size="18">TMOY · °C</text>
+      <text x="40" y="94" font-size="18">bar abs.</text><text x="1020" y="773" font-size="18">Températures · °C</text>
       <defs><clipPath id="clip"><rect x="105" y="100" width="1060" height="610"/></clipPath></defs><g clip-path="url(#clip)">
       <path d="${path(polygon)} Z" fill="#e4f4ee"/>
       <path d="${path(curves.upper)}" fill="none" stroke="#2a7e5c" stroke-width="3"/><path d="${path(curves.lower)}" fill="none" stroke="#2a7e5c" stroke-width="3"/>
@@ -109,13 +123,15 @@
       <rect x="${x(90)}" y="${y(31)}" width="${x(180)-x(90)}" height="${y(25)-y(31)}" fill="#45ac79" fill-opacity=".55" stroke="#147345" stroke-width="2"/>
       <rect x="${x(297.2)}" y="${y(160)}" width="${x(307.5)-x(297.2)}" height="${y(150)-y(160)}" fill="#74c5e5" fill-opacity=".2" stroke="#50abc9" stroke-dasharray="3 3"/>
       ${gridX}${gridY}
-      <path id="pt-trace" d="${path(ptTrail(model).map(p=>[p.tavg,p.pressure]))}" fill="none" stroke="#e7414d" stroke-width="2.5" stroke-linejoin="round"/>
-      <circle id="pt-point" cx="${x(s.tavgC)}" cy="${y(s.pressureBar)}" r="7" fill="#e7414d" stroke="white" stroke-width="2"/></g>
+      ${traces}</g>
       <text x="425" y="448" font-size="18">AN/GV · Arrêt normal sur GV</text><text x="966" y="145" font-size="18">RP · Production</text>
       <text x="290" y="663" class="small">Connexion RRA : 90–180 °C · 25–31 bar</text>
       <rect x="38" y="778" width="1190" height="56" rx="8" fill="#eef7fb"/>
-      <text x="56" y="800" class="small">TMOY ${fmt(s.tavgC,1)} °C</text><text x="268" y="800" class="small">P ${fmt(s.pressureBar,1)} bar abs.</text>
-      <text x="482" y="800" class="small">${operating.ptRule}</text><text x="56" y="823" class="small">Vert : domaines standards · pointillés : saturation</text></svg>`;
+      <text x="56" y="800" style="fill:#299d69" class="small">TMOY ${fmt(s.tavgC,1)} °C</text>
+      <text x="268" y="800" style="fill:#2685cc" class="small">TBF ${fmt(s.coldC,1)} °C</text>
+      <text x="482" y="800" style="fill:#e7414d" class="small">TBC ${fmt(s.hotC,1)} °C</text>
+      <text x="696" y="800" class="small">P ${fmt(s.pressureBar,1)} bar abs.</text>
+      <text x="56" y="823" class="small">${operating.ptRule}</text><text x="700" y="823" class="small">Fond vert : domaines · pointillés : saturation</text></svg>`;
   }
   function coreSvg(record,E){
     const c=record.core,w=780,h=570,left=94,right=712,top=66,bottom=490;

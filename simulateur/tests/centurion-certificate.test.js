@@ -15,12 +15,13 @@ test('certificat : seuls les scénarios terminés, nom visible, durée et deux v
 });
 
 test('certificat : P–T sur quatre heures, données réelles, point courant et mémoire bornée',()=>{
-  const m=E.make();m.state.time=20000;m.state.tavgC=167;m.state.pressureBar=28;
-  m.state.history=Array.from({length:20001},(_,t)=>({t,tavg:306-t/200,pressure:155-t/150}));
+  const m=E.make();m.state.time=20000;m.state.tavgC=167;m.state.hotC=169;m.state.coldC=165;m.state.pressureBar=28;
+  m.state.history=Array.from({length:20001},(_,t)=>({t,tavg:306-t/200,hot:325-t/200,cold:287-t/200,pressure:155-t/150}));
   const trail=Cert.ptTrail(m);
   assert.equal(trail[0].t,5600);assert.ok(trail.length<=1201);
-  assert.deepEqual(trail.at(-1),{t:20000,tavg:167,pressure:28});
-  assert.deepEqual(trail[1],{t:5613,tavg:m.state.history[5613].tavg,pressure:m.state.history[5613].pressure});
+  assert.deepEqual(trail.at(-1),{t:20000,tavg:167,hot:169,cold:165,pressure:28});
+  assert.deepEqual(trail[1],{t:5613,tavg:m.state.history[5613].tavg,hot:m.state.history[5613].hot,
+    cold:m.state.history[5613].cold,pressure:m.state.history[5613].pressure});
 });
 
 test('certificat : archives gelées aux événements, AAR PLIN et fin ; réinitialisation sans traces anciennes',()=>{

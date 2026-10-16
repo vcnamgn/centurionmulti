@@ -2,7 +2,7 @@
   "format": "Centurion-Documentation",
   "version": 1,
   "date": "2026-10-16",
-  "noteHash": "df52c69e8a84a55727cad4f0c1d58f9cd5366aacc3445808a8626ff9ec68f923",
+  "noteHash": "25d08fb45a729f901302bff75773890119a5ae089ef1685944847067f00cd41d",
   "modules": [
     {
       "file": "simulateur/centurion-engine.js",
@@ -872,7 +872,7 @@
       "file": "simulateur/centurion-app.js",
       "title": "Application",
       "description": "Horloge, commandes, arbitrage CC et présentation.",
-      "sha256": "89c3101e0629201f60b138573c7240b8af1ffb5b1818d2de84d06f15548ab426",
+      "sha256": "b9e112174c294782550722df1244a7945d0b1a6f1ca8d02d0a04e5aaed05d6a8",
       "functions": [
         {
           "name": "activateView",
@@ -1004,403 +1004,403 @@
         },
         {
           "name": "releasePtProbe",
-          "line": 277,
+          "line": 281,
           "signature": "releasePtProbe()",
           "publicApi": false,
           "description": "Réinitialise le bouton et la lecture P–T puis demande au SVG de libérer le réticule. Aucun effet sur les mesures ou les commandes physiques.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L277"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L281"
         },
         {
           "name": "renderInventoryBalance",
-          "line": 282,
+          "line": 286,
           "signature": "renderInventoryBalance()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L282"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L286"
         },
         {
           "name": "renderBoard",
-          "line": 318,
+          "line": 322,
           "signature": "renderBoard()",
           "publicApi": false,
           "description": "Application : affiche mesures réalisées, informations calculées, alarmes et positions.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L318"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L322"
         },
         {
           "name": "renderAlarms",
-          "line": 397,
+          "line": 401,
           "signature": "renderAlarms(s,g,l)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L397"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L401"
         },
         {
           "name": "renderAlarmTable",
-          "line": 415,
-          "signature": "renderAlarmTable()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L415"
-        },
-        {
-          "name": "setModelPage",
           "line": 419,
-          "signature": "setModelPage(page)",
+          "signature": "renderAlarmTable()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L419"
         },
         {
+          "name": "setModelPage",
+          "line": 423,
+          "signature": "setModelPage(page)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L423"
+        },
+        {
           "name": "setModelDetailPage",
-          "line": 424,
+          "line": 428,
           "signature": "setModelDetailPage(page)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L424"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L428"
         },
         {
           "name": "renderSignals",
-          "line": 432,
+          "line": 436,
           "signature": "renderSignals()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L432"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L436"
         },
         {
           "name": "renderAxial",
-          "line": 465,
+          "line": 469,
           "signature": "renderAxial()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L465"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L469"
         },
         {
           "name": "drawCoreCharts",
-          "line": 472,
+          "line": 476,
           "signature": "drawCoreCharts()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L472"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L476"
         },
         {
           "name": "drawHistory",
-          "line": 656,
+          "line": 660,
           "signature": "drawHistory()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L656"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L660"
         },
         {
           "name": "drawLoadProgramChart",
-          "line": 659,
+          "line": 663,
           "signature": "drawLoadProgramChart()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L659"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L663"
         },
         {
           "name": "renderTransientControls",
-          "line": 684,
+          "line": 688,
           "signature": "renderTransientControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L684"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L688"
         },
         {
           "name": "render",
-          "line": 711,
+          "line": 715,
           "signature": "render()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L711"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L715"
         },
         {
           "name": "faultValueLabel",
-          "line": 890,
-          "signature": "faultValueLabel(equipment,value)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L890"
-        },
-        {
-          "name": "renderEquipmentFaults",
           "line": 894,
-          "signature": "renderEquipmentFaults()",
+          "signature": "faultValueLabel(equipment,value)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L894"
         },
         {
+          "name": "renderEquipmentFaults",
+          "line": 898,
+          "signature": "renderEquipmentFaults()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L898"
+        },
+        {
           "name": "bindEquipmentFaults",
-          "line": 916,
+          "line": 920,
           "signature": "bindEquipmentFaults()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L916"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L920"
         },
         {
           "name": "bindNumber",
-          "line": 954,
+          "line": 958,
           "signature": "bindNumber(id,callback)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L954"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L958"
         },
         {
           "name": "bindNumericInputs",
-          "line": 957,
+          "line": 961,
           "signature": "bindNumericInputs(target,callback,selector=null)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L957"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L961"
         },
         {
           "name": "bindModelParameters",
-          "line": 985,
+          "line": 989,
           "signature": "bindModelParameters()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L985"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L989"
         },
         {
           "name": "renderManualExtras",
-          "line": 1005,
+          "line": 1009,
           "signature": "renderManualExtras()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1005"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1009"
         },
         {
           "name": "changeManualROverride",
-          "line": 1029,
+          "line": 1033,
           "signature": "changeManualROverride(enabled)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1029"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1033"
         },
         {
           "name": "bindManualExtras",
-          "line": 1039,
+          "line": 1043,
           "signature": "bindManualExtras()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1039"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1043"
         },
         {
           "name": "editorSignals",
-          "line": 1066,
+          "line": 1070,
           "signature": "editorSignals()",
           "publicApi": false,
           "description": "Application : délègue la projection des sources à controlSignals, sans duplication des mesures.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1066"
-        },
-        {
-          "name": "editorBridge",
-          "line": 1070,
-          "signature": "editorBridge(mode)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1070"
         },
         {
-          "name": "dispatchEditor",
+          "name": "editorBridge",
           "line": 1074,
-          "signature": "dispatchEditor(mode,payload)",
+          "signature": "editorBridge(mode)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1074"
         },
         {
+          "name": "dispatchEditor",
+          "line": 1078,
+          "signature": "dispatchEditor(mode,payload)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1078"
+        },
+        {
           "name": "sendEditorTick",
-          "line": 1080,
+          "line": 1084,
           "signature": "sendEditorTick(dt=0)",
           "publicApi": false,
           "description": "Application : envoie dt et les signaux communs aux deux éditeurs prêts.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1080"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1084"
         },
         {
           "name": "advanceControlledStep",
-          "line": 1092,
+          "line": 1096,
           "signature": "advanceControlledStep()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1092"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1096"
         },
         {
           "name": "finishCcStep",
-          "line": 1111,
+          "line": 1115,
           "signature": "finishCcStep(tick)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1111"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1115"
         },
         {
           "name": "receiveCcStepOutput",
-          "line": 1118,
+          "line": 1122,
           "signature": "receiveCcStepOutput(message)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1118"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1122"
         },
         {
           "name": "advanceSimulationTime",
-          "line": 1129,
+          "line": 1133,
           "signature": "advanceSimulationTime()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1129"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1133"
         },
         {
           "name": "connectEditor",
-          "line": 1144,
+          "line": 1148,
           "signature": "connectEditor(mode,id)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1144"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1148"
         },
         {
           "name": "setRegulationActive",
-          "line": 1150,
+          "line": 1154,
           "signature": "setRegulationActive(enabled,notifyEditor=true)",
           "publicApi": false,
           "description": "Application : active/désactive la commande CC-RÉGUL ; synchronise le repli manuel sur les actionneurs réalisés.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1150"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1154"
         },
         {
           "name": "setProtectionActive",
-          "line": 1173,
+          "line": 1177,
           "signature": "setProtectionActive(enabled,notifyEditor=true)",
           "publicApi": false,
           "description": "Application : commande CC-PROTECT et fixe le mode de protection par graphe.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1173"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1177"
         },
         {
           "name": "applyEditorOutputs",
-          "line": 1184,
+          "line": 1188,
           "signature": "applyEditorOutputs(message)",
           "publicApi": false,
           "description": "Application : traduit les sorties finies des ateliers actifs en commandes du moteur ; AAR/IS/ASG sont mémorisés.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1184"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1188"
         },
         {
           "name": "handleEditorMessage",
-          "line": 1217,
+          "line": 1221,
           "signature": "handleEditorMessage(data)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1217"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1221"
         },
         {
           "name": "stateStatus",
-          "line": 1239,
+          "line": 1243,
           "signature": "stateStatus(text,error=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1239"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1243"
         },
         {
           "name": "editorStateCommand",
-          "line": 1242,
+          "line": 1246,
           "signature": "editorStateCommand(mode,type,saved)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1242"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1246"
         },
         {
           "name": "waitForCcIdle",
-          "line": 1256,
+          "line": 1260,
           "signature": "waitForCcIdle()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1256"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1260"
         },
         {
           "name": "saveEditors",
-          "line": 1264,
-          "signature": "saveEditors()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1264"
-        },
-        {
-          "name": "stateUi",
           "line": 1268,
-          "signature": "stateUi()",
+          "signature": "saveEditors()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1268"
         },
         {
+          "name": "stateUi",
+          "line": 1272,
+          "signature": "stateUi()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1272"
+        },
+        {
           "name": "saveSimulationState",
-          "line": 1275,
+          "line": 1279,
           "signature": "saveSimulationState()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1275"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1279"
         },
         {
           "name": "loadSimulationState",
-          "line": 1291,
+          "line": 1295,
           "signature": "loadSimulationState(file)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1291"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1295"
         },
         {
           "name": "restoreStateUi",
-          "line": 1327,
+          "line": 1331,
           "signature": "restoreStateUi(ui)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1327"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1331"
         },
         {
           "name": "renderPzrLevelTrend",
-          "line": 1347,
+          "line": 1351,
           "signature": "renderPzrLevelTrend()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1347"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1351"
         },
         {
           "name": "renderSetpointControls",
-          "line": 1371,
+          "line": 1375,
           "signature": "renderSetpointControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1371"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1375"
         },
         {
           "name": "bindSetpointControls",
-          "line": 1388,
+          "line": 1392,
           "signature": "bindSetpointControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1388"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1392"
         },
         {
           "name": "bindControls",
-          "line": 1411,
+          "line": 1415,
           "signature": "bindControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1411"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1415"
         },
         {
           "name": "syncInputs",
-          "line": 1615,
+          "line": 1619,
           "signature": "syncInputs()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1615"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1619"
         },
         {
           "name": "frame",
-          "line": 1654,
+          "line": 1658,
           "signature": "frame(now)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1654"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-app.js#L1658"
         }
       ]
     },
@@ -1760,7 +1760,7 @@
       "file": "simulateur/centurion-svg-bridge.js",
       "title": "Pont SVG",
       "description": "Mesures, animations et navigation dans les SVG.",
-      "sha256": "90167ce79875ac0616aa634c5685b3d9d907e5333d0ee47eace479396fd7a29c",
+      "sha256": "6bbd833ca35c786d6da866e4f23f8fb00121367faa3439e6c2486973599c0e8c",
       "functions": [
         {
           "name": "ptPlot",
@@ -1804,51 +1804,51 @@
         },
         {
           "name": "bindNavigation",
-          "line": 260,
-          "signature": "bindNavigation()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L260"
-        },
-        {
-          "name": "destination",
           "line": 273,
-          "signature": "destination(label)",
+          "signature": "bindNavigation()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L273"
         },
         {
+          "name": "destination",
+          "line": 286,
+          "signature": "destination(label)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L286"
+        },
+        {
           "name": "arrowGroup",
-          "line": 282,
+          "line": 295,
           "signature": "arrowGroup(text)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L282"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L295"
         },
         {
           "name": "navigate",
-          "line": 290,
+          "line": 303,
           "signature": "navigate(target)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L290"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L303"
         },
         {
           "name": "bindArrows",
-          "line": 299,
+          "line": 312,
           "signature": "bindArrows()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L299"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L312"
         },
         {
           "name": "updateRods",
-          "line": 330,
+          "line": 343,
           "signature": "updateRods(data)",
           "publicApi": false,
           "description": "Arbitre AAR, manœuvre globale, surcharge R, sorties CC et manuel ; applique vitesses et compteur GCP.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L330"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-svg-bridge.js#L343"
         }
       ]
     },
@@ -1856,7 +1856,7 @@
       "file": "simulateur/centurion-certificate.js",
       "title": "Certificats",
       "description": "Archives des événements, captures SVG et export PNG/PDF local.",
-      "sha256": "6394101bbdf2fe4ac32a9a621924257fbd53939bae71956ade20a901f795fb89",
+      "sha256": "c0627ba32f2a5a5799c68f633c19d024a6a2c18bac2d239298df579e8c6daf0e",
       "functions": [
         {
           "name": "duration",
@@ -1948,107 +1948,107 @@
         },
         {
           "name": "coreSvg",
-          "line": 120,
+          "line": 136,
           "signature": "coreSvg(record,E)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L120"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L136"
         },
         {
           "name": "loadImage",
-          "line": 140,
+          "line": 156,
           "signature": "loadImage(url)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L140"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L156"
         },
         {
           "name": "rasterize",
-          "line": 144,
+          "line": 160,
           "signature": "rasterize(svg,width=1400)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L144"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L160"
         },
         {
           "name": "captureSvg",
-          "line": 151,
+          "line": 167,
           "signature": "captureSvg(file,snapshot,signal)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L151"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L167"
         },
         {
           "name": "receive",
-          "line": 174,
-          "signature": "receive(event)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L174"
-        },
-        {
-          "name": "fit",
           "line": 190,
-          "signature": "fit(ctx,image,x,y,w,h)",
+          "signature": "receive(event)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L190"
         },
         {
+          "name": "fit",
+          "line": 206,
+          "signature": "fit(ctx,image,x,y,w,h)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L206"
+        },
+        {
           "name": "wrap",
-          "line": 194,
+          "line": 210,
           "signature": "wrap(ctx,text,x,y,width,lineHeight)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L194"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L210"
         },
         {
           "name": "compose",
-          "line": 202,
+          "line": 218,
           "signature": "compose(summary,screen,thumbnails,created,layout)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L202"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L218"
         },
         {
           "name": "create",
-          "line": 250,
+          "line": 266,
           "signature": "create({E,getModel,svgFiles,ptCurves,prepare})",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L250"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L266"
         },
         {
           "name": "observe",
-          "line": 254,
+          "line": 270,
           "signature": "observe(model)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L254"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L270"
         },
         {
           "name": "outputs",
-          "line": 264,
+          "line": 280,
           "signature": "outputs(enabled)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L264"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L280"
         },
         {
           "name": "open",
-          "line": 265,
+          "line": 281,
           "signature": "open()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L265"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L281"
         },
         {
           "name": "generate",
-          "line": 270,
+          "line": 286,
           "signature": "generate()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L270"
+          "url": "https://github.com/vcnamgn/science005/blob/main/simulateur/centurion-certificate.js#L286"
         }
       ]
     },
@@ -4705,7 +4705,7 @@
       "source": "docs/CONCEPTION.md",
       "output": "docs/index.html",
       "title": "Conception et API",
-      "sha256": "df52c69e8a84a55727cad4f0c1d58f9cd5366aacc3445808a8626ff9ec68f923"
+      "sha256": "25d08fb45a729f901302bff75773890119a5ae089ef1685944847067f00cd41d"
     }
   ]
 }
