@@ -118,10 +118,11 @@ test('baisse 100 → 80 % avec les vrais CC : débit nominal malgré la baisse r
   m.state.primaryEnergyJ-=removedKg*E.C.primaryCpJkgK*waterC;
   E.step(m,.1);
   assert.ok(m.state.pzrLevelPct<35,'réserve PZR basse, boucles toujours pleines');
-  assert.deepEqual(m.state.inventory.loopPriming,[1,1,1,1]);
+  // La fermeture des volumes peut laisser un résidu d'arrondi, sans perte d'amorçage.
+  assert.ok(m.state.inventory.loopPriming.every(value=>Math.abs(value-1)<1e-7));
   const snapshot=E.instrumentSnapshot(m);
-  assert.ok(snapshot.loops.every(l=>l.flowPct===100));
-  assert.equal(E.controlSignals(m).qpriSignal[0],100);
+  assert.ok(snapshot.loops.every(l=>Math.abs(l.flowPct-100)<1e-5));
+  assert.ok(Math.abs(E.controlSignals(m).qpriSignal[0]-100)<1e-5);
 });
 
 // Exécuter les fonctions du véritable éditeur, sans son interface DOM.

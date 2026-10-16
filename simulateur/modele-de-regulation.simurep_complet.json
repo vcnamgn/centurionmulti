@@ -361,8 +361,8 @@
       "params": {
         "kp": 1.5,
         "ki": 0.08,
-        "min": -15,
-        "max": 15,
+        "min": -60,
+        "max": 60,
         "outputUnit": "m³/h"
       }
     },

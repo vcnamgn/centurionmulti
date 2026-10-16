@@ -15,9 +15,9 @@ function bench(){
   return {m,cc,pi,tick,integral};
 }
 
-test('PI niveau : +60, bornes partagées et correction réellement disponible pour 0/1/2 orifices',()=>{
+test('PI niveau : ±60, bornes partagées et correction réellement disponible pour 0/1/2/3 orifices',()=>{
   const {cc,pi,tick}=bench();
-  assert.equal(pi.params.max,60);assert.equal(pi.params.min,-15);
+  assert.equal(pi.params.max,60);assert.equal(pi.params.min,-60);
   assert.equal(pi.params.kp,1.5);assert.equal(pi.params.ki,.08);
   assert.equal(pi.params.externalLimits,'oui');
   for(const [letdown,capacity,correction] of [[36,60,24],[18,60,42],[0,60,60],[36,44,8]]){
@@ -25,7 +25,11 @@ test('PI niveau : +60, bornes partagées et correction réellement disponible po
     assert.equal(cc.state().signals.get(pi.id).value,correction);
     assert.equal(result.outputs.qchargeOut,capacity);
   }
-  assert.equal(tick(-50,0,60,0).outputs.qchargeOut,0,'pas de charge négative avec orifices fermés');
+  for(const letdown of [0,18,36,54]){
+    const result=tick(-50,letdown,60,0);
+    assert.equal(cc.state().signals.get(pi.id).value,-letdown,'la borne externe suit les orifices en service');
+    assert.equal(result.outputs.qchargeOut,0,'le niveau haut peut ramener la charge à zéro sans débit négatif');
+  }
   assert.equal(tick(50,36,0,0).outputs.qchargeOut,0,'capacité insuffisante : MIN aval prioritaire');
   const limit=cc.state().nodes.find(n=>n.type==='limit'&&n.label==='Limite QCHARGE');
   limit.params.max=40;
@@ -42,7 +46,7 @@ test('anti-saturation : intégrale accumulée reprise, capacité 44 à 177 bar e
   for(let i=0;i<600;i++)assert.equal(tick(30,36,cap).outputs.qchargeOut,44);
   assert.ok(integral()<-36,'le suivi vide effectivement l’intégrale ancienne');
   assert.ok(tick(0,36,cap).outputs.qchargeOut<36,'au retour à la consigne, plus de demande maintenue au plafond');
-  assert.ok(cc.state().signals.get(pi.id).value>=-15);
+  assert.ok(cc.state().signals.get(pi.id).value>=-36,'la correction reste limitée par la décharge réelle');
 });
 
 test('mémoires : pause figée, JSON repris au même sous-pas et ancien graphe v9 mis à jour sans perdre l’intégrale',()=>{

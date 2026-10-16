@@ -38,6 +38,11 @@ test('neuf corrections : bon code, couverture exacte, complet identique aux JSON
       choose(editor,key);editor.get('solutionsForm').fire('submit');
       assert.equal(editor.get('solutionsDialog').hasAttribute('open'),false,`${mode}/${key} chargé`);
       const state=editor.state();assert.equal(state.enabled,false);
+      if(mode==='regul'&&['level','pressure','complete'].includes(key)){
+        const pi=state.nodes.find(n=>n.type==='pi'&&n.label==='PI niveau');
+        assert.equal(pi.params.min,-60,`${key} : correction basse du PI niveau`);
+        assert.equal(pi.params.max,60,`${key} : correction haute du PI niveau`);
+      }
       const expected=targets[mode][key];
       assert.deepEqual(plain(state.nodes.filter(n=>expected.includes(n.type)||/Out$/.test(n.type)||n.type==='posg')
         .map(n=>n.type).sort()),expected.slice().sort());
