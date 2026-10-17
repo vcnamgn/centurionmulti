@@ -26,13 +26,13 @@ Le service écoute par défaut uniquement sur la boucle locale. Dans le conteneu
 
 Le manifeste conserve les champs disponibles sur Cloudron 8.3.1. Il n’utilise pas les nouveaux champs de publication du catalogue. La base Node.js Cloudron est épinglée par version datée et digest, suivant le guide officiel courant. L’installation sur le serveur cible a confirmé le démarrage du conteneur et un contrôle de santé `healthy`.
 
-Le modèle de workflow GitHub **Image du relais Cloudron** est fourni dans [relay-image.workflow.txt](relay-image.workflow.txt). Le workflow actif se trouve dans `.github/workflows/relay-image.yml`, sur la branche de préparation. Il se déclenche sur les modifications du relais dans cette branche, ou manuellement. Il exécute les tests, construit le Dockerfile racine puis publie `ghcr.io/vcnamgn/centurionmulti:relay-0.2.0` ainsi qu’une étiquette contenant le SHA Git. La visibilité du paquet GHCR doit être publique pour une récupération anonyme ; si GitHub l’a créé privé, la modifier dans les paramètres du paquet avant installation. Ne jamais inclure de token GitHub dans le manifeste, le Dockerfile ou une URL de téléchargement.
+Le modèle de workflow GitHub **Image du relais Cloudron** est fourni dans [relay-image.workflow.txt](relay-image.workflow.txt). Le workflow actif se trouve dans `.github/workflows/relay-image.yml`, sur la branche de préparation. Il se déclenche sur les modifications du relais dans cette branche, ou manuellement. Il exécute les tests, construit le Dockerfile racine puis publie `ghcr.io/vcnamgn/centurionmulti:relay-0.2.1` ainsi qu’une étiquette contenant le SHA Git. La visibilité du paquet GHCR doit être publique pour une récupération anonyme ; si GitHub l’a créé privé, la modifier dans les paramètres du paquet avant installation. Ne jamais inclure de token GitHub dans le manifeste, le Dockerfile ou une URL de téléchargement.
 
 Depuis un checkout de cette branche, avec le client Cloudron installé :
 
 ```text
 cloudron login my.vcnam.fr
-cloudron install --image ghcr.io/vcnamgn/centurionmulti:relay-0.2.0 --location s.vcnam.fr
+cloudron install --image ghcr.io/vcnamgn/centurionmulti:relay-0.2.1 --location s.vcnam.fr
 ```
 
 Le tableau de bord confirmé est `https://my.vcnam.fr`. L’image est disponible publiquement ; les commandes ci-dessus servent à une nouvelle installation, pas à répéter celle déjà effectuée. Le client lit le `CloudronManifest.json` du répertoire courant. Aucun service ne doit remplacer l’application déjà présente sur le serveur.
@@ -60,6 +60,12 @@ ghcr.io/vcnamgn/centurionmulti@sha256:086af53ff39edc5d2bc3a37687936a742583876d1c
 ```
 
 Révision source : `bb5184ca81ed0d8154bca103a4589ce1cd137f9c`. Construction et 15 tests du relais réussis dans GitHub Actions. Essai sur le site déployé avec deux pages maîtres et un auxiliaire : numéros distincts attribués, jonction depuis la seconde page vers le premier maître par les quatre chiffres, réception de la marche et de la pause, puis renouvellement de séance à 00:00:18 sans retour à zéro ; l’ancien auxiliaire affiche « Séance terminée ». Aucune erreur JavaScript relevée. Cet essai utilise des onglets d’un même navigateur ; le test entre ordinateurs reste à faire.
+
+## Correctif de présentation déployé (0.2.1)
+
+La version courante sur Cloudron est **0.2.1**, saine et installée le 18 octobre 2026. Elle conserve le protocole de séance de 0.2.0 et corrige le retour à la ligne de la barre supérieure dans les volets étroits. À la largeur de 602 pixels du navigateur, la page déployée a une largeur de contenu de 602 pixels : aucun débordement horizontal. Le menu Fichier et le numéro restent accessibles. Les 15 tests du relais passent aussi dans le workflow de cette version.
+
+Image : `ghcr.io/vcnamgn/centurionmulti@sha256:2317e44f330ee676c7bf355f3e09c88b21da58585b002e11c811b0fc12b729b9` ; révision source : `64c1720ebeb2e317bac20daf39b698727acaa4e7`. Le contrôle final confirme également l’attribution d’un numéro et la connexion maître en HTTPS. Le serveur de test local a été arrêté après validation.
 
 ## Séances numérotées (0.2.0)
 
