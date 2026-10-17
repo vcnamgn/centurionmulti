@@ -51,6 +51,16 @@ Cette image provient du commit `de84e0899fbe3ed80d115ac341efdb593046685b`, const
 
 Vérifications sur le site déployé : HTTPS, état Cloudron sain, création de séance, connexion d’un maître et d’un auxiliaire, mesures initiales, démarrage et pause reçus par l’auxiliaire, suivi à ×1 et ×200, et fermeture explicite du partage. Il s’agit d’un essai dans deux onglets du navigateur ; la validation entre deux ordinateurs et les essais de charge restent à faire. Aucune connexion GitHub n’est nécessaire aux participants.
 
+## Déploiement vérifié (0.2.0)
+
+Le 18 octobre 2026, l’application a été renommée en **s.vcnam.fr** et mise à jour vers **0.2.0** sur le même emplacement Cloudron. **sockets.vcnam.fr** reste une redirection. Cloudron confirme une application installée, en cours d’exécution et saine. L’image déployée est :
+
+```text
+ghcr.io/vcnamgn/centurionmulti@sha256:086af53ff39edc5d2bc3a37687936a742583876d1cae37587a3d9dbe380bfe1b
+```
+
+Révision source : `bb5184ca81ed0d8154bca103a4589ce1cd137f9c`. Construction et 15 tests du relais réussis dans GitHub Actions. Essai sur le site déployé avec deux pages maîtres et un auxiliaire : numéros distincts attribués, jonction depuis la seconde page vers le premier maître par les quatre chiffres, réception de la marche et de la pause, puis renouvellement de séance à 00:00:18 sans retour à zéro ; l’ancien auxiliaire affiche « Séance terminée ». Aucune erreur JavaScript relevée. Cet essai utilise des onglets d’un même navigateur ; le test entre ordinateurs reste à faire.
+
 ## Séances numérotées (0.2.0)
 
 Le relais active le partage dans la page qu’il sert. Une ouverture directe crée une nouvelle séance et un numéro de 1000 à 9999, unique parmi les séances présentes. Le navigateur maître conserve en mémoire sa capacité secrète, distincte du numéro. **Nouvelle séance** crée une nouvelle invitation puis ferme l’ancienne, sans remplacer le modèle, réinitialiser les CC ou interrompre la conduite. **Arrêter le partage** conserve aussi la simulation locale. Recharger la page crée un nouveau réacteur local et une nouvelle séance ; le numéro ne permet pas de récupérer une simulation perdue.
