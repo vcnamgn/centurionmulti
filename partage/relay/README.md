@@ -18,13 +18,13 @@ Le service écoute par défaut uniquement sur la boucle locale. Dans le conteneu
 
 ## Cible Cloudron
 
-- Version fournie par l’utilisateur : **Cloudron 8.3.2**.
+- Version vérifiée par l’API du serveur : **Cloudron 8.3.1** (la version annoncée initialement était 8.3.2).
 - Adresse souhaitée : **sockets.vcnam.fr**.
 - Une seule application ; aucun addon de base de données, d’authentification ou de stockage.
 - Limite de mémoire initiale : 256 Mio, à mesurer pendant les essais.
 - Image construite en dehors de Cloudron, pour ne pas utiliser un second emplacement avec une application de construction ou de registre.
 
-Le manifeste conserve les champs disponibles sur Cloudron 8.3.2. Il n’utilise pas les nouveaux champs de publication du catalogue. La base Node.js Cloudron est épinglée par version datée et digest, suivant le guide officiel courant. Le fonctionnement réel du conteneur sur Cloudron reste à confirmer lors de l’installation.
+Le manifeste conserve les champs disponibles sur Cloudron 8.3.1. Il n’utilise pas les nouveaux champs de publication du catalogue. La base Node.js Cloudron est épinglée par version datée et digest, suivant le guide officiel courant. L’installation sur le serveur cible a confirmé le démarrage du conteneur et un contrôle de santé `healthy`.
 
 Le modèle de workflow GitHub **Image du relais Cloudron** est fourni dans [relay-image.workflow.txt](relay-image.workflow.txt). Le workflow actif se trouve dans `.github/workflows/relay-image.yml`, sur la branche de préparation. Il se déclenche sur les modifications du relais dans cette branche, ou manuellement. Il exécute les tests, construit le Dockerfile racine puis publie `ghcr.io/vcnamgn/centurionmulti:relay-0.1.0` ainsi qu’une étiquette contenant le SHA Git. La visibilité du paquet GHCR doit être publique pour une récupération anonyme ; si GitHub l’a créé privé, la modifier dans les paramètres du paquet avant installation. Ne jamais inclure de token GitHub dans le manifeste, le Dockerfile ou une URL de téléchargement.
 
@@ -35,9 +35,21 @@ cloudron login my.vcnam.fr
 cloudron install --image ghcr.io/vcnamgn/centurionmulti:relay-0.1.0 --location sockets.vcnam.fr
 ```
 
-Le tableau de bord confirmé est `https://my.vcnam.fr`. Les commandes ne doivent être exécutées qu’après confirmation de la disponibilité de l’image. Le client lit le `CloudronManifest.json` du répertoire courant. Aucun service ne doit remplacer l’application déjà présente sur le serveur.
+Le tableau de bord confirmé est `https://my.vcnam.fr`. L’image est disponible publiquement ; les commandes ci-dessus servent à une nouvelle installation, pas à répéter celle déjà effectuée. Le client lit le `CloudronManifest.json` du répertoire courant. Aucun service ne doit remplacer l’application déjà présente sur le serveur.
 
 Après installation, ouvrir `https://sockets.vcnam.fr` et suivre les mêmes étapes que pour l’essai local. Les participants rejoignent ce site par leur lien ; ils n’installent pas chacun une application Cloudron. Le navigateur maître doit utiliser la version du simulateur servie par cette application pour activer ce premier raccordement.
+
+## Installation vérifiée
+
+Le 17 octobre 2026 (heure de Paris), le relais 0.1.0 a été installé sur **https://sockets.vcnam.fr**, via le tableau de bord **https://my.vcnam.fr**, sur Cloudron **8.3.1**. L’application utilise le second emplacement ; l’application existante a été conservée. L’image est récupérée anonymement et épinglée au digest :
+
+```text
+ghcr.io/vcnamgn/centurionmulti@sha256:31f9337976c97d05dd7487b7995a3c564d1fb5d8ead45d53929dd6b045486df9
+```
+
+Cette image provient du commit `de84e0899fbe3ed80d115ac341efdb593046685b`, construit et testé par le workflow GitHub. Le minimum du manifeste a ensuite été ajusté à 8.3.1 pour correspondre au serveur ; le manifeste est fourni séparément lors de l’installation et n’est pas embarqué dans cette image.
+
+Vérifications sur le site déployé : HTTPS, état Cloudron sain, création de séance, connexion d’un maître et d’un auxiliaire, mesures initiales, démarrage et pause reçus par l’auxiliaire, suivi à ×1 et ×200, et fermeture explicite du partage. Il s’agit d’un essai dans deux onglets du navigateur ; la validation entre deux ordinateurs et les essais de charge restent à faire. Aucune connexion GitHub n’est nécessaire aux participants.
 
 ## Portée du test
 

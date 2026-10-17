@@ -10,7 +10,7 @@
 - `simulateur/centurion-commands.js` : premier point d’entrée local, sans DOM ni réseau, qui réutilise le catalogue et l’application des commandes de `centurion-auto.js`.
 - Des vérifications ciblées du nouveau point d’entrée : priorités, validation sans effet, application en pause, changement de modèle et groupes refusés avant application.
 
-Le nouveau module n’est pas encore chargé par la page et les gestionnaires du pupitre ne lui sont pas encore raccordés. Un premier relais et un tableau auxiliaire en lecture seule sont maintenant disponibles pour essai, avec connexion activée uniquement par un lien maître. Le mode individuel reste sans connexion. Voir `partage/relay/README.md`. Elle ne constitue pas une barrière d’authentification réseau : permissions, fraîcheur, file, déduplication et reçus seront ajoutés à la session autoritaire.
+Le nouveau module n’est pas encore chargé par la page et les gestionnaires du pupitre ne lui sont pas encore raccordés. Un premier relais et un tableau auxiliaire en lecture seule sont maintenant disponibles pour essai, avec connexion activée uniquement par un lien maître. Le mode individuel reste sans connexion. Voir `partage/relay/README.md`. Le point d’entrée local ne constitue pas une barrière d’authentification réseau : permissions, fraîcheur, file, déduplication et reçus seront ajoutés à la session autoritaire.
 
 ## Interface locale préparée
 
@@ -45,7 +45,7 @@ Le fournisseur de contexte est rappelé à chaque opération afin de retrouver l
 5. Préparer la projection d’affichage et le fournisseur d’historiques, distincts des sauvegardes complètes et des préférences de navigation.
 6. Mettre à jour la conception du code et son catalogue généré lors de ce raccordement, puis valider la parité avant de commencer le transport en lecture seule.
 
-Le lot réseau initial transmettra les mesures courantes à 5 Hz et les historiques sur demande. Il n’attendra jamais un auxiliaire entre deux pas de 0,1 s. Le fonctionnement du maître masqué demande ensuite l’extraction conjointe de la physique, des CC et de la conduite auto dans un Worker local.
+Le prototype réseau transmet déjà les mesures courantes à 5 Hz. Les historiques sur demande restent à ajouter. Il n’attendra jamais un auxiliaire entre deux pas de 0,1 s. Le fonctionnement du maître masqué demande ensuite l’extraction conjointe de la physique, des CC et de la conduite auto dans un Worker local.
 
 ## Vérifications
 
@@ -55,4 +55,4 @@ node --test simulateur/tests/centurion-cc.test.js simulateur/tests/centurion-aut
 node scripts/check-docs.mjs
 ```
 
-Les deux premières notes sont des propositions autonomes conservées en Markdown sur la branche de préparation. Leur ajout aux pages HTML publiques est différé jusqu’à l’intégration de la documentation du partage. Le test local est distinct de l’installation Cloudron. La cible retenue est Cloudron 8.3.2 sur sockets.vcnam.fr, avec un seul emplacement d’application.
+Les deux premières notes sont des propositions autonomes conservées en Markdown sur la branche de préparation. Leur ajout aux pages HTML publiques est différé jusqu’à l’intégration de la documentation du partage. Le test local est distinct de l’installation Cloudron. Le relais 0.1.0 est installé sur https://sockets.vcnam.fr, sur Cloudron 8.3.1 (version vérifiée par l’API), avec un seul emplacement d’application. Le suivi maître–auxiliaire a été vérifié en HTTPS dans deux onglets ; les essais entre ordinateurs restent à faire. Voir les détails d’installation dans `partage/relay/README.md`.
