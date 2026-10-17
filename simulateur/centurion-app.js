@@ -1655,6 +1655,13 @@
       `<label>${name} · coefficient de forme<input type="number" data-axial-rod="${name}"
         min="0" max="1" step="0.001" value="${u.axialRodAbsorption[name]}"></label>`).join("");
   }
+  function readSharedState() {
+    if(pendingCcStep||stateBusy)return null;
+    return {identity:model,frame:{time:model.state.time,
+      simulation:{running,speed,regulationActive,protectionActive},
+      instruments:E.instrumentSnapshot(model),
+      core:{dnbr:model.state.dnbr,dpax:model.state.dpaxPctPn}}};
+  }
   function frame(now) {
     const elapsed=Math.min(.15,Math.max(0,(now-last)/1000));last=now;
     if(running){
@@ -1670,5 +1677,6 @@
   renderAlarmTable();bindControls();syncInputs();render();
   for(const [mode,id] of [["regul","regulationEditor"],["protect","protectionEditor"]])connectEditor(mode,id);
   connectAuto();
+  window.CenturionShare?.attach({readState:readSharedState});
   requestAnimationFrame(frame);
 })();

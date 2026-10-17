@@ -1,0 +1,15 @@
+{
+  "id": "fr.vcnam.centurion.relay",
+  "title": "Centurion Relay",
+  "author": "Centurion",
+  "description": "Partage éphémère des mesures calculées par un navigateur maître. Premier essai en lecture seule.",
+  "tagline": "Une simulation locale, plusieurs écrans",
+  "version": "0.1.0",
+  "minBoxVersion": "8.3.2",
+  "manifestVersion": 2,
+  "httpPort": 3000,
+  "healthCheckPath": "/healthz",
+  "memoryLimit": 268435456,
+  "addons": {},
+  "website": "https://github.com/vcnamgn/centurionmulti"
+}

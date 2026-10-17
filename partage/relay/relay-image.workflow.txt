@@ -1,0 +1,43 @@
+name: Image du relais Cloudron
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/prepare-multi-session]
+    paths:
+      - Dockerfile
+      - CloudronManifest.json
+      - partage/**
+      - simulateur/centurion-share.js
+      - .github/workflows/relay-image.yml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Charger le code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Préparer Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Installer et tester le relais
+        working-directory: partage/relay
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+      - name: Construire l’image
+        run: |
+          docker build --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.1.0" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA" .
+      - name: Se connecter au registre GitHub
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Publier l’image
+        run: |
+          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.1.0"
+          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA"

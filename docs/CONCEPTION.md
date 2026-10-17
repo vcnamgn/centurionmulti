@@ -1,6 +1,6 @@
 # Centurion — note de conception
 
-Version documentaire du 16 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
+Version documentaire du 17 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
 
 ## 1. Objet et périmètre
 
@@ -74,6 +74,14 @@ Les deux éditeurs sont des iframes de la même page, respectivement `?mode=regu
 L'atelier Conduite Auto est une troisième iframe. Il édite le graphe et reçoit les mesures, mais son exécution se déroule dans l'application, avant chaque pas physique de 0,1 s. Changer d'onglet ne suspend donc pas une séquence. Aucun diagramme de conduite n'est fourni au démarrage.
 
 Au départ, l'horloge est en pause, CC-RÉGUL est désactivé et CC-PROTECT est activé. L'absence de régulation ne coupe pas la physique des équipements ni les manœuvres explicitement automatiques de l'exercice.
+
+### Partage expérimental en lecture seule
+
+Une application de relais optionnelle, dans `partage/relay`, peut servir les fichiers statiques et transmettre les mesures entre navigateurs. Elle n’importe aucun moteur Centurion. La page de création ouvre un maître dans le simulateur habituel et fournit une invitation vers un tableau auxiliaire en lecture seule.
+
+Le script `centurion-share.js` reste inactif dans l’usage individuel. Avec un lien maître valide, il ouvre une connexion et publie une projection courante à 5 Hz réels ; il ne lit pas l’historique complet et n’attend pas le réseau entre les pas. La projection est ignorée pendant une sauvegarde ou un pas CC incomplet. Le remplacement du modèle renouvelle sa génération de publication.
+
+Les auxiliaires du premier essai ne chargent ni moteur ni évaluateur CC. Ils reçoivent le dernier instantané lors de leur entrée et signalent une coupure ou un retard des mesures. Les synoptiques complets, les historiques distants, les interventions et le Worker restent des évolutions à intégrer. Pour cet essai, garder l’onglet maître visible.
 
 ## 3. Modèle de données et conventions
 

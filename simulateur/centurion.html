@@ -478,6 +478,10 @@
 <p>Les deux éditeurs sont des iframes de la même page, respectivement <code>?mode=regul</code> et <code>?mode=protect</code>. La connexion est renouvelée à leur événement <code>load</code>. Les échanges <code>connect</code> / <code>ready</code> permettent aussi le raccordement si l&#39;un des documents était déjà prêt. Chaque SVG contient le script de liaison et annonce son chargement au parent.</p>
 <p>L&#39;atelier Conduite Auto est une troisième iframe. Il édite le graphe et reçoit les mesures, mais son exécution se déroule dans l&#39;application, avant chaque pas physique de 0,1 s. Changer d&#39;onglet ne suspend donc pas une séquence. Aucun diagramme de conduite n&#39;est fourni au démarrage.</p>
 <p>Au départ, l&#39;horloge est en pause, CC-RÉGUL est désactivé et CC-PROTECT est activé. L&#39;absence de régulation ne coupe pas la physique des équipements ni les manœuvres explicitement automatiques de l&#39;exercice.</p>
+<h3 id="detail-partage-experimental-en-lecture-seule">Partage expérimental en lecture seule</h3>
+<p>Une application de relais optionnelle, dans <code>partage/relay</code>, peut servir les fichiers statiques et transmettre les mesures entre navigateurs. Elle n’importe aucun moteur Centurion. La page de création ouvre un maître dans le simulateur habituel et fournit une invitation vers un tableau auxiliaire en lecture seule.</p>
+<p>Le script <code>centurion-share.js</code> reste inactif dans l’usage individuel. Avec un lien maître valide, il ouvre une connexion et publie une projection courante à 5 Hz réels ; il ne lit pas l’historique complet et n’attend pas le réseau entre les pas. La projection est ignorée pendant une sauvegarde ou un pas CC incomplet. Le remplacement du modèle renouvelle sa génération de publication.</p>
+<p>Les auxiliaires du premier essai ne chargent ni moteur ni évaluateur CC. Ils reçoivent le dernier instantané lors de leur entrée et signalent une coupure ou un retard des mesures. Les synoptiques complets, les historiques distants, les interventions et le Worker restent des évolutions à intégrer. Pour cet essai, garder l’onglet maître visible.</p>
 </article>
 <article class="model-detail-page" id="model-detail-3" aria-label="Données et unités"><h2>3. Modèle de données et conventions</h2>
 <p>L&#39;objet racine est <code>{ state, controls }</code>. Les fonctions d&#39;évolution modifient cet objet sur place. <code>state</code> contient les grandeurs réalisées et les mémoires du modèle ; <code>controls</code> contient les demandes, disponibilités et paramètres choisis. Un débit commandé ne doit jamais remplacer directement le débit mesuré dans une vue.</p>
@@ -818,6 +822,7 @@ node scripts/check-docs.mjs</code></pre>
   <script src="centurion-auto.js?v=20261011-auto11"></script>
   <script src="centurion-state.js?v=20261016-separated1"></script>
   <script src="centurion-certificate.js?v=20261016-pt-fine"></script>
-<script src="centurion-app.js?v=20261016-pt-fine"></script>
+<script src="centurion-share.js?v=20261017-share1"></script>
+<script src="centurion-app.js?v=20261017-share1"></script>
 </body>
 </html>
