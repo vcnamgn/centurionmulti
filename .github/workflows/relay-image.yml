@@ -33,12 +33,12 @@ jobs:
           npm test
       - name: Construire l’image
         run: |
-          docker build --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.2.0" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA" .
+          docker build --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.2.1" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA" .
       - name: Se connecter au registre GitHub
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - name: Publier l’image
         run: |
-          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.2.0"
+          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.2.1"
           docker push "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA"
