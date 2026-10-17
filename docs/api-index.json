@@ -2,7 +2,7 @@
   "format": "Centurion-Documentation",
   "version": 1,
   "date": "2026-10-17",
-  "noteHash": "f0345bcdbb637dfc35e56fea62c34c59a8df1f8368fa02e87f2f23069b4a4442",
+  "noteHash": "2074330fb1260bcbbe4941b4c727f261f510c5607b74fd6da68e36a1779e8589",
   "modules": [
     {
       "file": "simulateur/centurion-engine.js",
@@ -4793,7 +4793,7 @@
       "source": "docs/CONCEPTION.md",
       "output": "docs/index.html",
       "title": "Conception et API",
-      "sha256": "f0345bcdbb637dfc35e56fea62c34c59a8df1f8368fa02e87f2f23069b4a4442"
+      "sha256": "2074330fb1260bcbbe4941b4c727f261f510c5607b74fd6da68e36a1779e8589"
     }
   ]
 }

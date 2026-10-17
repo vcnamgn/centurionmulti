@@ -19,7 +19,7 @@ Le service écoute par défaut uniquement sur la boucle locale. Dans le conteneu
 ## Cible Cloudron
 
 - Version vérifiée par l’API du serveur : **Cloudron 8.3.1** (la version annoncée initialement était 8.3.2).
-- Adresse : **s.vcnam.fr** ; **sockets.vcnam.fr** redirige vers cette nouvelle adresse.
+- Adresse : **s.vcnam.fr** ; **sockets.vcnam.fr** reste un alias actif pour récupérer les anciennes autosauvegardes.
 - Une seule application ; aucun addon de base de données, d’authentification ou de stockage.
 - Limite de mémoire initiale : 256 Mio, à mesurer pendant les essais.
 - Image construite en dehors de Cloudron, pour ne pas utiliser un second emplacement avec une application de construction ou de registre.
@@ -53,7 +53,7 @@ Vérifications sur le site déployé : HTTPS, état Cloudron sain, création de 
 
 ## Déploiement vérifié (0.2.0)
 
-Le 18 octobre 2026, l’application a été renommée en **s.vcnam.fr** et mise à jour vers **0.2.0** sur le même emplacement Cloudron. **sockets.vcnam.fr** reste une redirection. Cloudron confirme une application installée, en cours d’exécution et saine. L’image déployée est :
+Le 18 octobre 2026, l’application a été renommée en **s.vcnam.fr** et mise à jour vers **0.2.0** sur le même emplacement Cloudron. **sockets.vcnam.fr** reste un alias actif, confirmé par une réponse HTTP 200 servant le simulateur. Cela permet d’y rouvrir les autosauvegardes de l’ancienne origine et d’exporter un fichier. Cloudron confirme une application installée, en cours d’exécution et saine. L’image déployée est :
 
 ```text
 ghcr.io/vcnamgn/centurionmulti@sha256:086af53ff39edc5d2bc3a37687936a742583876d1cae37587a3d9dbe380bfe1b
@@ -67,7 +67,7 @@ Le relais active le partage dans la page qu’il sert. Une ouverture directe cr�
 
 **Rejoindre** exige un maître connecté et ouvre seulement une invitation en lecture seule. Le numéro n’est pas un mot de passe : aucune sauvegarde personnelle, capacité maître ou commande n’est exposée par cette recherche. Les essais sont limités à dix recherches et cinq créations par minute et par adresse cliente ; le proxy Cloudron est pris en compte. Les numéros sont libérés à la fermeture ou à l’expiration. Les liens auxiliaires contiennent toujours une capacité longue, dans leur fragment. Les anciennes invitations cessent de fonctionner lors du renouvellement.
 
-Les autosauvegardes des CC et de la conduite auto restent celles du navigateur et de l’adresse du site. Elles sont communes aux onglets de cette adresse et ne forment pas une archive par numéro. Un fichier **Fichier → Sauvegarder l’état** conserve physique, historiques, graphes CC et conduite auto indépendamment de toute séance ; les exports propres aux ateliers constituent les fichiers de bibliothèque. Le changement de domaine ne transfère pas automatiquement le stockage local : exporter depuis l’ancien onglet, puis importer sur la nouvelle adresse permet de déplacer les travaux. Le relais ne stocke aucun projet durable.
+Les autosauvegardes des CC et de la conduite auto restent celles du navigateur et de l’adresse du site. Elles sont communes aux onglets de cette adresse et ne forment pas une archive par numéro. Un fichier **Fichier → Sauvegarder l’état** conserve physique, historiques, graphes CC et conduite auto indépendamment de toute séance ; les exports propres aux ateliers constituent les fichiers de bibliothèque. Le changement de domaine ne transfère pas automatiquement le stockage local : rouvrir le simulateur sur l’alias sockets.vcnam.fr, exporter depuis cet ancien domaine, puis importer sur la nouvelle adresse permet de déplacer les travaux. Le relais ne stocke aucun projet durable.
 
 Les tests du relais couvrent aussi l’attribution de numéros distincts, la jonction après connexion du maître, le formulaire natif, le refus d’un rôle maître avec l’invitation auxiliaire, la révocation lors du renouvellement, les refus de saisie et les limites de recherche. Dans le navigateur local, le renouvellement a conservé l’horloge à 00:00:40 et fermé l’ancien auxiliaire.
 
