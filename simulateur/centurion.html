@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="centurion-relay" content="off">
   <title>Centurion · Simulateur REP 1300 pédagogique</title>
-  <link rel="stylesheet" href="centurion.css?v=20261015-faults1">
+  <link rel="stylesheet" href="centurion.css?v=20261018-session1">
 </head>
 <body>
   <header class="topbar">
@@ -25,12 +26,31 @@
       <select id="simSpeed" aria-label="Vitesse"><option value="1">×1</option><option value="5">×5</option><option value="20" selected>×20</option><option value="50">×50</option><option value="200">×200</option></select>
       <button class="button button-primary" id="runButton">Démarrer</button>
       <button class="button button-quiet" id="resetButton">Réinitialiser</button>
-      <details class="state-menu"><summary class="button button-quiet">État JSON</summary><div>
+      <details class="state-menu"><summary class="button button-quiet">Fichier</summary><div>
         <button class="button" id="saveState" type="button">Sauvegarder l’état</button>
         <button class="button" id="loadState" type="button">Charger un état</button>
         <input id="stateFile" type="file" accept=".json,application/json" hidden>
-        <small id="stateStatus" role="status" aria-live="polite">État physique, historiques et ateliers CC. Chargement en pause.</small>
+        <small id="stateStatus" role="status" aria-live="polite">Physique, historiques, ateliers CC et conduite auto. Fichier transportable entre navigateurs. Chargement en pause.</small>
       </div></details>
+      <details class="state-menu reactor-menu" id="reactorMenu" hidden>
+        <summary class="button reactor-button" id="reactorButton" aria-label="Réacteur : connexion en cours">Réacteur ····</summary>
+        <div>
+          <strong id="reactorTitle">Séance de ce réacteur</strong>
+          <small id="reactorStatus" role="status" aria-live="polite">Connexion au partage…</small>
+          <a class="button" id="reactorObserver" target="_blank" rel="noopener" hidden>Ouvrir un écran auxiliaire</a>
+          <button class="button" id="reactorCopy" type="button" disabled>Copier l’invitation</button>
+          <button class="button" id="reactorNew" type="button" disabled>Nouvelle séance</button>
+          <button class="button" id="reactorStop" type="button" disabled>Arrêter le partage</button>
+          <small>Une nouvelle séance change le numéro et ferme les anciennes invitations. La simulation et tes schémas sont conservés.</small>
+          <small>Pour garder ou déplacer ton projet : Fichier → Sauvegarder l’état. Le numéro ne sauvegarde pas tes travaux.</small>
+          <form action="/api/sessions/join" method="post" target="_blank" rel="noopener" class="reactor-join">
+            <label for="reactorJoinCode">Rejoindre un autre réacteur</label>
+            <div><input id="reactorJoinCode" name="code" type="text" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" placeholder="1234" autocomplete="off" required aria-label="Numéro du réacteur à rejoindre"><button class="button" type="submit">Rejoindre</button></div>
+            <small>Ouvre un écran en lecture seule dans un autre onglet. Ton réacteur reste ouvert ici.</small>
+          </form>
+          <small>Le numéro sert à rejoindre une séance, sans mot de passe. Garde cet onglet maître visible pendant le partage.</small>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -479,8 +499,10 @@
 <p>L&#39;atelier Conduite Auto est une troisième iframe. Il édite le graphe et reçoit les mesures, mais son exécution se déroule dans l&#39;application, avant chaque pas physique de 0,1 s. Changer d&#39;onglet ne suspend donc pas une séquence. Aucun diagramme de conduite n&#39;est fourni au démarrage.</p>
 <p>Au départ, l&#39;horloge est en pause, CC-RÉGUL est désactivé et CC-PROTECT est activé. L&#39;absence de régulation ne coupe pas la physique des équipements ni les manœuvres explicitement automatiques de l&#39;exercice.</p>
 <h3 id="detail-partage-experimental-en-lecture-seule">Partage expérimental en lecture seule</h3>
-<p>Une application de relais optionnelle, dans <code>partage/relay</code>, peut servir les fichiers statiques et transmettre les mesures entre navigateurs. Elle n’importe aucun moteur Centurion. La page de création ouvre un maître dans le simulateur habituel et fournit une invitation vers un tableau auxiliaire en lecture seule.</p>
-<p>Le script <code>centurion-share.js</code> reste inactif dans l’usage individuel. Avec un lien maître valide, il ouvre une connexion et publie une projection courante à 5 Hz réels ; il ne lit pas l’historique complet et n’attend pas le réseau entre les pas. La projection est ignorée pendant une sauvegarde ou un pas CC incomplet. Le remplacement du modèle renouvelle sa génération de publication.</p>
+<p>Une application de relais optionnelle, dans <code>partage/relay</code>, sert les fichiers statiques et transmet les mesures entre navigateurs. Elle n’importe aucun moteur Centurion. Son accueil redirige directement vers <code>/simulateur/centurion.html</code>. Chaque ouverture de cette page sur le relais crée automatiquement une séance maître et affiche un numéro de quatre chiffres à droite du menu <strong>Fichier</strong>.</p>
+<p>Le serveur active la balise <code>centurion-relay</code> de la page qu’il sert. Sur un site statique ou depuis un fichier, sa valeur reste <code>off</code> et <code>centurion-share.js</code> n’ouvre aucune connexion. Sur le relais, il crée la séance puis publie une projection courante à 5 Hz réels ; il ne lit pas l’historique complet et n’attend pas le réseau entre les pas. La projection est ignorée pendant une sauvegarde ou un pas CC incomplet. Le remplacement du modèle renouvelle sa génération de publication.</p>
+<p>Le menu du réacteur copie l’invitation, ouvre un auxiliaire, renouvelle ou arrête le partage. <strong>Nouvelle séance</strong> renouvelle les capacités et le numéro, termine les anciennes invitations et conserve le modèle, les CC, leurs mémoires et la conduite auto dans la page maître. <strong>Rejoindre</strong> soumet les quatre chiffres et ouvre un auxiliaire dans un autre onglet ; le maître recherché doit être connecté. La saisie est bornée et les recherches sont limitées. Le numéro est un moyen de rejoindre une séance en lecture seule, pas un mot de passe ni une identité permanente. La capacité maître longue et distincte reste nécessaire pour publier ou fermer la séance.</p>
+<p>Les schémas CC, la conduite auto et les réglages appartiennent au projet du maître, indépendamment du numéro de partage. Les autosauvegardes existantes restent dans le navigateur et sont communes aux onglets de la même adresse ; elles ne sont pas des archives par réacteur. Le relais ne conserve ni projet ni état physique. <strong>Fichier → Sauvegarder l’état</strong> produit un fichier portable avec la physique, les historiques, les CC et la conduite auto ; les exports propres aux ateliers restent utiles pour leurs bibliothèques de schémas. Le changement d’adresse de <code>sockets.vcnam.fr</code> à <code>s.vcnam.fr</code> ne transfère pas automatiquement le stockage du navigateur : exporter puis importer un fichier est nécessaire pour déplacer les travaux d’une origine à l’autre. Une bibliothèque durable de projets pourrait ensuite utiliser des identifiants permanents et une sauvegarde serveur ; elle ne devra jamais utiliser ces quatre chiffres temporaires comme clé d’archive.</p>
 <p>Les auxiliaires du premier essai ne chargent ni moteur ni évaluateur CC. Ils reçoivent le dernier instantané lors de leur entrée et signalent une coupure ou un retard des mesures. Les synoptiques complets, les historiques distants, les interventions et le Worker restent des évolutions à intégrer. Pour cet essai, garder l’onglet maître visible.</p>
 </article>
 <article class="model-detail-page" id="model-detail-3" aria-label="Données et unités"><h2>3. Modèle de données et conventions</h2>
@@ -729,7 +751,7 @@ total          = (L3 − L0) × 60 / dt</code></pre>
 <p>Les paramètres physiques sont portés par <code>controls</code>, initialisés à partir des constantes <code>C</code> et des tables. Les saisies et la molette doivent appliquer les valeurs immédiatement, même en pause. Les poids intégraux et les paramètres de forme sont distincts. Réinitialiser rétablit les paramètres physiques par défaut ; les graphes des ateliers ont leur propre persistance.</p>
 <p>Le navigateur conserve les modèles CC dans <code>localStorage</code>, sous <code>centurion-regul-autosave-v1</code> et la clé équivalente de protection. Les modèles JSON exportés utilisent le format <code>SimuREP-Regulation</code>, version 1. La sauvegarde porte le graphe et la vue de l&#39;atelier ; elle ne sérialise pas tout l&#39;état physique ni l&#39;historique d&#39;une partie.</p>
 <h3 id="detail-etat-complet-au-format-json">État complet au format JSON</h3>
-<p>Le menu <strong>État JSON</strong> de la barre supérieure permet de <strong>Sauvegarder l’état</strong> ou <strong>Charger un état</strong>. Ce fichier est distinct de l&#39;export d&#39;un graphe CC : son format est <code>Centurion-State</code>, version 1, avec une révision du moteur. <code>centurion-state.js</code> vérifie format, révision, types, tailles des tableaux, nombres finis, chronologie et cohérence de la brèche avant tout remplacement.</p>
+<p>Le menu <strong>Fichier</strong> de la barre supérieure permet de <strong>Sauvegarder l’état</strong> ou <strong>Charger un état</strong>. Ce fichier est distinct de l&#39;export d&#39;un graphe CC : son format est <code>Centurion-State</code>, version 1, avec une révision du moteur. <code>centurion-state.js</code> vérifie format, révision, types, tailles des tableaux, nombres finis, chronologie et cohérence de la brèche avant tout remplacement.</p>
 <p>Les instantanés du certificat contiennent aussi les conditions empêchant une connexion RRA. Cette liste de diagnostics a une longueur variable (zéro à cinq chaînes) : elle ne doit pas être comparée au nombre de conditions présentes au démarrage. Les tailles des tableaux physiques restent imposées, notamment les quatre boucles/GV et les 32 mailles axiales. Sauvegarder et charger conservent les diagnostics de chaque instantané.</p>
 <p>La sauvegarde conserve <code>state</code> et <code>controls</code> intégralement : précurseurs, iode/xénon sur 32 mailles, inventaires liquide/vapeur, énergie, paquets en transit, réserves RIS/puisard, groupes, vannes, brèche, demandes et délais de protection, programme de charge, événements et historique. Elle contient aussi les deux graphes CC, leurs mémoires de filtres, dérivés et intégrateurs, leur activation, les fenêtres des graphiques, les seuils d&#39;alarme et les instantanés du certificat. Les fichiers SVG et JavaScript restent dans l&#39;application ; ils ne sont pas embarqués dans le JSON.</p>
 <p>L&#39;application fige le temps et attend la fin du pas CC en cours pour obtenir un état cohérent. Le dialogue <code>centurion-editor-save</code> / <code>validate</code> / <code>restore</code> utilise le même raccordement direct ou par messages que les pas physiques. Les deux graphes sont validés avant restauration ; une ancienne réponse de calcul ne peut pas commander la partie rechargée. Un fichier incompatible conserve la partie courante. Un fichier valide est <strong>toujours chargé en pause</strong>, même si les régulations et protections enregistrées étaient actives ; Démarrer poursuit la simulation. Les graphes restaurés remplacent les graphes des ateliers et leur autosauvegarde. Un initiateur dont le compte à rebours réel est en cours doit être lancé ou annulé avant l&#39;enregistrement.</p>
@@ -822,7 +844,7 @@ node scripts/check-docs.mjs</code></pre>
   <script src="centurion-auto.js?v=20261011-auto11"></script>
   <script src="centurion-state.js?v=20261016-separated1"></script>
   <script src="centurion-certificate.js?v=20261016-pt-fine"></script>
-<script src="centurion-share.js?v=20261017-share1"></script>
+<script src="centurion-share.js?v=20261018-session1"></script>
 <script src="centurion-app.js?v=20261017-share1"></script>
 </body>
 </html>

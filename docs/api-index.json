@@ -2,7 +2,7 @@
   "format": "Centurion-Documentation",
   "version": 1,
   "date": "2026-10-17",
-  "noteHash": "7d625ebf20a03e980ba4a3f4be106702ac17f7b4a96bd6abe0247804d2d3bec5",
+  "noteHash": "f0345bcdbb637dfc35e56fea62c34c59a8df1f8368fa02e87f2f23069b4a4442",
   "modules": [
     {
       "file": "simulateur/centurion-engine.js",
@@ -871,8 +871,8 @@
     {
       "file": "simulateur/centurion-share.js",
       "title": "Publication du maître",
-      "description": "Connexion optionnelle et diffusion des instantanés ; aucun réseau en mode individuel.",
-      "sha256": "fd6366ae506599ac6ce23a6f3349bf4733bb9dc4a7dc1d93aff6a5713b6c1b57",
+      "description": "Numéro de séance, menu du réacteur et diffusion des instantanés ; inactif hors relais.",
+      "sha256": "b020baedfee9b487a81e85b0c9e12be1d3a60aa73e9ab50c4ee23adec4bbd3e7",
       "functions": [
         {
           "name": "attach",
@@ -883,20 +883,68 @@
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L7"
         },
         {
-          "name": "cleanup",
-          "line": 24,
-          "signature": "cleanup()",
+          "name": "status",
+          "line": 17,
+          "signature": "status(text,error=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L24"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L17"
+        },
+        {
+          "name": "controls",
+          "line": 18,
+          "signature": "controls()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L18"
+        },
+        {
+          "name": "observerUrl",
+          "line": 22,
+          "signature": "observerUrl(current)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L22"
+        },
+        {
+          "name": "loadSdk",
+          "line": 26,
+          "signature": "loadSdk()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L26"
         },
         {
           "name": "publish",
-          "line": 27,
+          "line": 37,
           "signature": "publish()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L27"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L37"
+        },
+        {
+          "name": "disconnect",
+          "line": 44,
+          "signature": "disconnect(end)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L44"
+        },
+        {
+          "name": "connect",
+          "line": 53,
+          "signature": "connect(current)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L53"
+        },
+        {
+          "name": "createSession",
+          "line": 72,
+          "signature": "createSession()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L72"
         }
       ]
     },
@@ -4715,7 +4763,7 @@
       "source": "simulateur/README.md",
       "output": "simulateur/README.html",
       "title": "Mode d’emploi",
-      "sha256": "9b2be4337155fbdbe93139095b0de16c9c9b7b10f6f90c1313d9ac7f2754700a"
+      "sha256": "4b65394fe249ef20fa72055e3dcfaa802e7c5478249a20bd95635227340a7188"
     },
     {
       "source": "simulateur/METHODE-CENTURION.md",
@@ -4745,7 +4793,7 @@
       "source": "docs/CONCEPTION.md",
       "output": "docs/index.html",
       "title": "Conception et API",
-      "sha256": "7d625ebf20a03e980ba4a3f4be106702ac17f7b4a96bd6abe0247804d2d3bec5"
+      "sha256": "f0345bcdbb637dfc35e56fea62c34c59a8df1f8368fa02e87f2f23069b4a4442"
     }
   ]
 }

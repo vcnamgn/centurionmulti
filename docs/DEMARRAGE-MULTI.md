@@ -10,7 +10,7 @@
 - `simulateur/centurion-commands.js` : premier point d’entrée local, sans DOM ni réseau, qui réutilise le catalogue et l’application des commandes de `centurion-auto.js`.
 - Des vérifications ciblées du nouveau point d’entrée : priorités, validation sans effet, application en pause, changement de modèle et groupes refusés avant application.
 
-Le nouveau module n’est pas encore chargé par la page et les gestionnaires du pupitre ne lui sont pas encore raccordés. Un premier relais et un tableau auxiliaire en lecture seule sont maintenant disponibles pour essai, avec connexion activée uniquement par un lien maître. Le mode individuel reste sans connexion. Voir `partage/relay/README.md`. Le point d’entrée local ne constitue pas une barrière d’authentification réseau : permissions, fraîcheur, file, déduplication et reçus seront ajoutés à la session autoritaire.
+Le nouveau module n’est pas encore chargé par la page et les gestionnaires du pupitre ne lui sont pas encore raccordés. Un premier relais et un tableau auxiliaire en lecture seule sont maintenant disponibles pour essai, avec création automatique d’une séance sur le relais et jonction par numéro de quatre chiffres. Le mode fichier ou site statique reste sans connexion. Voir `partage/relay/README.md`. Le point d’entrée local ne constitue pas une barrière d’authentification réseau : permissions, fraîcheur, file, déduplication et reçus seront ajoutés à la session autoritaire.
 
 ## Interface locale préparée
 
@@ -55,4 +55,4 @@ node --test simulateur/tests/centurion-cc.test.js simulateur/tests/centurion-aut
 node scripts/check-docs.mjs
 ```
 
-Les deux premières notes sont des propositions autonomes conservées en Markdown sur la branche de préparation. Leur ajout aux pages HTML publiques est différé jusqu’à l’intégration de la documentation du partage. Le test local est distinct de l’installation Cloudron. Le relais 0.1.0 est installé sur https://sockets.vcnam.fr, sur Cloudron 8.3.1 (version vérifiée par l’API), avec un seul emplacement d’application. Le suivi maître–auxiliaire a été vérifié en HTTPS dans deux onglets ; les essais entre ordinateurs restent à faire. Voir les détails d’installation dans `partage/relay/README.md`.
+Les deux premières notes sont des propositions autonomes conservées en Markdown sur la branche de préparation. Leur ajout aux pages HTML publiques est différé jusqu’à l’intégration de la documentation du partage. Le test local est distinct de l’installation Cloudron. Le relais est installé sur https://s.vcnam.fr/simulateur/centurion.html (ancienne adresse sockets.vcnam.fr redirigée), sur Cloudron 8.3.1 (version vérifiée par l’API), avec un seul emplacement d’application. Le suivi maître–auxiliaire a été vérifié en HTTPS dans deux onglets ; les essais entre ordinateurs restent à faire. Voir les détails d’installation dans `partage/relay/README.md`.

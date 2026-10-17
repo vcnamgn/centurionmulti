@@ -4,7 +4,7 @@
   "author": "Centurion",
   "description": "Partage éphémère des mesures calculées par un navigateur maître. Premier essai en lecture seule.",
   "tagline": "Une simulation locale, plusieurs écrans",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minBoxVersion": "8.3.1",
   "manifestVersion": 2,
   "httpPort": 3000,

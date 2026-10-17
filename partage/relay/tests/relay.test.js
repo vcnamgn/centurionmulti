@@ -101,3 +101,55 @@ test('le client de partage ne charge aucun réseau ni DOM en mode individuel',()
   vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../../../simulateur/centurion-share.js'),'utf8'),context);
   assert.equal(context.CenturionShare.attach({readState:()=>{throw Error('Lecture non demandée');}}),null);
 });
+
+test('les numéros sont distincts, à quatre chiffres et ouvrent seulement le rôle auxiliaire',async t=>{
+  const f=await fixture(t),a=await(await f.create()).json(),b=await(await f.create()).json();
+  assert.match(a.code,/^[1-9]\d{3}$/);assert.notEqual(a.code,b.code);
+  const join=code=>fetch(f.origin+'/api/sessions/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+  assert.equal((await join(a.code)).status,404,'pas de maître connecté');
+  const master=await f.open('master',a);
+  const response=await join(a.code);assert.equal(response.status,200);const invitation=await response.json();
+  assert.equal(invitation.sessionId,a.sessionId);assert.equal(invitation.code,a.code);assert.equal(invitation.masterToken,undefined);
+  await assert.rejects(f.open('master',a,invitation.inviteToken),/access_refused/);
+  const viewer=await f.open('viewer',invitation);
+  const received=once(viewer,'state:frame');await send(master,'state:frame',frame());assert.equal((await received).seq,1);
+});
+
+test('un formulaire de numéro ouvre l’auxiliaire sans jeton dans le chemin ou la requête',async t=>{
+  const f=await fixture(t),session=await(await f.create()).json();await f.open('master',session);
+  const page=await fetch(f.origin+'/simulateur/centurion.html');assert.equal(page.headers.get('referrer-policy'),'same-origin','préserve Origin dans les formulaires POST sans référent externe');
+  const response=await fetch(f.origin+'/api/sessions/join',{method:'POST',redirect:'manual',headers:{Origin:f.origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code:session.code})});
+  assert.equal(response.status,303);const link=new URL(response.headers.get('location'),f.origin);
+  assert.equal(link.pathname,'/observer');assert.equal(link.search,'');assert.equal(new URLSearchParams(link.hash.slice(1)).get('code'),session.code);
+  assert.equal(new URLSearchParams(link.hash.slice(1)).get('inviteToken'),session.inviteToken);assert.doesNotMatch(link.href,/masterToken/);
+  const bad=await fetch(f.origin+'/api/sessions/join',{method:'POST',redirect:'manual',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'code=oops'});
+  assert.equal(bad.status,303);assert.equal(bad.headers.get('location'),'/observer?joinError=invalid_code');
+});
+
+test('renouveler une séance invalide son numéro et son invitation, sans fermer le nouveau maître',async t=>{
+  const f=await fixture(t),old=await(await f.create()).json(),master=await f.open('master',old),viewer=await f.open('viewer',old);
+  const current=await(await f.create()).json();assert.notEqual(old.code,current.code);const next=await f.open('master',current);
+  const ended=once(viewer,'session:status');await new Promise(resolve=>master.emit('session:end',resolve));assert.equal((await ended).closed,true);
+  const join=await fetch(f.origin+'/api/sessions/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:old.code})});assert.equal(join.status,404);
+  await assert.rejects(f.open('viewer',old),/access_refused/);assert.equal((await send(next,'state:frame',frame())).ok,true);
+});
+
+test('recherche par numéro : origine, contenu, rythme et maître absent contrôlés',async t=>{
+  const f=await fixture(t);const post=(body,headers={})=>fetch(f.origin+'/api/sessions/join',{method:'POST',headers:{'Content-Type':'application/json',...headers},body});
+  assert.equal((await post('{"code":"1234"}',{Origin:'https://unrelated.example'})).status,403);
+  assert.equal((await post('broken')).status,400);
+  for(const code of [1234,'12','12345','1e03','<script>'])assert.equal((await post(JSON.stringify({code}))).status,400);
+  assert.equal((await post('x'.repeat(1100))).status,413);
+  for(let n=0;n<3;n++)assert.equal((await post('{"code":"1234"}')).status,404);
+  assert.equal((await post('{"code":"1234"}')).status,429);
+});
+
+test('seul le serveur du relais active l’attribution automatique de numéro',async t=>{
+  const f=await fixture(t);const response=await fetch(f.origin+'/',{redirect:'manual'});
+  assert.equal(response.status,302);assert.equal(response.headers.get('location'),'/simulateur/centurion.html');
+  const html=await(await fetch(f.origin+'/simulateur/centurion.html')).text();assert.match(html,/name="centurion-relay" content="on"/);assert.match(html,/>Fichier<\/summary>/);
+  const source=fs.readFileSync(path.resolve(__dirname,'../../../simulateur/centurion.html'),'utf8');assert.match(source,/name="centurion-relay" content="off"/);
+  let read=false;const context=vm.createContext({URLSearchParams,document:{querySelector:()=>({content:'off'})}});
+  vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../../../simulateur/centurion-share.js'),'utf8'),context);
+  assert.equal(context.CenturionShare.attach({readState:()=>{read=true;}}),null);assert.equal(read,false);
+});

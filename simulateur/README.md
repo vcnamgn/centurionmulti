@@ -6,7 +6,9 @@ Ouvrir [`centurion.html`](centurion.html) dans Chrome, Edge ou Firefox. Le charg
 
 ## Parcours
 
-Le menu **État JSON**, en haut à droite, sauvegarde une partie complète : physique, paramètres, historiques, commandes, graphes CC et mémoires de leurs blocs, plus les instantanés du certificat. **Charger un état** restaure le fichier en pause ; **Démarrer** permet de poursuivre. Les fichiers restent sur votre ordinateur et peuvent être joints pour déboguer un cas. Ils sont distincts des fichiers de graphes exportés depuis CC-RÉGUL ou CC-PROTECT. Les ateliers chargés remplacent leur autosauvegarde. Attendre ou annuler un compte à rebours d'initiateur avant de sauvegarder.
+Sur https://s.vcnam.fr/simulateur/centurion.html, un numéro de séance à quatre chiffres apparaît automatiquement à droite du menu **Fichier**. Son menu propose une nouvelle séance (simulation conservée), l’invitation d’auxiliaires, l’arrêt du partage et la saisie du numéro d’un autre maître pour le rejoindre en lecture seule dans un nouvel onglet. Ce numéro est temporaire ; il ne sauvegarde pas un projet. Les autosauvegardes des ateliers sont locales au navigateur et à l’adresse du site.
+
+Le menu **Fichier**, en haut à droite, sauvegarde une partie complète : physique, paramètres, historiques, commandes, graphes CC et mémoires de leurs blocs, plus les instantanés du certificat. **Charger un état** restaure le fichier en pause ; **Démarrer** permet de poursuivre. Les fichiers restent sur votre ordinateur et peuvent être joints pour déboguer un cas. Ils sont distincts des fichiers de graphes exportés depuis CC-RÉGUL ou CC-PROTECT. Les ateliers chargés remplacent leur autosauvegarde. Attendre ou annuler un compte à rebours d'initiateur avant de sauvegarder.
 
 Arrêter manuellement les pompes RIS ne ferme pas une brèche. La section reste affichée dans le panneau RIS ; le débit de fuite dépend de la différence de pression et peut devenir nul près de la pression atmosphérique.
 
