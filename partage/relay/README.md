@@ -26,13 +26,13 @@ Le service écoute par défaut uniquement sur la boucle locale. Dans le conteneu
 
 Le manifeste conserve les champs disponibles sur Cloudron 8.3.1. Il n’utilise pas les nouveaux champs de publication du catalogue. La base Node.js Cloudron est épinglée par version datée et digest, suivant le guide officiel courant. L’installation sur le serveur cible a confirmé le démarrage du conteneur et un contrôle de santé `healthy`.
 
-Le modèle de workflow GitHub **Image du relais Cloudron** est fourni dans [relay-image.workflow.txt](relay-image.workflow.txt). Le workflow actif se trouve dans `.github/workflows/relay-image.yml`, sur la branche de préparation. Il se déclenche sur les modifications du relais dans cette branche, ou manuellement. Il exécute les tests, construit le Dockerfile racine puis publie `ghcr.io/vcnamgn/centurionmulti:relay-0.4.0` ainsi qu’une étiquette contenant le SHA Git. La visibilité du paquet GHCR doit être publique pour une récupération anonyme ; si GitHub l’a créé privé, la modifier dans les paramètres du paquet avant installation. Ne jamais inclure de token GitHub dans le manifeste, le Dockerfile ou une URL de téléchargement.
+Le modèle de workflow GitHub **Image du relais Cloudron** est fourni dans [relay-image.workflow.txt](relay-image.workflow.txt). Le workflow actif se trouve dans `.github/workflows/relay-image.yml`, sur la branche de préparation. Il se déclenche sur les modifications du relais dans cette branche, ou manuellement. Il exécute les tests, construit le Dockerfile racine puis publie `ghcr.io/vcnamgn/centurionmulti:relay-0.4.1` ainsi qu’une étiquette contenant le SHA Git. La visibilité du paquet GHCR doit être publique pour une récupération anonyme ; si GitHub l’a créé privé, la modifier dans les paramètres du paquet avant installation. Ne jamais inclure de token GitHub dans le manifeste, le Dockerfile ou une URL de téléchargement.
 
 Depuis un checkout de cette branche, avec le client Cloudron installé :
 
 ```text
 cloudron login my.vcnam.fr
-cloudron install --image ghcr.io/vcnamgn/centurionmulti:relay-0.4.0 --location s.vcnam.fr
+cloudron install --image ghcr.io/vcnamgn/centurionmulti:relay-0.4.1 --location s.vcnam.fr
 ```
 
 Le tableau de bord confirmé est `https://my.vcnam.fr`. L’image est disponible publiquement ; les commandes ci-dessus servent à une nouvelle installation, pas à répéter celle déjà effectuée. Le client lit le `CloudronManifest.json` du répertoire courant. Aucun service ne doit remplacer l’application déjà présente sur le serveur.
@@ -100,3 +100,7 @@ Pendant le déplacement d’une boîte CC, un aperçu met à jour seulement les 
 - [Cloudron — manifeste](https://docs.cloudron.io/packaging/manifest/).
 - [Cloudron — images de base et système de fichiers](https://docs.cloudron.io/packaging/cheat-sheet/).
 - [GitHub — registre de conteneurs et visibilité des paquets](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
+## Correctif 0.4.1
+
+Le message temporaire pendant le glissement CC est supprimé pour conserver la hauteur de la zone du schéma. L’aperçu léger et le tracé final restent identiques.
