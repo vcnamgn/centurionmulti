@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const path=require('node:path'),fs=require('node:fs'),vm=require('node:vm');
 const {io}=require('socket.io-client');
-const {createRelay}=require('../server');
+const {createRelay,PROTOCOL}=require('../server');
 const E=require('../../../simulateur/centurion-engine');
 
 async function fixture(t,options={}){
@@ -12,7 +12,7 @@ async function fixture(t,options={}){
   const create=()=>fetch(origin+'/api/sessions',{method:'POST'});
   const open=async(role,session,proof,authorityId='test-master-authority')=>{
     const socket=io(origin,{transports:['websocket'],forceNew:true,reconnection:false,
-      auth:{protocol:1,role,authorityId,sessionId:session.sessionId,token:proof||(role==='master'?session.masterToken:session.inviteToken)}});
+      auth:{protocol:PROTOCOL,role,authorityId,sessionId:session.sessionId,token:proof||(role==='master'?session.masterToken:session.inviteToken)}});
     clients.push(socket);
     await new Promise((resolve,reject)=>{socket.once('session:status',resolve);socket.once('connect_error',reject);});return socket;
   };
@@ -21,13 +21,17 @@ async function fixture(t,options={}){
 function once(socket,name){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Événement absent : '+name)),3000);socket.once(name,value=>{clearTimeout(timer);resolve(value);});});}
 const send=(socket,name,value)=>socket.timeout(3000).emitWithAck(name,value);
 function frame(model=E.make(),seq=1,epoch='generation-one'){
-  return {protocol:1,epoch,seq,time:model.state.time,simulation:{running:true,speed:20,visible:true},instruments:E.instrumentSnapshot(model),core:{dnbr:model.state.dnbr,dpax:model.state.dpaxPctPn}};
+  return {protocol:PROTOCOL,epoch,seq,time:model.state.time,simulation:{running:true,speed:20,visible:true},instruments:E.instrumentSnapshot(model),core:{dnbr:model.state.dnbr,dpax:model.state.dpaxPctPn}};
 }
 
 test('une app sert le simulateur, le tableau auxiliaire et le contrôle de santé sans exposer le dépôt',async t=>{
   const f=await fixture(t);
   for(const url of ['/','/observer','/healthz','/simulateur/centurion.html','/socket.io/socket.io.js'])assert.equal((await fetch(f.origin+url)).status,200,url);
   for(const url of ['/.git/config','/assets/%2e%2e%2fserver.js','/assets/../../server.js'])assert.equal((await fetch(f.origin+url)).status,404,url);
+  const masterHtml=await(await fetch(f.origin+'/simulateur/centurion.html')).text();
+  const auxHtml=await(await fetch(f.origin+'/simulateur/centurion.html?shareViewer=test-session')).text();
+  assert.equal((masterHtml.match(/&amp;shared=0/g)||[]).length,3);
+  assert.equal((auxHtml.match(/&amp;shared=1/g)||[]).length,3,'le mode auxiliaire précède tout chargement d’iframe');
   const content=await(await fetch(f.origin+'/observer')).text();
   assert.doesNotMatch(content,/centurion-(engine|app|auto|cc-regul)\./);
   assert.equal((await fetch(f.origin+'/api/sessions',{method:'POST',headers:{Origin:'https://unrelated.example'}})).status,403);
@@ -54,7 +58,7 @@ test('authentification : invitation sans pouvoir maître, jeton incorrect et dou
 test('séances isolées et arrivée tardive par dernier instantané confirmé',async t=>{
   const f=await fixture(t),a=await(await f.create()).json(),b=await(await f.create()).json();
   const master=await f.open('master',a);await send(master,'state:frame',frame());
-  const late=io(f.origin,{transports:['websocket'],forceNew:true,auth:{protocol:1,role:'viewer',sessionId:a.sessionId,token:a.inviteToken}});f.clients.push(late);
+  const late=io(f.origin,{transports:['websocket'],forceNew:true,auth:{protocol:PROTOCOL,role:'viewer',sessionId:a.sessionId,token:a.inviteToken}});f.clients.push(late);
   const saved=await once(late,'state:frame');assert.equal(saved.seq,1);
   await assert.rejects(f.open('viewer',b,a.inviteToken),/access_refused/);
 });
@@ -66,7 +70,7 @@ test('numérotation, génération et volume des mesures bornés',async t=>{
   assert.equal((await send(master,'state:frame',frame(E.make(),1,'generation-two'))).ok,true);
   const invalid=frame(E.make(),2,'generation-two');invalid.instruments.gvAll=[];
   assert.deepEqual(await send(master,'state:frame',invalid),{ok:false,error:'invalid_frame'});
-  const large=frame(E.make(),2,'generation-two');large.extra='x'.repeat(55000);
+  const large=frame(E.make(),2,'generation-two');large.extra='x'.repeat(1024*1024);
   assert.deepEqual(await send(master,'state:frame',large),{ok:false,error:'frame_too_large'});
 });
 
@@ -120,7 +124,7 @@ test('un formulaire de numéro ouvre l’auxiliaire sans jeton dans le chemin ou
   const page=await fetch(f.origin+'/simulateur/centurion.html');assert.equal(page.headers.get('referrer-policy'),'same-origin','préserve Origin dans les formulaires POST sans référent externe');
   const response=await fetch(f.origin+'/api/sessions/join',{method:'POST',redirect:'manual',headers:{Origin:f.origin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code:session.code})});
   assert.equal(response.status,303);const link=new URL(response.headers.get('location'),f.origin);
-  assert.equal(link.pathname,'/observer');assert.equal(link.search,'');assert.equal(new URLSearchParams(link.hash.slice(1)).get('code'),session.code);
+  assert.equal(link.pathname,'/simulateur/centurion.html');assert.equal(link.searchParams.get('shareViewer'),session.sessionId);assert.equal(link.searchParams.has('inviteToken'),false);assert.equal(new URLSearchParams(link.hash.slice(1)).get('code'),session.code);
   assert.equal(new URLSearchParams(link.hash.slice(1)).get('inviteToken'),session.inviteToken);assert.doesNotMatch(link.href,/masterToken/);
   const bad=await fetch(f.origin+'/api/sessions/join',{method:'POST',redirect:'manual',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'code=oops'});
   assert.equal(bad.status,303);assert.equal(bad.headers.get('location'),'/observer?joinError=invalid_code');
@@ -152,4 +156,29 @@ test('seul le serveur du relais active l’attribution automatique de numéro',a
   let read=false;const context=vm.createContext({URLSearchParams,document:{querySelector:()=>({content:'off'})}});
   vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../../../simulateur/centurion-share.js'),'utf8'),context);
   assert.equal(context.CenturionShare.attach({readState:()=>{read=true;}}),null);assert.equal(read,false);
+});
+
+test('les gestes auxiliaires sont exécutés une seule fois par le maître et restent bornés à leur séance',async t=>{
+  const f=await fixture(t),session=await(await f.create()).json(),master=await f.open('master',session),viewer=await f.open('viewer',session);
+  await send(master,'state:frame',frame());let calls=0,actor='';
+  master.on('command:apply',(packet,ack)=>{calls++;actor=packet.actor;setTimeout(()=>ack({ok:true,value:packet.action.value}),5);});
+  const request={id:'command-unique-one',epoch:'generation-one',action:{kind:'ui',target:'heaterInput',event:'input',value:'450'}};
+  const [first,second]=await Promise.all([send(viewer,'command:request',request),send(viewer,'command:request',request)]);
+  assert.deepEqual(first,{ok:true,value:'450'});assert.deepEqual(second,first);assert.equal(calls,1);assert.equal(actor,viewer.id);
+  assert.equal((await send(viewer,'command:request',{...request,action:{...request.action,value:'500'}})).error,'duplicate_conflict');
+  assert.equal((await send(viewer,'command:request',{...request,id:'command-stale-one',epoch:'generation-old'})).error,'stale_epoch');
+  assert.equal((await send(viewer,'command:request',{...request,id:'command-unknown-one',action:{kind:'write-model-path',path:'state.powerPct'}})).error,'invalid_command');
+  const other=await(await f.create()).json(),otherViewer=await f.open('viewer',other);
+  assert.equal((await send(otherViewer,'command:request',request)).error,'master_offline');assert.equal(calls,1);
+});
+
+test('les schémas partagés proviennent seulement du maître et parviennent aux auxiliaires tardifs',async t=>{
+  const f=await fixture(t),session=await(await f.create()).json(),master=await f.open('master',session),viewer=await f.open('viewer',session);
+  const document={protocol:PROTOCOL,epoch:'generation-one',revision:1,editors:{regul:{revision:1,graph:{nodes:[],links:[]}}}};
+  viewer.on('session:document',(_,ack)=>ack({ok:true}));
+  assert.equal((await send(viewer,'session:document',document)).error,'read_only');
+  const received=once(viewer,'session:document');assert.equal((await send(master,'session:document',document)).ok,true);assert.equal((await received).revision,1);
+  assert.equal((await new Promise(resolve=>viewer.emit('session:document-request',resolve))).revision,1);
+  const late=io(f.origin,{transports:['websocket'],forceNew:true,reconnection:false,auth:{protocol:PROTOCOL,role:'viewer',sessionId:session.sessionId,token:session.inviteToken}});f.clients.push(late);
+  const latest=await once(late,'session:document');assert.equal(latest.revision,1);
 });

@@ -11,6 +11,25 @@ function clearRoute(route,nodes,from,to){
   });
 }
 const request=(from,to,start,end,startDirection='right',endDirection='left')=>({from,to,start,end,startDirection,endDirection});
+
+test('les signaux différents prennent des voies distinctes, un même signal peut partager une voie',()=>{
+  const scene=O.createRouter({padding:4,stub:12}).prepare([]);
+  const a={...request('a','b',{x:0,y:0},{x:300,y:0}),net:'pression'};
+  const b={...request('c','d',{x:50,y:0},{x:250,y:0}),net:'niveau'};
+  const separate=scene.plan([a,b]);assert.equal(separate[1].blocked,false);
+  assert.equal(O.wirePenalty(separate[1].points[1],separate[1].points[2]||separate[1].points[1],[{a:a.start,b:a.end}]),0);
+  assert.ok(separate[1].points.some(p=>p.y!==0),'un détour existe sans superposer les lignes');
+  const shared=scene.plan([a,{...b,net:a.net}]);assert.deepEqual(shared[1].points,[b.start,b.end]);
+  assert.equal(scene.plan([a,{...b,net:a.net}]),shared,'plan réutilisé sans recalcul à chaque affichage');
+});
+
+test('un croisement de signaux distincts porte un pont, sans point de jonction',()=>{
+  const routes=[{points:[{x:0,y:100},{x:200,y:100}],blocked:false},{points:[{x:100,y:0},{x:100,y:200}],blocked:false}];
+  const bridges=O.crossingBridges(routes,['pression','niveau']);assert.equal(bridges[0].length,1);assert.equal(bridges[1].length,0);
+  assert.match(O.bridgedPath(routes[0].points,bridges[0]),/Q100 90 105 100/);
+  assert.deepEqual(O.crossingBridges(routes,['pression','pression']),[[],[]]);
+  const avoid=O.crossingBridges(routes,['pression','niveau'],{rects:[{left:95,right:105,top:90,bottom:99}]});assert.equal(avoid[0][0].sign,1,'pont de l’autre côté si une boîte occupe le dessus');
+});
 function ccModel({multiple=false}={}){
   const g=referenceModel('regul'),copy=(type,id,x,y)=>({...structuredClone(g.nodes.find(n=>n.type===type)),id,x,y});
   const source=copy('constant','N1',0,100);source.params={value:42,unit:'bar'};

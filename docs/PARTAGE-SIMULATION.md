@@ -1,6 +1,6 @@
 # Centurion — partage d’une simulation entre plusieurs ordinateurs
 
-Note de proposition du 17 octobre 2026, issue de la lecture du code local. Le partage n’est pas implémenté. Les noms de nouveaux modules, les cadences et les limites indiqués ici sont des propositions.
+Note de proposition du 17 octobre 2026, issue de la lecture du code local. Cette note conserve le plan initial ; la version 0.3.0 réalise désormais le partage des interfaces, du pilotage, des documents et des historiques. L’état livré est décrit dans CONCEPTION.md et DEMARRAGE-MULTI.md. Les droits réglables, verrous exclusifs et Worker ci-dessous restent des perspectives. Le contrôle actuel d’édition repose sur les révisions avec refus des conflits.
 
 Mise à jour de la préparation : le relais peut être hébergé sur le serveur Vultr déjà disponible. Cloudron reste une option. Voir [le comparatif d’hébergement](PARTAGE-HEBERGEMENT.md) et [l’état du premier lot](DEMARRAGE-MULTI.md).
 
@@ -220,7 +220,7 @@ Un objectif de confort, par exemple une commande confirmée en moins d’une sec
 
 Cette note décrit une proposition et ne déploie aucun relais. Le premier adaptateur local de commandes est préparé séparément, sans être chargé par la page actuelle. Elle est conservée à part de la documentation qui décrit le comportement déjà implémenté. Son intégration éventuelle au site documentaire pourra passer par le générateur, lorsqu’elle sera destinée à publication.
 
-Vérification de l’existant effectuée pendant cet audit : `node --test simulateur/tests/centurion-cc.test.js simulateur/tests/centurion-auto-actions.test.js simulateur/tests/centurion-state.test.js` — 42 tests réussis, aucun échec. Cela valide ces comportements locaux existants ; aucun comportement de partage n’est encore testé. Les références de fichiers, numéros de ligne et la structure Markdown de cette note ont aussi été contrôlés.
+Vérification de l’existant effectuée pendant cet audit : `node --test simulateur/tests/centurion-cc.test.js simulateur/tests/centurion-auto-actions.test.js simulateur/tests/centurion-state.test.js` — 42 tests réussis, aucun échec. Cela valide ces comportements locaux existants ; ce relevé historique précède les tests de partage ajoutés en 0.3.0. Les références de fichiers, numéros de ligne et la structure Markdown de cette note ont aussi été contrôlés.
 
 Le checkout historique de Centurion contient de nombreuses modifications déjà publiées et n’a pas servi de source à cette copie. Ce nouveau dépôt a été cloné depuis `vcnamgn/science005` au commit public vérifié `ced5ea094b809def2d713a706ca6952b4ccd0492`. Le remote `origin` vise `vcnamgn/centurionmulti` ; `upstream` conserve la source en lecture, avec son URL de push désactivée. Les évolutions du partage se font sur une branche dédiée.
 

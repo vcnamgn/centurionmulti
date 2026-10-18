@@ -3,6 +3,10 @@
   const E=window.CenturionEngine;
   if(!E) throw new Error("centurion-engine.js manquant");
   const $=id=>document.getElementById(id);
+  const auxiliary=window.CenturionShare?.isAuxiliary()===true;
+  let sharing=null;
+  const sessionControls=window.CenturionSessionControls?.create({document,isAuxiliary:()=>auxiliary,
+    request:action=>sharing?sharing.request(action):Promise.resolve({ok:false,message:'Séance non connectée.'}),onStatus:(text,error)=>sharing?.setStatus(text,error)});
   const fmt=(v,d=0)=>Number(v).toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d});
   const tLabel=t=>{
     const n=Math.max(0,Math.floor(t));
@@ -71,6 +75,11 @@
   const alarmLimits=Object.fromEntries(alarmDefaults.map(a=>[a.id,[...a.limits]]));
   const editorReady={regul:false,protect:false};
   let lastPaint=0;
+  let sharedDocument=null,sharedFrame=null,sharedEpoch=null,sharedHistoryLoading=false,sharedHistoryCursor=null;
+  const sessionVersions={regul:0,protect:0,auto:0};
+  const sessionSignatures={regul:null,protect:null,auto:null};
+  let sessionDocumentRevision=0,sessionDocuments=null;
+  const transfers=new Map();
 
   function activateView(name) {
     activeView=name;
@@ -84,6 +93,7 @@
     }
     if(name==="transitoires") drawLoadProgramChart();
     if(name==="conduiteAuto")publishAutoState();
+    maybeLoadSharedHistory();
   }
   function autoValues(){
     const point=E.historyPoint(model);
@@ -100,11 +110,19 @@
     if(!Auto||!autoReady)return;
     dispatchAuto({type:init?"centurion-auto-init":"centurion-auto-state",runtime:autoRuntime,
       values:autoValues(),simulationRunning:running,
-      ...(init?{graph:autoGraph,measurements:autoMeasurements.map(({id,label,tag,unit,group,range})=>({id,label,tag,unit,group,range})),
+      ...(init?{graph:autoGraph,sharedRevision:sessionVersions.auto,measurements:autoMeasurements.map(({id,label,tag,unit,group,range})=>({id,label,tag,unit,group,range})),
         commands:Auto.actionCatalog()}:{} )});
   }
   function handleAutoMessage(data,source){
     if(!Auto||source!==$("autoEditor")?.contentWindow||typeof data?.type!=="string"||!data.type.startsWith("centurion-auto-"))return;
+    if(auxiliary){
+      if(data.type==='centurion-auto-ready'){autoReady=true;publishAutoState(true);return;}
+      if(data.type==='centurion-auto-graph'){
+        void sharedRequest({kind:'auto-edit',graph:data.graph,revision:data.revision}).then(result=>dispatchAuto({type:'centurion-auto-edit-result',serial:data.serial,result}));return;
+      }
+      if(data.type==='centurion-auto-command')void sharedRequest({kind:'auto-command',action:data.action,sequence:data.sequence});
+      return;
+    }
     try{
       if(data.type==="centurion-auto-ready"){
         if(!autoHasGraph){autoGraph=Auto.validate(data.graph,autoVariables);autoHasGraph=true;}
@@ -714,7 +732,7 @@
   }
   function render() {
     const s=model.state,u=model.controls;
-    certificate?.observe(model);
+    if(!auxiliary)certificate?.observe(model);
     const v=E.instrumentSnapshot(model,selectedGv);
     if(s.endState){running=false;if(pendingInitiator)cancelInitiator();
       if(autoRuntime?.status==="running"){
@@ -1082,6 +1100,7 @@
     return null;
   }
   function sendEditorTick(dt=0) {
+    if(auxiliary)return;
     if(pendingCcStep)return;
     // Rafraîchissement d'affichage uniquement : le calcul des CC appartient
     // aux sous-pas physiques, jamais à la cadence de dessin du navigateur.
@@ -1219,6 +1238,17 @@
     }
   }
   function handleEditorMessage(data) {
+    if(auxiliary){
+      const mode=data?.mode;if(!['regul','protect'].includes(mode))return;
+      if(data.type==='centurion-editor-ready'){
+        editorReady[mode]=true;
+        if(sharedDocument?.editors?.[mode])dispatchEditor(mode,{type:'centurion-editor-shared-graph',graph:sharedDocument.editors[mode].graph,revision:sharedDocument.editors[mode].revision});
+        if(sharedFrame?.editors?.[mode])dispatchEditor(mode,{type:'centurion-editor-shared-display',display:sharedFrame.editors[mode]});
+      }
+      if(data.type==='centurion-editor-shared-edit')void sharedRequest({kind:'cc-edit',mode,graph:data.graph,replace:data.replace,revision:data.revision}).then(result=>dispatchEditor(mode,{type:'centurion-editor-edit-result',serial:data.serial,result}));
+      if(data.type==='centurion-editor-enabled')void sharedRequest({kind:'cc-enabled',mode,enabled:data.enabled});
+      return;
+    }
     if(data?.type==="centurion-editor-ready"){
       const mode=data.mode;
       if(!["regul","protect"].includes(mode))return;
@@ -1277,6 +1307,10 @@
       alarmLimits,...(Auto?{autoConduite:{graph:autoGraph,runtime:autoRuntime}}:{})};
   }
   async function saveSimulationState(){
+    if(auxiliary){
+      if(!sharing)return;stateStatus('Sauvegarde de l’état du maître…');
+      try{const result=await sharing.exportFile();stateStatus(result.message);}catch(error){stateStatus(error.message,true);}return;
+    }
     if(stateBusy)return;
     if(pendingInitiator){stateStatus("Terminez ou annulez le décompte de l'initiateur avant de sauvegarder.",true);return;}
     const resume=running;stateBusy=true;running=false;render();
@@ -1292,13 +1326,18 @@
     }catch(error){stateStatus("Sauvegarde impossible : "+error.message,true);}
     finally{stateBusy=false;running=resume&&!model.state.endState;last=performance.now();render();}
   }
-  async function loadSimulationState(file){
+  async function loadSimulationState(file,{validated=null}={}){
+    if(auxiliary){
+      if(!file||!sharing)return;stateStatus('Transmission du fichier au maître…');
+      try{const result=await sharing.importFile(file);stateStatus(result.message||'État chargé par le maître, en pause.');}
+      catch(error){stateStatus(error.message,true);}finally{$('stateFile').value='';}return;
+    }
     if(stateBusy||!file)return;
     stateBusy=true;const resume=running;running=false;render();
     let previous=null;
     try{
       if(file.size>window.CenturionState.MAX_STATE_BYTES)throw new Error("Fichier trop volumineux (160 Mo maximum).");
-      const save=window.CenturionState.read(E,await file.text());
+      const save=validated||window.CenturionState.read(E,await file.text());
       for(const mode of ["regul","protect"])
         await editorStateCommand(mode,"centurion-editor-validate",save.editors[mode]);
       await waitForCcIdle();
@@ -1316,6 +1355,7 @@
       else certificate?.observe(model);
       stateStatus(`État chargé à ${tLabel(model.state.time)} · en pause. Cliquez sur Démarrer pour poursuivre.`);
       previous=null;
+      return true;
     }catch(error){
       if(previous){
         model=previous.model;restoreStateUi(previous.ui);
@@ -1326,6 +1366,7 @@
         if(previous.archive)certificate?.restore(model,previous.archive);
       }
       running=resume;stateStatus("Chargement impossible : "+error.message+" La partie courante est conservée.",true);
+      return false;
     }finally{stateBusy=false;last=performance.now();render();$("stateFile").value="";}
   }
   function restoreStateUi(ui){
@@ -1508,7 +1549,7 @@
       }
       if(e.data?.type==="centurion-svg-navigate") setDiagram(e.data.diagram,e.data.gv||selectedGv);
       if(e.data?.type==="centurion-svg-ready") updateSvg();
-      handleEditorMessage(e.data);
+      if(['regul','protect'].some(mode=>e.source===$(editorFrames[mode]).contentWindow&&e.data?.mode===mode))handleEditorMessage(e.data);
     });
     $("runButton").addEventListener("click",()=>{if(model.state.endState)return;running=!running;render();});
     $("resetButton").addEventListener("click",()=>{cancelInitiator();running=false;pendingCcStep=null;model=E.make();
@@ -1655,16 +1696,163 @@
       `<label>${name} · coefficient de forme<input type="number" data-axial-rod="${name}"
         min="0" max="1" step="0.001" value="${u.axialRodAbsorption[name]}"></label>`).join("");
   }
-  function readSharedState() {
+  function sharedRequest(action){return sharing?sharing.request(action):Promise.resolve({ok:false,error:'offline',message:'Séance non connectée.'});}
+  function graphSignature(graph){return graph?JSON.stringify({name:graph.name,nodes:graph.nodes,links:graph.links,nodeCounter:graph.nodeCounter,stepDelayS:graph.stepDelayS}):null;}
+  function sessionContent(){
+    const editors={},display={};
+    for(const mode of ['regul','protect']){
+      const current=editorBridge(mode)?.receive({type:'centurion-editor-session'});
+      if(!current)continue;
+      const signature=graphSignature(current.graph);
+      if(signature!==sessionSignatures[mode]){sessionSignatures[mode]=signature;sessionVersions[mode]++;sessionDocumentRevision++;}
+      editors[mode]={graph:current.graph,revision:sessionVersions[mode]};display[mode]=current.display;
+    }
+    const autoSignature=graphSignature(autoGraph);
+    if(autoSignature!==sessionSignatures.auto){sessionSignatures.auto=autoSignature;sessionVersions.auto++;sessionDocumentRevision++;}
+    const archive=certificate?.save()||null,archiveSignature=JSON.stringify(archive);
+    if(archiveSignature!==sessionSignatures.archive){sessionSignatures.archive=archiveSignature;sessionDocumentRevision++;}
+    sessionDocuments={revision:sessionDocumentRevision,editors,autoGraph,autoRevision:sessionVersions.auto,archive};
+    return {document:sessionDocuments,display};
+  }
+  function applySharedDocument(packet){
+    if(!auxiliary||packet.protocol!==2)return;sharedDocument=packet;
+    for(const mode of ['regul','protect'])if(packet.editors?.[mode]){
+      sessionVersions[mode]=packet.editors[mode].revision;
+      if(editorReady[mode])dispatchEditor(mode,{type:'centurion-editor-shared-graph',...packet.editors[mode]});
+    }
+    if(packet.autoGraph){autoGraph=Auto.validate(packet.autoGraph,autoVariables);sessionVersions.auto=packet.autoRevision;publishAutoState(true);}
+    if(packet.archive&&sharedFrame)certificate?.restore(model,packet.archive);
+  }
+  function mergeSharedHistory(points){
+    if(!points?.length)return;
+    const all=new Map(model.state.history.map(p=>[p.t,p]));for(const point of points)all.set(point.t,point);
+    model.state.history=[...all.values()].sort((a,b)=>a.t-b.t).slice(-28801);
+  }
+  function applySharedFrame(packet){
+    if(!auxiliary||!packet.model?.state||!packet.model.controls||packet.model.state.time!==packet.time)throw Error('État de séance incompatible.');
+    const changed=sharedEpoch!==packet.epoch,history=changed?[]:model.state.history;
+    sharedEpoch=packet.epoch;sharedFrame=packet;
+    if(changed){model={state:packet.model.state,controls:packet.model.controls};sharedHistoryCursor=null;}
+    else{model.state=packet.model.state;model.controls=packet.model.controls;}
+    model.state.history=history;mergeSharedHistory(packet.history);if(changed)historyView.reset();
+    running=packet.simulation.running;speed=packet.simulation.speed;regulationActive=packet.simulation.regulationActive;protectionActive=packet.simulation.protectionActive;
+    pendingInitiator=packet.initiator?{...packet.initiator,deadline:performance.now()+packet.initiator.remainingMs}:null;
+    if(packet.autoRuntime)autoRuntime=packet.autoRuntime;
+    if(packet.alarmLimits)for(const key of Object.keys(alarmLimits))if(packet.alarmLimits[key])alarmLimits[key]=packet.alarmLimits[key];
+    if(changed){syncInputs();if(sharedDocument?.epoch===packet.epoch&&sharedDocument.archive)certificate?.restore(model,sharedDocument.archive);}
+    for(const mode of ['regul','protect'])if(editorReady[mode]&&packet.editors?.[mode])dispatchEditor(mode,{type:'centurion-editor-shared-display',display:packet.editors[mode]});
+    render();sessionControls?.apply(packet.controls);maybeLoadSharedHistory();
+  }
+  async function maybeLoadSharedHistory(){
+    if(!auxiliary||!sharing||!sharedFrame||sharedHistoryLoading||!(activeView==='graphiques'||activeView==='synoptiques'&&['core','pt'].includes(diagram)))return;
+    const earliest=model.state.history[0]?.t??Infinity;
+    if(earliest<=sharedFrame.historyStart||sharedHistoryCursor===sharedFrame.historyStart)return;
+    const epoch=sharedEpoch;sharedHistoryLoading=true;let before=Number.MAX_SAFE_INTEGER;
+    sharing.setStatus('Auxiliaire · chargement de l’historique du maître…');
+    try{
+      while(sharedEpoch===epoch){
+        const result=await sharedRequest({kind:'history-page',before,limit:80});if(!result.ok)break;
+        if(sharedEpoch!==epoch)break;
+        if(!result.points.length){sharedHistoryCursor=sharedFrame.historyStart;break;}
+        mergeSharedHistory(result.points);before=result.points[0].t;sharedHistoryCursor=before;
+        drawHistory();if(diagram==='pt')updateSvg();if(diagram==='core')drawCoreCharts();
+        if(before<=result.start)break;await new Promise(resolve=>setTimeout(resolve,120));
+      }
+    }finally{sharedHistoryLoading=false;if(sharedEpoch===epoch)sharing.setStatus('Auxiliaire connecté · historique actualisé.');}
+  }
+  function conflict(message){const error=new Error(message);error.code='schema_conflict';throw error;}
+  async function executeSharedAction(action,context){
+    for(const [id,transfer] of transfers)if(Date.now()-transfer.at>120000)transfers.delete(id);
+    if(action.kind==='history-page'){
+      if(!Number.isFinite(action.before)||!Number.isInteger(action.limit)||action.limit<1||action.limit>100)throw Error('Demande d’historique invalide.');
+      return {ok:true,points:model.state.history.filter(p=>p.t<action.before).slice(-action.limit),start:model.state.history[0]?.t??model.state.time};
+    }
+    if(action.kind.startsWith('state-')&&action.kind!=='state-import-finish')return stateTransfer(action,context);
+    if(stateBusy)throw Error('Une sauvegarde ou un chargement est en cours.');
+    await waitForCcIdle();if(model!==context.identity)throw Error('Le réacteur a changé. Attendez son actualisation.');
+    if(action.kind==='ui'){const result=sessionControls.execute(action);render();return result;}
+    if(action.kind==='cc-enabled'){
+      if(!['regul','protect'].includes(action.mode)||typeof action.enabled!=='boolean')throw Error('Mode CC invalide.');
+      if(action.mode==='regul')setRegulationActive(action.enabled);else setProtectionActive(action.enabled);return {ok:true};
+    }
+    if(action.kind==='cc-edit'){
+      if(!['regul','protect'].includes(action.mode)||!Number.isSafeInteger(action.revision))throw Error('Schéma CC invalide.');
+      sessionContent();if(action.revision!==sessionVersions[action.mode])conflict('Ce schéma a été modifié par un autre participant. Reprenez la version partagée avant de rééditer.');
+      const result=editorBridge(action.mode)?.receive({type:'centurion-editor-apply-graph',graph:action.graph,replace:action.replace===true});
+      if(!result?.ok)throw Error(result?.message||'Atelier indisponible.');
+      if(action.mode==='regul'&&regulationActive!==result.enabled)setRegulationActive(result.enabled,false);
+      if(action.mode==='protect'&&protectionActive!==result.enabled)setProtectionActive(result.enabled,false);
+      sessionContent();return {ok:true,revision:sessionVersions[action.mode]};
+    }
+    if(action.kind==='auto-edit'){
+      sessionContent();if(action.revision!==sessionVersions.auto)conflict('Ce diagramme a été modifié par un autre participant. Reprenez la version partagée.');
+      if(['running','paused'].includes(autoRuntime.status))throw Error('Interrompez la séquence avant de modifier le diagramme.');
+      autoGraph=Auto.validate(action.graph,autoVariables);autoRuntime=Auto.idle();autoHasGraph=true;publishAutoState(true);sessionContent();return {ok:true,revision:sessionVersions.auto};
+    }
+    if(action.kind==='auto-command'){
+      if(!['start','pause','resume','stop'].includes(action.action)||typeof action.sequence!=='string')throw Error('Commande de conduite invalide.');
+      if(action.action==='start'){
+        if(model.state.endState||['running','paused'].includes(autoRuntime.status))throw Error('La séquence ne peut pas démarrer dans cet état.');
+        autoRuntime=Auto.start(autoGraph,action.sequence,autoVariables);running=true;
+      }else if(action.action==='pause'&&autoRuntime.status==='running'){autoRuntime.status='paused';autoRuntime.message='Séquence en pause · commandes conservées';}
+      else if(action.action==='resume'&&autoRuntime.status==='paused'){autoRuntime.status='running';running=true;}
+      else if(action.action==='stop'){autoRuntime.status='stopped';autoRuntime.message='Séquence interrompue · commandes conservées';}
+      render();return {ok:true};
+    }
+    if(action.kind==='state-import-finish'){
+      const transfer=transfers.get(action.transfer);if(!transfer||transfer.actor!==context.actor||transfer.direction!=='in'||transfer.next!==transfer.parts||transfer.received!==transfer.length)throw Error('Transfert incomplet ou expiré.');
+      transfers.delete(action.transfer);const file=new File(transfer.chunks,transfer.name,{type:'application/json'});
+      if(file.size>window.CenturionState.MAX_STATE_BYTES)throw Error('Fichier trop volumineux.');
+      const expected=window.CenturionState.read(E,await file.text());
+      if(model!==context.identity)throw Error('La simulation a changé pendant le transfert.');
+      const loaded=await loadSimulationState(file,{validated:expected});if(!loaded)throw Error($('stateStatus').textContent);
+      return {ok:true,message:'État chargé par le maître, en pause.'};
+    }
+    throw Error('Commande de séance inconnue.');
+  }
+  async function stateTransfer(action,context){
+    if(action.kind==='state-export-start'){
+      if(stateBusy||pendingInitiator||transfers.size>=2)throw Error('Sauvegarde temporairement indisponible.');
+      const resume=running;stateBusy=true;running=false;
+      try{
+        await waitForCcIdle();if(model!==context.identity)throw Error('La simulation a changé.');
+        const editors=await saveEditors(),saved=window.CenturionState.write(E,model,editors,stateUi(),certificate?.save()||null);
+        const text=JSON.stringify(saved),id=crypto.randomUUID();transfers.set(id,{actor:context.actor,direction:'out',text,at:Date.now()});
+        return {ok:true,transfer:id,parts:Math.ceil(text.length/65536),name:'Centurion-etat-'+tLabel(model.state.time).replaceAll(':','-')+'.json'};
+      }finally{stateBusy=false;running=resume&&!model.state.endState;last=performance.now();render();}
+    }
+    if(action.kind==='state-import-start'){
+      if(transfers.size>=2||!Number.isSafeInteger(action.parts)||action.parts<1||action.parts>2560||!Number.isSafeInteger(action.length)||action.length<1||action.length>window.CenturionState.MAX_STATE_BYTES||action.parts!==Math.ceil(action.length/65536)||typeof action.name!=='string')throw Error('Transfert de fichier invalide ou serveur occupé.');
+      const id=crypto.randomUUID();transfers.set(id,{actor:context.actor,direction:'in',name:action.name.slice(0,120),parts:action.parts,length:action.length,chunks:[],next:0,received:0,at:Date.now()});return {ok:true,transfer:id};
+    }
+    const transfer=transfers.get(action.transfer);if(!transfer||transfer.actor!==context.actor)throw Error('Transfert inconnu ou expiré.');transfer.at=Date.now();
+    if(action.kind==='state-export-end'){transfers.delete(action.transfer);return {ok:true};}
+    if(action.kind==='state-export-page'&&transfer.direction==='out'){
+      if(!Number.isSafeInteger(action.index)||action.index<0||action.index>=Math.ceil(transfer.text.length/65536))throw Error('Page de fichier invalide.');
+      return {ok:true,text:transfer.text.slice(action.index*65536,(action.index+1)*65536)};
+    }
+    if(action.kind==='state-import-part'&&transfer.direction==='in'){
+      if(typeof action.text!=='string'||action.text.length>65536||action.index!==transfer.next||transfer.received+action.text.length>transfer.length)throw Error('Fragment de fichier invalide.');
+      transfer.chunks.push(action.text);transfer.received+=action.text.length;transfer.next++;return {ok:true};
+    }
+    throw Error('Opération de fichier invalide.');
+  }
+  function readSharedState({identityOnly=false,historySince=null}={}) {
     if(pendingCcStep||stateBusy)return null;
-    return {identity:model,frame:{time:model.state.time,
+    if(identityOnly)return {identity:model};
+    const content=sessionContent(),{history,events,...state}=model.state;
+    let start=history.length;while(start>0&&history.length-start<120&&(historySince===null||history[start-1].t>historySince))start--;
+    return {identity:model,document:content.document,frame:{time:model.state.time,
       simulation:{running,speed,regulationActive,protectionActive},
+      model:{state:{...state,events:events.slice(-1000)},controls:model.controls},history:history.slice(start),historyStart:history[0]?.t??model.state.time,
+      controls:sessionControls?.read(),editors:content.display,autoRuntime,alarmLimits,
+      initiator:pendingInitiator?{name:pendingInitiator.name,details:pendingInitiator.details,label:pendingInitiator.label,remainingMs:Math.max(0,pendingInitiator.deadline-performance.now())}:null,
       instruments:E.instrumentSnapshot(model),
       core:{dnbr:model.state.dnbr,dpax:model.state.dpaxPctPn}}};
   }
   function frame(now) {
     const elapsed=Math.min(.15,Math.max(0,(now-last)/1000));last=now;
-    if(running){
+    if(running&&!auxiliary){
       // Borner aussi le retard du raccordement local par messages.
       carry=Math.min(30,carry+elapsed*speed);
       advanceSimulationTime();
@@ -1677,6 +1865,6 @@
   renderAlarmTable();bindControls();syncInputs();render();
   for(const [mode,id] of [["regul","regulationEditor"],["protect","protectionEditor"]])connectEditor(mode,id);
   connectAuto();
-  window.CenturionShare?.attach({readState:readSharedState});
+  sharing=window.CenturionShare?.attach({readState:readSharedState,applyState:applySharedFrame,applyDocument:applySharedDocument,execute:executeSharedAction});
   requestAnimationFrame(frame);
 })();

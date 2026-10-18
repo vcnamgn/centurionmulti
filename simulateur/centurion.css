@@ -487,3 +487,5 @@ input[type=number],select{background:#fff;border:1px solid #b8d1df;border-radius
 .equipment-fault-row output{font-weight:700;font-variant-numeric:tabular-nums}
 @media(max-width:1050px){.equipment-fault-form{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.equipment-fault-form{grid-template-columns:1fr}.equipment-fault-row{grid-template-columns:1fr auto}.equipment-fault-row>div{grid-column:1/-1}}
+
+[data-session-role="auxiliary"] .reactor-button{background:#e8e4fa;border-color:#b7a8e2;color:#4b3577}

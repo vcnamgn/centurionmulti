@@ -34,7 +34,8 @@ function documentLink(url,sourceFile,outputFile){
 }
 const modules=[
   {file:'simulateur/centurion-engine.js',title:'Moteur',description:'Physique et API indépendante du navigateur.'},
-  {file:'simulateur/centurion-share.js',title:'Publication du maître',description:'Numéro de séance, menu du réacteur et diffusion des instantanés ; inactif hors relais.'},
+  {file:'simulateur/centurion-share.js',title:'Séances partagées',description:'Rôles maître/auxiliaire, instantanés, documents, commandes confirmées et fichiers fragmentés ; inactif hors relais.'},
+  {file:'simulateur/centurion-session-controls.js',title:'Gestes partagés',description:'Catalogue explicite du pupitre, bornes des saisies et application par les gestionnaires du maître.'},
   {file:'simulateur/centurion-app.js',title:'Application',description:'Horloge, commandes, arbitrage CC et présentation.'},
   {file:'simulateur/centurion-history.js',title:'Historiques',description:'Catalogue des mesures, courbes libres, axes, période sélectionnée et tableau figé.'},
   {file:'simulateur/centurion-svg-bridge.js',title:'Pont SVG',description:'Mesures, animations et navigation dans les SVG.'},

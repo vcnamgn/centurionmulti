@@ -3,7 +3,8 @@ const http=require('node:http'),fs=require('node:fs/promises'),path=require('nod
 const {randomBytes,randomInt,createHash,timingSafeEqual}=require('node:crypto');
 const {Server}=require('socket.io');
 
-const PROTOCOL=1,MAX_FRAME_BYTES=64*1024;
+const PROTOCOL=2,MAX_FRAME_BYTES=1024*1024,MAX_DOCUMENT_BYTES=6*1024*1024,MAX_COMMAND_BYTES=4*1024*1024;
+const COMMAND_KINDS=new Set(['ui','cc-edit','cc-enabled','auto-edit','auto-command','history-page','state-export-start','state-export-page','state-export-end','state-import-start','state-import-part','state-import-finish']);
 const token=()=>randomBytes(32).toString('base64url');
 const digest=value=>createHash('sha256').update(value).digest();
 const matches=(value,expected)=>typeof value==='string'&&value.length<=100&&timingSafeEqual(digest(value),expected);
@@ -43,13 +44,13 @@ function createRelay({maxRooms=20,maxViewers=20,idleMs=30*60*1000,now=Date.now,p
     }
     for(const [ip,entry] of creationWindows)if(now()-entry.start>60000)creationWindows.delete(ip);
   }
-  async function staticFile(res,root,relative,head){
+  async function staticFile(res,root,relative,head,auxiliary=false){
     const file=path.resolve(root,relative);
     if(!file.startsWith(path.resolve(root)+path.sep)){json(res,404,{error:'not_found'});return;}
     try{
       const info=await fs.stat(file);if(!info.isFile())throw Error('not_file');
       let data=await fs.readFile(file);
-      if(file===path.join(projectRoot,'simulateur','centurion.html'))data=data.toString().replace('name="centurion-relay" content="off"','name="centurion-relay" content="on"');
+      if(file===path.join(projectRoot,'simulateur','centurion.html'))data=data.toString().replace('name="centurion-relay" content="off"','name="centurion-relay" content="on"').replaceAll('&amp;shared=0',auxiliary?'&amp;shared=1':'&amp;shared=0');
       res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache'});
       res.end(head?undefined:data);
     }catch{json(res,404,{error:'not_found'});}
@@ -59,7 +60,7 @@ function createRelay({maxRooms=20,maxViewers=20,idleMs=30*60*1000,now=Date.now,p
   });});
   async function handleRequest(req,res){
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');
-    let pathname;try{pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch{json(res,400,{error:'invalid_url'});return;}
+    let pathname,requestUrl;try{requestUrl=new URL(req.url,'http://localhost');pathname=decodeURIComponent(requestUrl.pathname);}catch{json(res,400,{error:'invalid_url'});return;}
     if(req.method==='GET'&&pathname==='/healthz'){json(res,200,{ok:true,protocol:PROTOCOL});return;}
     if(req.method==='POST'&&['/api/sessions','/api/sessions/join'].includes(pathname)){
       if(!sameOrigin(req)){json(res,403,{error:'origin_refused'});return;}
@@ -75,13 +76,13 @@ function createRelay({maxRooms=20,maxViewers=20,idleMs=30*60*1000,now=Date.now,p
         if(!room){refused(404,'session_unavailable');return;}
         // Le numéro ouvre seulement une invitation en lecture seule, jamais la capacité maître.
         const params=new URLSearchParams({session:room.id,inviteToken:room.inviteToken,code:room.code});
-        if(form)redirect(res,'/observer#'+params);else json(res,200,{protocol:PROTOCOL,sessionId:room.id,code:room.code,inviteToken:room.inviteToken});
+        if(form)redirect(res,'/simulateur/centurion.html?shareViewer='+room.id+'#'+params);else json(res,200,{protocol:PROTOCOL,sessionId:room.id,code:room.code,inviteToken:room.inviteToken});
         return;
       }
       if(rooms.size>=maxRooms){json(res,429,{error:'room_limit'});return;}
       const id=randomBytes(12).toString('base64url'),masterToken=token(),inviteToken=token(),code=availableCode();
       if(!code){json(res,429,{error:'room_limit'});return;}
-      rooms.set(id,{id,code,masterHash:digest(masterToken),inviteHash:digest(inviteToken),inviteToken,master:null,authorityId:null,viewers:new Set(),activity:now(),frame:null,lastFrameAt:0,rateStart:now(),rateCount:0});
+      rooms.set(id,{id,code,masterHash:digest(masterToken),inviteHash:digest(inviteToken),inviteToken,master:null,authorityId:null,viewers:new Set(),activity:now(),frame:null,document:null,pendingCommands:0,lastFrameAt:0,rateStart:now(),rateCount:0});
       json(res,201,{protocol:PROTOCOL,sessionId:id,code,masterToken,inviteToken});return;
     }
     if(!['GET','HEAD'].includes(req.method)){json(res,405,{error:'method_refused'});return;}
@@ -89,13 +90,13 @@ function createRelay({maxRooms=20,maxViewers=20,idleMs=30*60*1000,now=Date.now,p
     if(pathname==='/'){res.writeHead(302,{Location:'/simulateur/centurion.html','Cache-Control':'no-store'});res.end();return;}
     if(pathname==='/observer')return staticFile(res,publicRoot,'observer.html',head);
     if(pathname.startsWith('/assets/'))return staticFile(res,publicRoot,pathname.slice(8),head);
-    if(pathname.startsWith('/simulateur/'))return staticFile(res,path.join(projectRoot,'simulateur'),pathname.slice(12),head);
+    if(pathname.startsWith('/simulateur/'))return staticFile(res,path.join(projectRoot,'simulateur'),pathname.slice(12),head,Boolean(requestUrl.searchParams.get('shareViewer')));
     if(pathname.startsWith('/docs/'))return staticFile(res,path.join(projectRoot,'docs'),pathname.slice(6),head);
     if(pathname==='/README.html')return staticFile(res,projectRoot,'README.html',head);
     if(pathname==='/support/README.html')return staticFile(res,path.join(projectRoot,'support'),'README.html',head);
     json(res,404,{error:'not_found'});
   }
-  const io=new Server(server,{transports:['websocket'],maxHttpBufferSize:MAX_FRAME_BYTES+2048,serveClient:true,
+  const io=new Server(server,{transports:['websocket'],maxHttpBufferSize:8*1024*1024,serveClient:true,
     allowRequest:(req,done)=>done(null,sameOrigin(req)),perMessageDeflate:false});
   io.use((socket,next)=>{
     const {sessionId,role,token:proof,protocol,authorityId}=socket.handshake.auth||{};
@@ -112,7 +113,43 @@ function createRelay({maxRooms=20,maxViewers=20,idleMs=30*60*1000,now=Date.now,p
   });
   io.on('connection',socket=>{
     const room=socket.data.room;socket.join(room.id);room.activity=now();announce(room);
-    if(socket.data.role==='viewer'&&room.frame)socket.emit('state:frame',room.frame);
+    function sendDocument(document){
+      socket.data.nextDocument=document;if(socket.data.documentInFlight||!socket.connected)return;
+      const current=socket.data.nextDocument;socket.data.nextDocument=null;socket.data.documentInFlight=true;
+      socket.timeout(5000).emit('session:document',current,()=>{socket.data.documentInFlight=false;if(socket.data.nextDocument)sendDocument(socket.data.nextDocument);});
+    }
+    socket.data.sendDocument=sendDocument;socket.data.requests=new Map();
+    if(socket.data.role==='viewer'){if(room.document)sendDocument(room.document);if(room.frame)socket.emit('state:frame',room.frame);}
+    socket.on('session:document',(document,ack)=>{
+      const reply=value=>{if(typeof ack==='function')ack(value);};
+      if(socket.data.role!=='master'||room.master!==socket.id){reply({ok:false,error:'read_only'});return;}
+      if(!document||document.protocol!==PROTOCOL||typeof document.epoch!=='string'||!Number.isSafeInteger(document.revision)||document.revision<0||Buffer.byteLength(JSON.stringify(document))>MAX_DOCUMENT_BYTES){reply({ok:false,error:'invalid_document'});return;}
+      if(room.document?.epoch===document.epoch&&document.revision<room.document.revision){reply({ok:false,error:'old_document'});return;}
+      room.document=document;
+      for(const id of room.viewers)io.sockets.sockets.get(id)?.data.sendDocument(document);
+      reply({ok:true});
+    });
+    socket.on('session:document-request',ack=>{if(socket.data.role==='viewer'&&typeof ack==='function')ack(room.document);});
+    socket.on('command:request',(packet,ack)=>{
+      const reply=result=>{if(typeof ack==='function')ack(result);};
+      if(socket.data.role!=='viewer'){reply({ok:false,error:'invalid_role'});return;}
+      if(!packet||typeof packet.id!=='string'||!/^[\w-]{8,80}$/.test(packet.id)||!COMMAND_KINDS.has(packet.action?.kind)||Buffer.byteLength(JSON.stringify(packet))>MAX_COMMAND_BYTES){reply({ok:false,error:'invalid_command'});return;}
+      if(!room.master){reply({ok:false,error:'master_offline',message:'Maître indisponible. Aucune commande appliquée.'});return;}
+      if(!room.frame||packet.epoch!==room.frame.epoch){reply({ok:false,error:'stale_epoch',message:'Le réacteur a changé. Attendez son actualisation.'});return;}
+      const requests=socket.data.requests,hash=createHash('sha256').update(JSON.stringify(packet)).digest('hex'),existing=requests.get(packet.id);
+      if(existing){if(existing.hash!==hash){reply({ok:false,error:'duplicate_conflict'});return;}existing.promise.then(reply);return;}
+      const at=now();if(!socket.data.commandWindow||at-socket.data.commandWindow.start>=1000)socket.data.commandWindow={start:at,count:0};
+      if(++socket.data.commandWindow.count>20||socket.data.pendingCommands>=2||room.pendingCommands>=32){reply({ok:false,error:'command_rate',message:'Trop de commandes simultanées. Réessayez.'});return;}
+      socket.data.pendingCommands=(socket.data.pendingCommands||0)+1;room.pendingCommands++;
+      const promise=new Promise(resolve=>{
+        const master=io.sockets.sockets.get(room.master);
+        if(!master){resolve({ok:false,error:'master_offline'});return;}
+        master.timeout(20000).emit('command:apply',{id:packet.id,actor:socket.id,epoch:packet.epoch,action:packet.action},(error,result)=>{
+          resolve(error?{ok:false,error:'master_timeout',message:'Réponse du maître absente. Vérifiez les valeurs avant de recommencer.'}:result&&typeof result.ok==='boolean'?result:{ok:false,error:'invalid_reply'});
+        });
+      }).then(result=>{socket.data.pendingCommands--;room.pendingCommands--;if(Buffer.byteLength(JSON.stringify(result))>8192)requests.delete(packet.id);return result;});
+      requests.set(packet.id,{hash,promise});if(requests.size>128)requests.delete(requests.keys().next().value);promise.then(reply);
+    });
     socket.on('state:frame',(frame,ack)=>{
       const reply=code=>{if(typeof ack==='function')ack({ok:!code,...(code?{error:code}:{})});};
       if(socket.data.role!=='master'||room.master!==socket.id){reply('read_only');return;}

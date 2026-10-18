@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 
 // Surface DOM de test : exécute le script complet de l'éditeur et ses messages.
 // Les données JSON, les éléments et les identifiants viennent du véritable HTML.
-function editorSurface(mode='regul',{saved=null}={}){
+function editorSurface(mode='regul',{saved=null,shared=false}={}){
   const html=fs.readFileSync(path.join(__dirname,mode==='auto'?'../../centurion-conduite-auto.html':'../../centurion-cc-regul.html'),'utf8');
   const events={},frames=[],messages=[],timers=[],intervals=[],storage=new Map();let now=0,frameSerial=0,textMeasurements=0;
   if(saved)storage.set(mode==='auto'?'centurion.conduite-auto.v1':`centurion-${mode}-autosave-v1`,JSON.stringify(saved));
@@ -96,7 +96,7 @@ function editorSurface(mode='regul',{saved=null}={}){
     createElementNS:(_,t)=>new Element(t),addEventListener:(k,fn)=>(events['document-'+k]??=[]).push(fn)};
   const parent={postMessage:data=>messages.push(data)};
   const window={parent,devicePixelRatio:1,addEventListener:(k,fn)=>(events[k]??=[]).push(fn)};
-  const context=vm.createContext({document,window,parent,location:{search:'?mode='+mode},console,
+  const context=vm.createContext({document,window,parent,location:{search:'?mode='+mode+(shared?'&shared=1':'')},console,
     performance:{now:()=>now},requestAnimationFrame:fn=>{fn.frameId=++frameSerial;frames.push(fn);return fn.frameId;},
     cancelAnimationFrame:id=>{const i=frames.findIndex(fn=>fn.frameId===id);if(i>=0)frames.splice(i,1);},
     setTimeout:fn=>(timers.push(fn),timers.length),clearTimeout(){},setInterval:fn=>(intervals.push(fn),intervals.length),
@@ -108,7 +108,7 @@ function editorSurface(mode='regul',{saved=null}={}){
     for(const name of ['centurion-auto.js','centurion-orthogonal-routing.js','centurion-auto-routing.js','centurion-auto-editing.js','centurion-conduite-auto.js'])
       vm.runInContext(fs.readFileSync(path.join(__dirname,'../../'+name),'utf8'),context,{filename:name});
     return {messages,storage,get:id=>document.getElementById(id),query:s=>document.querySelector(s),queryAll:s=>document.querySelectorAll(s),
-      receive:data=>window.CenturionAutoEditor.receive(data),
+      receive:data=>window.CenturionAutoEditor.receive(data),flushTimers(){while(timers.length)timers.shift()();},
       graph:()=>JSON.parse(storage.get('centurion.conduite-auto.v1')||JSON.stringify(saved)),
       realTime:ms=>{now=ms;for(const fn of intervals)fn();},
       get pendingFrames(){return frames.length;},get textMeasurements(){return textMeasurements;},

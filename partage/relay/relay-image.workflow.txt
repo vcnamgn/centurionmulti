@@ -31,14 +31,19 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm test
+      - name: Vérifier les interfaces partagées
+        run: |
+          node --test simulateur/tests/centurion-session-controls.test.js simulateur/tests/centurion-shared-editors.test.js simulateur/tests/centurion-routing.test.js simulateur/tests/centurion-auto-editing.test.js simulateur/tests/centurion-cc.test.js
+          node --test --test-name-pattern='projection réseau complète|auxiliaire complet|un message CC étranger|révisions partagées' simulateur/tests/centurion-startup.test.js
+          node scripts/check-docs.mjs
       - name: Construire l’image
         run: |
-          docker build --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.2.1" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA" .
+          docker build --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" --label org.opencontainers.image.revision="$GITHUB_SHA" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.3.0" --tag "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA" .
       - name: Se connecter au registre GitHub
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - name: Publier l’image
         run: |
-          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.2.1"
+          docker push "ghcr.io/${GITHUB_REPOSITORY,,}:relay-0.3.0"
           docker push "ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA"
