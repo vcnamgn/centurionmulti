@@ -92,9 +92,19 @@ Seul le maître avance la physique, les mémoires CC et les séquences. Les auxi
 
 Le maître restaure normalement ses autosauvegardes. Un auxiliaire n’en lit et n’en écrit aucune : les iframes sont servies avec `shared=1` avant leur démarrage. **Ouvrir** un JSON reste une action explicite qui modifie le schéma commun après validation. Chaque document possède une révision ; une édition concurrente périmée est refusée, le brouillon reste visible et exportable et le participant peut reprendre la version partagée. Il n’y a pas de fusion automatique. La conduite auto doit être interrompue avant édition. Déplacer un bloc CC conserve les mémoires et l’activation ; remplacer explicitement son schéma reprend la règle habituelle de désactivation.
 
-Le protocole 2 sépare les mesures remplaçables (5 Hz) des documents confirmés et des commandes. Les historiques plus anciens se chargent par pages à l’ouverture d’une vue concernée ; les sauvegardes complètes transitent en fragments de 64 K caractères. **Fichier** permet à un auxiliaire de sauvegarder l’état du maître ou de proposer un chargement validé, appliqué en pause. Aucun projet durable n’est stocké sur le relais.
+Le protocole 3 sépare les mesures remplaçables (5 Hz) des documents confirmés et des commandes. Les historiques plus anciens se chargent par pages à l’ouverture d’une vue concernée ; les sauvegardes complètes transitent en fragments de 64 K caractères. **Fichier** permet à un auxiliaire de sauvegarder l’état du maître ou de proposer un chargement validé, appliqué en pause. Aucun projet durable n’est stocké sur le relais.
 
 Une coupure fige les dernières valeurs et suspend les commandes ; aucun auxiliaire ne devient maître automatiquement. Garder le maître visible : l’extraction conjointe physique/CC/conduite dans un Worker reste à réaliser. La veille ou la fermeture du navigateur interrompt la séance.
+
+
+
+### Édition exclusive et journaux (0.4.0)
+
+Un seul participant édite les trois ateliers de la séance ; le maître possède ce droit au départ. Les autres restent en visualisation, tout en conservant le pilotage, le choix des vues et les exports. **Demander à éditer** ouvre un popup chez l’éditeur courant : garder la main ou transférer. Les modifications attendent leur confirmation avant transfert. Le relais refuse les imports et éditions provenant d’un autre participant ou d’une ancienne révision de droit. À la déconnexion d’un éditeur auxiliaire, le droit retourne au maître. Une demande expire après une minute. Le protocole 3 impose de recharger les anciennes pages.
+
+L’onglet **Logs** sépare les événements physiques par démarrage, réinitialisation et chargement d’état. Le journal de séance garde les connexions, demandes/transferts, imports et interventions marquantes ; aucun échantillon physique périodique n’y est copié. Mémoire bornée à 12 essais de 300 événements et 160 événements de séance ; export JSON disponible. Les auxiliaires reçoivent les essais du maître avec les documents, et peuvent voir leurs propres événements de connexion. Ces journaux ne sont pas une archive persistante et disparaissent au rechargement sans export.
+
+Pendant le déplacement d’une boîte CC, un aperçu met à jour seulement les liens attachés ; l’évitement complet et les ponts sont recalculés au relâchement. Les éléments SVG sont réutilisés. Le rafraîchissement de l’ancien simulateur masqué est désactivé dans les iframes Centurion ; le vrai calcul reste commandé par le parent. Banc VM sur 92 blocs/88 liens, 12 mouvements : environ 457 ms par image avant correction, 2,5 ms après, et environ 117 ms au relâchement dans cet essai. Ces chiffres comparent une surface DOM simulée et ne prédisent pas la durée sur chaque navigateur. Un test vérifie structurellement qu’aucun nouveau routage global n’est lancé pendant le glissement.
 
 ## 3. Modèle de données et conventions
 

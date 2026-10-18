@@ -1,6 +1,6 @@
 # Séances partagées Centurion
 
-La version 0.3.0 ouvre le simulateur habituel comme maître, lui attribue un numéro de séance à quatre chiffres et donne aux auxiliaires les mêmes interfaces, le pilotage et l’édition partagés. Le relais ne charge aucun moteur physique ni évaluateur CC. Il sert aussi les fichiers statiques : une seule application Cloudron suffit pour l’ensemble de cet essai.
+La version 0.4.0 ouvre le simulateur habituel comme maître, lui attribue un numéro de séance à quatre chiffres et donne aux auxiliaires les mêmes interfaces, le pilotage et l’édition partagés. Le relais ne charge aucun moteur physique ni évaluateur CC. Il sert aussi les fichiers statiques : une seule application Cloudron suffit pour l’ensemble de cet essai.
 
 ## Essai local
 
@@ -26,13 +26,13 @@ Le service écoute par défaut uniquement sur la boucle locale. Dans le conteneu
 
 Le manifeste conserve les champs disponibles sur Cloudron 8.3.1. Il n’utilise pas les nouveaux champs de publication du catalogue. La base Node.js Cloudron est épinglée par version datée et digest, suivant le guide officiel courant. L’installation sur le serveur cible a confirmé le démarrage du conteneur et un contrôle de santé `healthy`.
 
-Le modèle de workflow GitHub **Image du relais Cloudron** est fourni dans [relay-image.workflow.txt](relay-image.workflow.txt). Le workflow actif se trouve dans `.github/workflows/relay-image.yml`, sur la branche de préparation. Il se déclenche sur les modifications du relais dans cette branche, ou manuellement. Il exécute les tests, construit le Dockerfile racine puis publie `ghcr.io/vcnamgn/centurionmulti:relay-0.3.0` ainsi qu’une étiquette contenant le SHA Git. La visibilité du paquet GHCR doit être publique pour une récupération anonyme ; si GitHub l’a créé privé, la modifier dans les paramètres du paquet avant installation. Ne jamais inclure de token GitHub dans le manifeste, le Dockerfile ou une URL de téléchargement.
+Le modèle de workflow GitHub **Image du relais Cloudron** est fourni dans [relay-image.workflow.txt](relay-image.workflow.txt). Le workflow actif se trouve dans `.github/workflows/relay-image.yml`, sur la branche de préparation. Il se déclenche sur les modifications du relais dans cette branche, ou manuellement. Il exécute les tests, construit le Dockerfile racine puis publie `ghcr.io/vcnamgn/centurionmulti:relay-0.4.0` ainsi qu’une étiquette contenant le SHA Git. La visibilité du paquet GHCR doit être publique pour une récupération anonyme ; si GitHub l’a créé privé, la modifier dans les paramètres du paquet avant installation. Ne jamais inclure de token GitHub dans le manifeste, le Dockerfile ou une URL de téléchargement.
 
 Depuis un checkout de cette branche, avec le client Cloudron installé :
 
 ```text
 cloudron login my.vcnam.fr
-cloudron install --image ghcr.io/vcnamgn/centurionmulti:relay-0.3.0 --location s.vcnam.fr
+cloudron install --image ghcr.io/vcnamgn/centurionmulti:relay-0.4.0 --location s.vcnam.fr
 ```
 
 Le tableau de bord confirmé est `https://my.vcnam.fr`. L’image est disponible publiquement ; les commandes ci-dessus servent à une nouvelle installation, pas à répéter celle déjà effectuée. Le client lit le `CloudronManifest.json` du répertoire courant. Aucun service ne doit remplacer l’application déjà présente sur le serveur.
@@ -67,7 +67,7 @@ La version **0.2.1** a été installée le 18 octobre 2026. Elle conserve le pro
 
 Image : `ghcr.io/vcnamgn/centurionmulti@sha256:2317e44f330ee676c7bf355f3e09c88b21da58585b002e11c811b0fc12b729b9` ; révision source : `64c1720ebeb2e317bac20daf39b698727acaa4e7`. Le contrôle final confirme également l’attribution d’un numéro et la connexion maître en HTTPS. Le serveur de test local a été arrêté après validation.
 
-## Fonctionnement de la version 0.3.0
+## Fonctionnement de la version 0.4.0
 
 Le bouton existant affiche **M · numéro** ou **A · numéro**, avec rôle détaillé et connexion dans son menu/infobulle. Aucune ligne supplémentaire du bandeau. **Rejoindre** exige un maître connecté et donne accès au pilotage et à l’édition de sa séance. Le numéro est un code d’accès pratique, sans compte ni mot de passe individuel : le communiquer seulement aux participants souhaités. Les liens auxiliaires gardent une capacité longue dans leur fragment ; la capacité maître reste distincte et privée.
 
@@ -77,13 +77,23 @@ Les auxiliaires affichent synoptiques, graphiques, initiateurs, transitoires, pa
 
 Le maître restaure et autosauvegarde ses graphes dans son navigateur. Les iframes auxiliaires démarrent en mode partagé, sans lire ni écrire les autosauvegardes personnelles. **Ouvrir** importe explicitement un JSON dans la séance ; **Fichier** sauvegarde l’état maître ou charge un état validé en pause. Chaque document possède une révision : une modification périmée est refusée, conserve le brouillon visible/exportable et propose de reprendre la version commune. Aucune fusion automatique. Interrompre la conduite auto avant édition. Une modification de position CC conserve les mémoires et l’activation ; un remplacement explicite suit les règles normales d’import.
 
-Le protocole 2 diffuse les mesures à 5 Hz sans attendre le réseau entre les pas. Les anciens instantanés sont remplaçables ; les documents fiables ont un seul envoi en attente par destinataire. Les historiques anciens se demandent par pages ; les fichiers complets transitent par fragments de 64 K caractères. Le relais ne charge aucun moteur et ne conserve que séances, dernier instantané et dernier document en mémoire.
+Le protocole 3 diffuse les mesures à 5 Hz sans attendre le réseau entre les pas. Les anciens instantanés sont remplaçables ; les documents fiables ont un seul envoi en attente par destinataire. Les historiques anciens se demandent par pages ; les fichiers complets transitent par fragments de 64 K caractères. Le relais ne charge aucun moteur et ne conserve que séances, dernier instantané et dernier document en mémoire.
 
 Limites : 20 séances, 20 auxiliaires par séance, instantané 1 Mio, document 6 Mio, commande 4 Mio, paquet Socket.IO 8 Mio ; commandes bornées à 20/s, deux en attente par auxiliaire et 32 par séance. Deux transferts de fichier simultanés au maximum dans le maître, expirant après deux minutes sans activité. Le fichier final doit respecter la limite du format Centurion-State (160 Mio).
 
 Une coupure marque les valeurs périmées et suspend les interventions, sans promotion automatique. Un même maître vivant peut se reconnecter. Les séances sans maître expirent après 30 minutes ; redémarrer le relais les efface. Les projets restent indépendants des quatre chiffres : conserver des JSON ou un état complet. Le changement de domaine ne déplace pas le stockage du navigateur ; utiliser l’alias ancien pour exporter ses travaux.
 
 **Garder l’onglet maître visible.** Le Worker commun physique/CC/Auto n’est pas intégré. Veille, navigateur fermé ou page gelée interrompent la progression. Les essais entre ordinateurs et les essais de charge restent à faire. Le mode fichier ou site statique garde son partage désactivé.
+
+
+
+### Édition exclusive et journaux (0.4.0)
+
+Un seul participant édite les trois ateliers de la séance ; le maître possède ce droit au départ. Les autres restent en visualisation, tout en conservant le pilotage, le choix des vues et les exports. **Demander à éditer** ouvre un popup chez l’éditeur courant : garder la main ou transférer. Les modifications attendent leur confirmation avant transfert. Le relais refuse les imports et éditions provenant d’un autre participant ou d’une ancienne révision de droit. À la déconnexion d’un éditeur auxiliaire, le droit retourne au maître. Une demande expire après une minute. Le protocole 3 impose de recharger les anciennes pages.
+
+L’onglet **Logs** sépare les événements physiques par démarrage, réinitialisation et chargement d’état. Le journal de séance garde les connexions, demandes/transferts, imports et interventions marquantes ; aucun échantillon physique périodique n’y est copié. Mémoire bornée à 12 essais de 300 événements et 160 événements de séance ; export JSON disponible. Les auxiliaires reçoivent les essais du maître avec les documents, et peuvent voir leurs propres événements de connexion. Ces journaux ne sont pas une archive persistante et disparaissent au rechargement sans export.
+
+Pendant le déplacement d’une boîte CC, un aperçu met à jour seulement les liens attachés ; l’évitement complet et les ponts sont recalculés au relâchement. Les éléments SVG sont réutilisés. Le rafraîchissement de l’ancien simulateur masqué est désactivé dans les iframes Centurion ; le vrai calcul reste commandé par le parent. Banc VM sur 92 blocs/88 liens, 12 mouvements : environ 457 ms par image avant correction, 2,5 ms après, et environ 117 ms au relâchement dans cet essai. Ces chiffres comparent une surface DOM simulée et ne prédisent pas la durée sur chaque navigateur. Un test vérifie structurellement qu’aucun nouveau routage global n’est lancé pendant le glissement.
 
 ## Références de packaging
 

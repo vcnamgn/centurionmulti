@@ -146,7 +146,7 @@ test('auxiliaire complet : les mesures du maître alimentent les vues sans aucun
   let callbacks,steps=0;const sharingModule={isAuxiliary:()=>true,attach(options){callbacks=options;return {request:async()=>({ok:false}),setStatus(){}};}};
   const page=application(app,null,{...E,step(){steps++;throw Error('Un auxiliaire ne calcule pas la physique.');}},{},{sharingModule});
   const source=E.make();source.state.time=20;
-  callbacks.applyState({protocol:2,epoch:'master-generation',seq:1,time:20,model:source,history:[],historyStart:0,simulation:{running:true,speed:200,regulationActive:false,protectionActive:false}});
+  callbacks.applyState({protocol:3,epoch:'master-generation',seq:1,time:20,model:source,history:[],historyStart:0,simulation:{running:true,speed:200,regulationActive:false,protectionActive:false}});
   for(let i=0;i<10;i++)page.frame(100);
   assert.equal(steps,0);assert.equal(page.get('simClock').textContent,'00:00:20');assert.equal(page.get('runButton').textContent,'Pause');
 });
@@ -162,8 +162,8 @@ test('projection réseau complète : conduite auto et interfaces restent utilisa
   const page=application(app,null,E,{}, {autoModule:Auto,sharingModule:{isAuxiliary:()=>true,attach(o){aux=o;return {request:async()=>({ok:false}),setStatus(){}};}}});
   page.receive({type:'centurion-auto-ready'},page.get('autoEditor').contentWindow);
   const payload=JSON.parse(JSON.stringify(master.readState()));
-  aux.applyDocument({...payload.document,protocol:2,epoch:'network-generation'});
-  aux.applyState({...payload.frame,protocol:2,epoch:'network-generation',seq:1});
+  aux.applyDocument({...payload.document,protocol:3,epoch:'network-generation'});
+  aux.applyState({...payload.frame,protocol:3,epoch:'network-generation',seq:1});
   page.frame();
   assert.equal(page.get('simClock').textContent,'00:00:00');
 });

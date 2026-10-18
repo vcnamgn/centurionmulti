@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="centurion-relay" content="off">
   <title>Centurion · Simulateur REP 1300 pédagogique</title>
-  <link rel="stylesheet" href="centurion.css?v=20261018-shared1">
+  <link rel="stylesheet" href="centurion.css?v=20261018-final1">
 </head>
 <body>
   <header class="topbar">
@@ -19,6 +19,7 @@
       <button class="tab" data-view="protection">CC-Protec.</button>
       <button class="tab" data-view="conduiteAuto">Conduite Auto</button>
       <button class="tab" data-view="modele">Modèles</button>
+      <button class="tab" data-view="logs">Logs</button>
     </nav>
     <div class="runbar">
       <span class="run-indicator" id="runIndicator">EN PAUSE</span>
@@ -55,6 +56,8 @@
   </header>
 
   <main>
+    <div id="diagramEditBar" class="diagram-edit-bar" hidden><strong id="diagramEditStatus">Édition</strong><button class="button" id="editorRequest" type="button">Demander à éditer</button></div>
+    <dialog id="editorTransferDialog"><h2>Demande de mode éditeur</h2><p id="editorTransferText"></p><p id="editorTransferError" role="status"></p><div class="dialog-actions"><button class="button" id="editorTransferRefuse">Garder l’édition</button><button class="button button-primary" id="editorTransferAccept">Transférer l’édition</button></div></dialog>
     <div class="initiator-countdown" id="initiatorCountdown" role="status" aria-live="polite" aria-atomic="true" hidden><strong id="initiatorCountdownLabel"></strong><span>Départ dans <b id="initiatorCountdownSeconds">5</b> s</span><button class="button" id="cancelInitiator" type="button">Annuler</button></div>
     <div id="equipmentFaultBanner" class="equipment-fault-banner" hidden><strong id="equipmentFaultSummary"></strong><button id="showEquipmentFaults" class="button" type="button">Voir les défaillances</button></div>
     <section class="view active" id="view-synoptiques">
@@ -359,12 +362,12 @@
     </section>
 
     <section class="view" id="view-regulation">
-      <iframe id="regulationEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=regul&amp;v=20261018-shared1&amp;shared=0" title="Éditeur CC-RÉGUL"></iframe>
+      <iframe id="regulationEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=regul&amp;v=20261018-final1&amp;shared=0" title="Éditeur CC-RÉGUL"></iframe>
     </section>
 
     <section class="view" id="view-protection">
       <div class="protection-toolbar"><label class="inline-check"><input id="protectionsEnabled" type="checkbox" checked> Protection active</label><label class="inline-check"><input id="risEnabled" type="checkbox" checked> RIS disponible</label><button class="button button-danger" id="forceTrip">Forcer l’AAR</button><button class="button button-primary" id="forceRis">Forcer l’IS</button><span class="badge" id="protectionState">Surveillance</span></div>
-      <iframe id="protectionEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=protect&amp;v=20261018-shared1&amp;shared=0" title="Éditeur CC-PROTECT"></iframe>
+      <iframe id="protectionEditor" class="logic-editor-frame" src="centurion-cc-regul.html?mode=protect&amp;v=20261018-final1&amp;shared=0" title="Éditeur CC-PROTECT"></iframe>
       <div id="signalCards" class="signal-grid"></div>
       <div class="control-grid two-col">
         <section class="card"><h2>Chaîne RIS</h2><div class="form-row thresholds">
@@ -380,7 +383,7 @@
     </section>
 
     <section class="view" id="view-conduiteAuto">
-      <iframe id="autoEditor" class="logic-editor-frame auto-editor-frame" src="centurion-conduite-auto.html?v=20261018-shared1&amp;shared=0" title="Atelier Conduite Auto"></iframe>
+      <iframe id="autoEditor" class="logic-editor-frame auto-editor-frame" src="centurion-conduite-auto.html?v=20261018-final1&amp;shared=0" title="Atelier Conduite Auto"></iframe>
     </section>
 
     <section class="view" id="view-initiateurs">
@@ -506,8 +509,12 @@
 <p>Depuis la version 0.3.0, les auxiliaires ouvrent la même page et les mêmes ateliers : synoptiques, graphiques, initiateurs, transitoires, réglages, CC et conduite auto. Le bouton existant affiche <strong>M · numéro</strong> ou <strong>A · numéro</strong> ; son menu et son infobulle développent le rôle et la connexion, sans ligne de bandeau supplémentaire. La navigation, les zooms et le choix des courbes restent propres à chaque participant.</p>
 <p>Seul le maître avance la physique, les mémoires CC et les séquences. Les auxiliaires chargent les modules nécessaires au rendu, mais leurs boucles de calcul sont désactivées. Leurs gestes passent par un catalogue explicite de contrôles dans <code>centurion-session-controls.js</code> et réutilisent les gestionnaires du pupitre maître. Le relais vérifie rôle, génération, taille, cadence et identifiant de commande ; le maître vérifie disponibilité, bornes et règles métier avant de répondre. Une demande incertaine n’est pas rejouée automatiquement.</p>
 <p>Le maître restaure normalement ses autosauvegardes. Un auxiliaire n’en lit et n’en écrit aucune : les iframes sont servies avec <code>shared=1</code> avant leur démarrage. <strong>Ouvrir</strong> un JSON reste une action explicite qui modifie le schéma commun après validation. Chaque document possède une révision ; une édition concurrente périmée est refusée, le brouillon reste visible et exportable et le participant peut reprendre la version partagée. Il n’y a pas de fusion automatique. La conduite auto doit être interrompue avant édition. Déplacer un bloc CC conserve les mémoires et l’activation ; remplacer explicitement son schéma reprend la règle habituelle de désactivation.</p>
-<p>Le protocole 2 sépare les mesures remplaçables (5 Hz) des documents confirmés et des commandes. Les historiques plus anciens se chargent par pages à l’ouverture d’une vue concernée ; les sauvegardes complètes transitent en fragments de 64 K caractères. <strong>Fichier</strong> permet à un auxiliaire de sauvegarder l’état du maître ou de proposer un chargement validé, appliqué en pause. Aucun projet durable n’est stocké sur le relais.</p>
+<p>Le protocole 3 sépare les mesures remplaçables (5 Hz) des documents confirmés et des commandes. Les historiques plus anciens se chargent par pages à l’ouverture d’une vue concernée ; les sauvegardes complètes transitent en fragments de 64 K caractères. <strong>Fichier</strong> permet à un auxiliaire de sauvegarder l’état du maître ou de proposer un chargement validé, appliqué en pause. Aucun projet durable n’est stocké sur le relais.</p>
 <p>Une coupure fige les dernières valeurs et suspend les commandes ; aucun auxiliaire ne devient maître automatiquement. Garder le maître visible : l’extraction conjointe physique/CC/conduite dans un Worker reste à réaliser. La veille ou la fermeture du navigateur interrompt la séance.</p>
+<h3 id="detail-edition-exclusive-et-journaux-0-4-0">Édition exclusive et journaux (0.4.0)</h3>
+<p>Un seul participant édite les trois ateliers de la séance ; le maître possède ce droit au départ. Les autres restent en visualisation, tout en conservant le pilotage, le choix des vues et les exports. <strong>Demander à éditer</strong> ouvre un popup chez l’éditeur courant : garder la main ou transférer. Les modifications attendent leur confirmation avant transfert. Le relais refuse les imports et éditions provenant d’un autre participant ou d’une ancienne révision de droit. À la déconnexion d’un éditeur auxiliaire, le droit retourne au maître. Une demande expire après une minute. Le protocole 3 impose de recharger les anciennes pages.</p>
+<p>L’onglet <strong>Logs</strong> sépare les événements physiques par démarrage, réinitialisation et chargement d’état. Le journal de séance garde les connexions, demandes/transferts, imports et interventions marquantes ; aucun échantillon physique périodique n’y est copié. Mémoire bornée à 12 essais de 300 événements et 160 événements de séance ; export JSON disponible. Les auxiliaires reçoivent les essais du maître avec les documents, et peuvent voir leurs propres événements de connexion. Ces journaux ne sont pas une archive persistante et disparaissent au rechargement sans export.</p>
+<p>Pendant le déplacement d’une boîte CC, un aperçu met à jour seulement les liens attachés ; l’évitement complet et les ponts sont recalculés au relâchement. Les éléments SVG sont réutilisés. Le rafraîchissement de l’ancien simulateur masqué est désactivé dans les iframes Centurion ; le vrai calcul reste commandé par le parent. Banc VM sur 92 blocs/88 liens, 12 mouvements : environ 457 ms par image avant correction, 2,5 ms après, et environ 117 ms au relâchement dans cet essai. Ces chiffres comparent une surface DOM simulée et ne prédisent pas la durée sur chaque navigateur. Un test vérifie structurellement qu’aucun nouveau routage global n’est lancé pendant le glissement.</p>
 </article>
 <article class="model-detail-page" id="model-detail-3" aria-label="Données et unités"><h2>3. Modèle de données et conventions</h2>
 <p>L&#39;objet racine est <code>{ state, controls }</code>. Les fonctions d&#39;évolution modifient cet objet sur place. <code>state</code> contient les grandeurs réalisées et les mémoires du modèle ; <code>controls</code> contient les demandes, disponibilités et paramètres choisis. Un débit commandé ne doit jamais remplacer directement le débit mesuré dans une vue.</p>
@@ -831,6 +838,7 @@ node scripts/check-docs.mjs</code></pre>
         <section class="card"><h2>Sources et statut</h2><ul class="sources"><li><a href="references.html#ref-02" target="_blank" rel="noopener">Exploitation des cœurs REP</a> : EP-RGL4 et G3 (pages PDF 185–188), chaînes de protection et SPIN (205–217).</li><li>Tableau 11 FXY(z) SPIN en DDC fourni par l'utilisateur : configurations grappées, cotes 1 à 31. La transposition aux 32 mailles et la sélection locale sont des hypothèses d'étude.</li><li><a href="references.html#ref-03" target="_blank" rel="noopener">Marguet</a> : comptage des pas de groupe (§5.4.4, pages PDF 616–622).</li><li>Note REF-01 : accumulateurs RIS (§4.11, page PDF 45), domaine AN/RRA, paramètres PZR et températures nominales. Table ASG symétrique et croquis inventaire/P–T fournis par l’utilisateur. Volumes équivalents CPP, puisard et courbes des pompes RIS restent des hypothèses d’étude.</li><li>La méthode détaillée, les équations et les limites de validité sont décrites dans Modèle → Détails et la <a href="METHODE-CENTURION.html" target="_blank" rel="noopener">méthode détaillée</a>.</li></ul></section>
       </div></div>
     </section>
+    <section class="view" id="view-logs"><div class="panel-head"><div><h1>Logs</h1><p>Événements marquants · 12 essais physiques et 160 événements de séance au maximum, en mémoire.</p></div><button class="button" id="exportLogs">Exporter les logs JSON</button></div><div class="logs-layout"><section class="card"><h2>Simulation physique</h2><div id="physicalLogs"></div></section><section class="card"><h2>Séance et connexion</h2><ol id="sessionLogs"></ol></section></div></section>
   </main>
   <div id="coreDamageCountdown" class="core-damage-countdown" role="status" aria-live="polite" hidden><strong>Risque de cœur fondu</strong><b id="coreDamageSeconds">5</b><span id="coreDamageReason"></span><small>Temps réel ×1 · corriger la situation avant la fin du décompte</small></div>
   <div id="scenarioEnd" class="scenario-end" role="status" hidden><strong id="scenarioEndTitle"></strong><span id="scenarioEndReason"></span><button id="openCertificate" class="button">Créer un certificat</button><small>Fin de scénario · Réinitialiser pour recommencer</small></div>
@@ -845,11 +853,12 @@ node scripts/check-docs.mjs</code></pre>
   <script src="centurion-engine.js?v=20261016-separated1"></script>
   <script src="centurion-history.js?v=20261016-separated1"></script>
   <script src="centurion-cc-pzr.js?v=20261009-pt-probe"></script>
-  <script src="centurion-auto.js?v=20261018-shared1"></script>
+  <script src="centurion-auto.js?v=20261018-final1"></script>
   <script src="centurion-state.js?v=20261016-separated1"></script>
   <script src="centurion-certificate.js?v=20261016-pt-fine"></script>
-<script src="centurion-share.js?v=20261018-shared1"></script>
-<script src="centurion-session-controls.js?v=20261018-shared1"></script>
-<script src="centurion-app.js?v=20261018-shared1"></script>
+<script src="centurion-share.js?v=20261018-final1"></script>
+<script src="centurion-logs.js?v=20261018-final1"></script>
+<script src="centurion-session-controls.js?v=20261018-final1"></script>
+<script src="centurion-app.js?v=20261018-final1"></script>
 </body>
 </html>

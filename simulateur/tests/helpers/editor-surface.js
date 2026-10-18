@@ -61,7 +61,7 @@ function editorSurface(mode='regul',{saved=null,shared=false}={}){
     matches(s){return matches(this,s);}
     addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);}
     removeEventListener(k,fn){this.listeners[k]=(this.listeners[k]||[]).filter(listener=>listener!==fn);}
-    fire(k,extra={}){return Promise.all((this.listeners[k]||[]).map(fn=>fn({type:k,target:this,preventDefault(){},stopPropagation(){},...extra})));}
+    fire(k,extra={}){let stopped=false;const event={type:k,target:this,preventDefault(){},stopPropagation(){},stopImmediatePropagation(){stopped=true;},...extra};for(const fn of events['capture-'+k]||[])fn(event);return stopped?Promise.resolve([]):Promise.all((this.listeners[k]||[]).map(fn=>fn(event)));}
     focus(){}select(){}click(){this.fire('click');}setPointerCapture(){}releasePointerCapture(){}
     showModal(){this.setAttribute('open','');}close(){this.removeAttribute('open');}
     getBoundingClientRect(){return {left:0,top:0,right:1200,bottom:700,width:1200,height:700};}
@@ -93,7 +93,7 @@ function editorSurface(mode='regul',{saved=null,shared=false}={}){
   const document={body:root.querySelector('body'),documentElement:root.querySelector('html'),activeElement:null,
     getElementById:id=>root.querySelector('#'+id),querySelector:s=>root.querySelector(s),
     querySelectorAll:s=>root.querySelectorAll(s),createElement:t=>new Element(t),
-    createElementNS:(_,t)=>new Element(t),addEventListener:(k,fn)=>(events['document-'+k]??=[]).push(fn)};
+    createElementNS:(_,t)=>new Element(t),addEventListener:(k,fn,capture)=>(events[(capture?'capture-':'document-')+k]??=[]).push(fn)};
   const parent={postMessage:data=>messages.push(data)};
   const window={parent,devicePixelRatio:1,addEventListener:(k,fn)=>(events[k]??=[]).push(fn)};
   const context=vm.createContext({document,window,parent,location:{search:'?mode='+mode+(shared?'&shared=1':'')},console,
@@ -127,6 +127,7 @@ function editorSurface(mode='regul',{saved=null,shared=false}={}){
     flushTimers(){while(timers.length)timers.shift()();},
     receive(data){for(const fn of events.message||[])fn({data,source:parent});},
     frame(time=100){const fn=frames.shift();if(!fn)throw Error('aucune trame');fn(time);},
+    routingStats:()=>vm.runInContext('({...regConnectorRouter.stats})',context),
     state:()=>vm.runInContext('({nodes:regNodes,links:regLinks,enabled:regulationEnabled,signals:regLastSignals})',context)};
 }
 module.exports={editorSurface};

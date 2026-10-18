@@ -129,3 +129,11 @@ for(const mode of ['regul','protect']){
     assert.match(ui.query('[data-reg-link-index="0"]').textContent,/42,0 bar/);
   });
 }
+
+test('glissement de 92 blocs : aucun nouveau routage global avant le relâchement',()=>{
+  const ui=editorSurface('regul',{saved:referenceModel('regul')}),node=ui.state().nodes[15],el=ui.query('[data-node-id="'+node.id+'"]');
+  ui.get('zoomResetReg').click();el.fire('pointerdown',{button:0,clientX:100,clientY:100,pointerId:1});const before=ui.routingStats();
+  for(let i=1;i<=8;i++){el.fire('pointermove',{clientX:100+i*10,clientY:100+i*4});ui.frame(i*100);ui.frame(i*100+1);}
+  assert.equal(ui.routingStats().requests,before.requests,'aucune recherche de couloir dans les images de glissement');
+  el.fire('pointerup',{pointerId:1});assert.ok(ui.routingStats().requests>before.requests,'tracé final remis à jour');
+});

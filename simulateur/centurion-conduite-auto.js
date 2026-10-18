@@ -2,6 +2,7 @@
   'use strict';
   const A=window.CenturionAuto,R=window.CenturionAutoRouting,B=window.CenturionAutoEditing,$=id=>document.getElementById(id),STORAGE='centurion.conduite-auto.v1';
   const sharedAux=new URLSearchParams(location.search).get('shared')==='1';
+  let editAllowed=!sharedAux;
   let sharedRevision=0,sharedSerial=0,sharedSending=0,sharedAccepted=null,sharedPending=null,sharedTimer=null;
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -11,7 +12,7 @@
   let selected=null,selection=new Set(),pending=null,drag=null,undo=[],redo=[],clipboard=null,importGraph=null,view={x:0,y:0,w:1200,h:700},suppressClick=false;
   let sequenceListSignature=null,runtimeDrawingSignature=null,seenSerial=0;
   const recent=new Map(),layoutCache=new Map();let dragFrame=null;
-  const locked=()=>['running','paused'].includes(runtime.status);
+  const locked=()=>!editAllowed||['running','paused'].includes(runtime.status);
   const post=data=>parent.postMessage(data,'*');
   const current=()=>selection.size<=1?graph.nodes.find(n=>n.id===selected):null;
   const id=prefix=>prefix+'-'+(window.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
@@ -133,7 +134,7 @@
       if(list.some(s=>s.id===previous))$('sequenceSelect').value=previous;
       sequenceListSignature=signature;
     }
-    $('startSequence').disabled=!connected||locked()||!list.length;
+    $('startSequence').disabled=!connected||['running','paused'].includes(runtime.status)||!list.length;
   }
   function options(list,value){return list.map(([v,t])=>`<option value="${esc(JSON.stringify(v))}"${v===value?' selected':''}>${esc(t)}</option>`).join('');}
   function pickerOptions(list,value,field){
@@ -233,6 +234,12 @@
     updateReading();
   }
   function receive(data){
+    if(data?.type==='centurion-auto-permission'){if(editAllowed!==Boolean(data.allowed)){editAllowed=Boolean(data.allowed);refreshRuntime();draw();}return;}
+    if(data?.type==='centurion-auto-flush'){
+      if(drag)return {idle:false};
+      if(sharedAux&&editAllowed&&!sharedSending&&JSON.stringify(graph)!==sharedAccepted)sendSharedGraph();
+      return {idle:!sharedSending&&(!sharedAux||JSON.stringify(graph)===sharedAccepted)};
+    }
     if(data?.type==='centurion-auto-edit-result'){
       const changedAgain=sharedSerial>data.serial;sharedSending=0;
       if(data.result.ok){sharedRevision=data.result.revision;

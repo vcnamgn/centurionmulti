@@ -1,6 +1,6 @@
 # Centurion — partage d’une simulation entre plusieurs ordinateurs
 
-Note de proposition du 17 octobre 2026, issue de la lecture du code local. Cette note conserve le plan initial ; la version 0.3.0 réalise désormais le partage des interfaces, du pilotage, des documents et des historiques. L’état livré est décrit dans CONCEPTION.md et DEMARRAGE-MULTI.md. Les droits réglables, verrous exclusifs et Worker ci-dessous restent des perspectives. Le contrôle actuel d’édition repose sur les révisions avec refus des conflits.
+Note de proposition du 17 octobre 2026, issue de la lecture du code local. Cette note conserve le plan initial ; la version 0.4.0 réalise désormais le partage des interfaces, du pilotage, des documents et des historiques. L’état livré est décrit dans CONCEPTION.md et DEMARRAGE-MULTI.md. Les droits réglables et le Worker ci-dessous restent des perspectives ; 0.4.0 introduit un propriétaire d’édition commun aux trois ateliers, transférable sur demande. Le contrôle actuel d’édition repose sur les révisions avec refus des conflits.
 
 Mise à jour de la préparation : le relais peut être hébergé sur le serveur Vultr déjà disponible. Cloudron reste une option. Voir [le comparatif d’hébergement](PARTAGE-HEBERGEMENT.md) et [l’état du premier lot](DEMARRAGE-MULTI.md).
 

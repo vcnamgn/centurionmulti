@@ -4,7 +4,7 @@
   if(!E) throw new Error("centurion-engine.js manquant");
   const $=id=>document.getElementById(id);
   const auxiliary=window.CenturionShare?.isAuxiliary()===true;
-  let sharing=null;
+  let sharing=null,editAccess={allowed:!auxiliary,label:'Maître',pending:null};
   const sessionControls=window.CenturionSessionControls?.create({document,isAuxiliary:()=>auxiliary,
     request:action=>sharing?sharing.request(action):Promise.resolve({ok:false,message:'Séance non connectée.'}),onStatus:(text,error)=>sharing?.setStatus(text,error)});
   const fmt=(v,d=0)=>Number(v).toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -42,6 +42,7 @@
     ["naturalCirculationFlow","naturalCirculationKgSPerLoop"]
   ];
   let model=E.make(),running=false,speed=20,last=performance.now(),carry=0;
+  const logs=window.CenturionLogs?.create({document});
   const certificate=window.CenturionCertificate?.create({E,getModel:()=>model,svgFiles,ptCurves,
     prepare:()=>{$("ptTrailWindow").value="14400";setDiagram("pt");render();}});
   let diagram="rcp",selectedGv=1,activeView="synoptiques",svgDoc=null;
@@ -93,7 +94,23 @@
     }
     if(name==="transitoires") drawLoadProgramChart();
     if(name==="conduiteAuto")publishAutoState();
-    maybeLoadSharedHistory();
+    maybeLoadSharedHistory();updateEditAccess();if(name==='logs')logs?.render();
+  }
+  function updateEditAccess(state=editAccess){
+    editAccess=state;
+    const bar=$('diagramEditBar');if(bar)bar.hidden=!['regulation','protection','conduiteAuto'].includes(activeView);
+    const status=$('diagramEditStatus');if(status)status.textContent=state.allowed?'Mode édition · vous êtes l’éditeur des schémas':'Mode visualisation · éditeur : '+state.label;
+    const request=$('editorRequest');if(request){request.hidden=state.allowed;request.disabled=Boolean(state.pending);request.textContent=state.pending?'Demande en attente…':'Demander à éditer';}
+    for(const mode of ['regul','protect'])if(editorReady[mode])dispatchEditor(mode,{type:'centurion-editor-permission',allowed:state.allowed});
+    if(autoReady)dispatchAuto({type:'centurion-auto-permission',allowed:state.allowed});
+  }
+  async function prepareEditorTransfer(){
+    const deadline=Date.now()+26000;
+    while(Date.now()<deadline){
+      const cc=['regul','protect'].every(mode=>editorBridge(mode)?.receive({type:'centurion-editor-flush'})?.idle!==false);
+      let autoIdle=true;try{autoIdle=$('autoEditor').contentWindow?.CenturionAutoEditor?.receive({type:'centurion-auto-flush'})?.idle!==false;}catch{}
+      if(cc&&autoIdle)return;await new Promise(resolve=>setTimeout(resolve,80));
+    }throw Error('Des modifications attendent encore le maître. Réessayez après leur confirmation.');
   }
   function autoValues(){
     const point=E.historyPoint(model);
@@ -108,6 +125,7 @@
   }
   function publishAutoState(init=false){
     if(!Auto||!autoReady)return;
+    dispatchAuto({type:"centurion-auto-permission",allowed:editAccess.allowed});
     dispatchAuto({type:init?"centurion-auto-init":"centurion-auto-state",runtime:autoRuntime,
       values:autoValues(),simulationRunning:running,
       ...(init?{graph:autoGraph,sharedRevision:sessionVersions.auto,measurements:autoMeasurements.map(({id,label,tag,unit,group,range})=>({id,label,tag,unit,group,range})),
@@ -731,6 +749,7 @@
     $("programElapsed").textContent=tLabel(u.transientElapsedS||0);
   }
   function render() {
+    if(!auxiliary)logs?.observe(model);if(activeView==='logs')logs?.render();
     const s=model.state,u=model.controls;
     if(!auxiliary)certificate?.observe(model);
     const v=E.instrumentSnapshot(model,selectedGv);
@@ -1241,7 +1260,7 @@
     if(auxiliary){
       const mode=data?.mode;if(!['regul','protect'].includes(mode))return;
       if(data.type==='centurion-editor-ready'){
-        editorReady[mode]=true;
+        editorReady[mode]=true;dispatchEditor(mode,{type:"centurion-editor-permission",allowed:editAccess.allowed});
         if(sharedDocument?.editors?.[mode])dispatchEditor(mode,{type:'centurion-editor-shared-graph',graph:sharedDocument.editors[mode].graph,revision:sharedDocument.editors[mode].revision});
         if(sharedFrame?.editors?.[mode])dispatchEditor(mode,{type:'centurion-editor-shared-display',display:sharedFrame.editors[mode]});
       }
@@ -1326,13 +1345,14 @@
     }catch(error){stateStatus("Sauvegarde impossible : "+error.message,true);}
     finally{stateBusy=false;running=resume&&!model.state.endState;last=performance.now();render();}
   }
-  async function loadSimulationState(file,{validated=null}={}){
+  async function loadSimulationState(file,{validated=null,fromSession=false}={}){
     if(auxiliary){
       if(!file||!sharing)return;stateStatus('Transmission du fichier au maître…');
       try{const result=await sharing.importFile(file);stateStatus(result.message||'État chargé par le maître, en pause.');}
       catch(error){stateStatus(error.message,true);}finally{$('stateFile').value='';}return;
     }
     if(stateBusy||!file)return;
+    if(sharing&&!sharing.canEdit?.()&&!fromSession){stateStatus('Demandez le mode édition avant de charger un état complet.',true);return false;}
     stateBusy=true;const resume=running;running=false;render();
     let previous=null;
     try{
@@ -1354,6 +1374,7 @@
       if(save.certificateArchive)certificate?.restore(model,save.certificateArchive);
       else certificate?.observe(model);
       stateStatus(`État chargé à ${tLabel(model.state.time)} · en pause. Cliquez sur Démarrer pour poursuivre.`);
+      logs?.begin("État chargé : "+file.name,model.state.time);logs?.observe(model);
       previous=null;
       return true;
     }catch(error){
@@ -1454,6 +1475,9 @@
     }
   }
   function bindControls() {
+    $('exportLogs')?.addEventListener('click',()=>{
+      const url=URL.createObjectURL(new Blob([JSON.stringify(logs?.data(),null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='Centurion-logs.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    });
     bindSetpointControls();
     $("saveState").addEventListener("click",saveSimulationState);
     $("loadState").addEventListener("click",()=>{$("stateFile").value="";$("stateFile").click();});
@@ -1551,8 +1575,8 @@
       if(e.data?.type==="centurion-svg-ready") updateSvg();
       if(['regul','protect'].some(mode=>e.source===$(editorFrames[mode]).contentWindow&&e.data?.mode===mode))handleEditorMessage(e.data);
     });
-    $("runButton").addEventListener("click",()=>{if(model.state.endState)return;running=!running;render();});
-    $("resetButton").addEventListener("click",()=>{cancelInitiator();running=false;pendingCcStep=null;model=E.make();
+    $("runButton").addEventListener("click",()=>{if(model.state.endState)return;running=!running;logs?.note(running?"Simulation démarrée":"Simulation en pause",model.state.time);render();});
+    $("resetButton").addEventListener("click",()=>{cancelInitiator();running=false;pendingCcStep=null;model=E.make();logs?.begin("Réinitialisation",0);
       if(Auto){autoRuntime=Auto.idle();publishAutoState(true);}
       releasePtProbe();
       historyView.reset();
@@ -1703,7 +1727,11 @@
     for(const mode of ['regul','protect']){
       const current=editorBridge(mode)?.receive({type:'centurion-editor-session'});
       if(!current)continue;
+      if(current.dragging&&sessionDocuments?.editors?.[mode]){editors[mode]=sessionDocuments.editors[mode];display[mode]=current.display;continue;}
       const signature=graphSignature(current.graph);
+      const contentSignature=JSON.stringify({name:current.graph.name,nodes:current.graph.nodes.map(({x,y,...node})=>node),links:current.graph.links});
+      if(sessionSignatures['content-'+mode]&&sessionSignatures['content-'+mode]!==contentSignature)logs?.session('Schéma '+(mode==='regul'?'CC-Régul':'CC-Protec')+' mis à jour · '+current.graph.nodes.length+' blocs.');
+      sessionSignatures['content-'+mode]=contentSignature;
       if(signature!==sessionSignatures[mode]){sessionSignatures[mode]=signature;sessionVersions[mode]++;sessionDocumentRevision++;}
       editors[mode]={graph:current.graph,revision:sessionVersions[mode]};display[mode]=current.display;
     }
@@ -1711,11 +1739,12 @@
     if(autoSignature!==sessionSignatures.auto){sessionSignatures.auto=autoSignature;sessionVersions.auto++;sessionDocumentRevision++;}
     const archive=certificate?.save()||null,archiveSignature=JSON.stringify(archive);
     if(archiveSignature!==sessionSignatures.archive){sessionSignatures.archive=archiveSignature;sessionDocumentRevision++;}
-    sessionDocuments={revision:sessionDocumentRevision,editors,autoGraph,autoRevision:sessionVersions.auto,archive};
+    if(logs&&sessionSignatures.logs!==logs.version){sessionSignatures.logs=logs.version;sessionDocumentRevision++;}
+    sessionDocuments={revision:sessionDocumentRevision,editors,autoGraph,autoRevision:sessionVersions.auto,archive,logs:logs?.snapshot()};
     return {document:sessionDocuments,display};
   }
   function applySharedDocument(packet){
-    if(!auxiliary||packet.protocol!==2)return;sharedDocument=packet;
+    if(!auxiliary||packet.protocol!==3)return;sharedDocument=packet;if(packet.logs){logs?.receive(packet.logs);if(activeView==='logs')logs?.render();}
     for(const mode of ['regul','protect'])if(packet.editors?.[mode]){
       sessionVersions[mode]=packet.editors[mode].revision;
       if(editorReady[mode])dispatchEditor(mode,{type:'centurion-editor-shared-graph',...packet.editors[mode]});
@@ -1805,7 +1834,7 @@
       if(file.size>window.CenturionState.MAX_STATE_BYTES)throw Error('Fichier trop volumineux.');
       const expected=window.CenturionState.read(E,await file.text());
       if(model!==context.identity)throw Error('La simulation a changé pendant le transfert.');
-      const loaded=await loadSimulationState(file,{validated:expected});if(!loaded)throw Error($('stateStatus').textContent);
+      const loaded=await loadSimulationState(file,{validated:expected,fromSession:true});if(!loaded)throw Error($('stateStatus').textContent);
       return {ok:true,message:'État chargé par le maître, en pause.'};
     }
     throw Error('Commande de séance inconnue.');
@@ -1865,6 +1894,6 @@
   renderAlarmTable();bindControls();syncInputs();render();
   for(const [mode,id] of [["regul","regulationEditor"],["protect","protectionEditor"]])connectEditor(mode,id);
   connectAuto();
-  sharing=window.CenturionShare?.attach({readState:readSharedState,applyState:applySharedFrame,applyDocument:applySharedDocument,execute:executeSharedAction});
+  sharing=window.CenturionShare?.attach({readState:readSharedState,applyState:applySharedFrame,applyDocument:applySharedDocument,execute:executeSharedAction,onEditState:updateEditAccess,onEvent:text=>logs?.session(text),prepareTransfer:prepareEditorTransfer});
   requestAnimationFrame(frame);
 })();

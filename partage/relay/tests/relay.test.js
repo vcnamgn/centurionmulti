@@ -182,3 +182,22 @@ test('les schémas partagés proviennent seulement du maître et parviennent aux
   const late=io(f.origin,{transports:['websocket'],forceNew:true,reconnection:false,auth:{protocol:PROTOCOL,role:'viewer',sessionId:session.sessionId,token:session.inviteToken}});f.clients.push(late);
   const latest=await once(late,'session:document');assert.equal(latest.revision,1);
 });
+
+test('édition exclusive : demande au propriétaire, refus, transfert, contrôle réseau et reprise au départ',async t=>{
+  let clock=100000;const f=await fixture(t,{now:()=>clock}),room=await(await f.create()).json();
+  const master=await f.open('master',room),aux=await f.open('viewer',room),other=await f.open('viewer',room);
+  await send(master,'state:frame',frame());
+  const action={kind:'cc-edit',mode:'regul',revision:1,graph:{}};
+  assert.equal((await send(aux,'command:request',{id:'edit-denied-001',epoch:'generation-one',action,editRevision:1})).error,'edit_required');
+  let prompt=once(master,'edit:prompt');assert.equal((await masterRequest(aux)).ok,true);const first=await prompt;
+  assert.equal((await send(other,'edit:answer',{id:first.id,accept:true})).ok,false,'un tiers ne peut pas accepter');
+  assert.equal((await send(master,'edit:answer',{id:first.id,accept:false})).ok,true);
+  clock+=11000;prompt=once(master,'edit:prompt');await masterRequest(aux);const second=await prompt;
+  const changed=once(aux,'edit:state');assert.equal((await send(master,'edit:answer',{id:second.id,accept:true})).ok,true);const access=await changed;
+  assert.equal(access.owner,aux.id);assert.equal(access.revision,2);
+  let applied=0;master.on('command:apply',(_packet,ack)=>{applied++;ack({ok:true});});
+  assert.equal((await send(aux,'command:request',{id:'edit-allowed-001',epoch:'generation-one',action,editRevision:access.revision})).ok,true);assert.equal(applied,1);
+  assert.equal((await send(other,'command:request',{id:'edit-denied-002',epoch:'generation-one',action,editRevision:access.revision})).error,'edit_required');
+  const returned=once(master,'edit:state');aux.disconnect();assert.equal((await returned).owner,'master');
+});
+const masterRequest=socket=>socket.timeout(3000).emitWithAck('edit:request');

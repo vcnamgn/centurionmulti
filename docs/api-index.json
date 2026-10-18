@@ -2,7 +2,7 @@
   "format": "Centurion-Documentation",
   "version": 1,
   "date": "2026-10-17",
-  "noteHash": "a08e7da2ba0e353426b85be2fb21854eca141c561ebabc497641644b858180c9",
+  "noteHash": "f48ab0478253d3ef9a70232aab86eb40096be210fbdf62cdf094e4bf75f86ea7",
   "modules": [
     {
       "file": "simulateur/centurion-engine.js",
@@ -872,111 +872,215 @@
       "file": "simulateur/centurion-share.js",
       "title": "Séances partagées",
       "description": "Rôles maître/auxiliaire, instantanés, documents, commandes confirmées et fichiers fragmentés ; inactif hors relais.",
-      "sha256": "8219fc0bb1ebef6bb501fb0fb9d8b93fc1f5c09d8a0f99321b47704a4e0cabef",
+      "sha256": "d566853c54c26ebad1c45e55a50f726459a7a57e6718de1bd45244db5b8d9527",
       "functions": [
         {
           "name": "attach",
           "line": 7,
-          "signature": "attach({readState,applyState=()=>{},applyDocument=()=>{},execute=async()=>({ok:false,error:'unsupported'})})",
+          "signature": "attach({readState,applyState=()=>{},applyDocument=()=>{},execute=async()=>({ok:false,error:'unsupported'}),onEditState=()=>{},onEvent=()=>{},prepareTransfer=async()=>{}})",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L7"
         },
         {
-          "name": "status",
-          "line": 15,
-          "signature": "status(text,error=false)",
+          "name": "updateEdit",
+          "line": 17,
+          "signature": "updateEdit()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L15"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L17"
         },
         {
-          "name": "label",
-          "line": 16,
-          "signature": "label(code)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L16"
-        },
-        {
-          "name": "controls",
+          "name": "requestEdit",
           "line": 21,
-          "signature": "controls()",
+          "signature": "requestEdit()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L21"
         },
         {
-          "name": "observerUrl",
-          "line": 26,
-          "signature": "observerUrl(current)",
+          "name": "answerEdit",
+          "line": 25,
+          "signature": "answerEdit(accept)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L26"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L25"
         },
         {
-          "name": "loadSdk",
-          "line": 30,
-          "signature": "loadSdk()",
+          "name": "status",
+          "line": 38,
+          "signature": "status(text,error=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L30"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L38"
         },
         {
-          "name": "publish",
+          "name": "label",
           "line": 39,
-          "signature": "publish()",
+          "signature": "label(code)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L39"
         },
         {
+          "name": "controls",
+          "line": 44,
+          "signature": "controls()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L44"
+        },
+        {
+          "name": "observerUrl",
+          "line": 49,
+          "signature": "observerUrl(current)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L49"
+        },
+        {
+          "name": "loadSdk",
+          "line": 53,
+          "signature": "loadSdk()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L53"
+        },
+        {
+          "name": "publish",
+          "line": 62,
+          "signature": "publish()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L62"
+        },
+        {
           "name": "disconnect",
-          "line": 54,
+          "line": 77,
           "signature": "disconnect(end)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L54"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L77"
         },
         {
           "name": "connect",
-          "line": 59,
+          "line": 82,
           "signature": "connect(current)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L59"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L82"
         },
         {
           "name": "createSession",
-          "line": 94,
+          "line": 125,
           "signature": "createSession()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L94"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L125"
         },
         {
           "name": "request",
-          "line": 102,
+          "line": 133,
           "signature": "request(action)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L102"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L133"
         },
         {
           "name": "exportFile",
-          "line": 108,
+          "line": 139,
           "signature": "exportFile()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L108"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L139"
         },
         {
           "name": "importFile",
-          "line": 120,
+          "line": 151,
           "signature": "importFile(file)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L120"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-share.js#L151"
+        }
+      ]
+    },
+    {
+      "file": "simulateur/centurion-logs.js",
+      "title": "Journaux",
+      "description": "Événements physiques séparés par essai, moments de séance, limites mémoire et export.",
+      "sha256": "70700e835eb2b7eefd52d35bc23859e3b2d0512af6ee2b499e14d2d845987a12",
+      "functions": [
+        {
+          "name": "create",
+          "line": 4,
+          "signature": "create({document=null,now=()=>new Date().toISOString(),maxRuns=12,maxEvents=300,maxSession=160}={})",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L4"
+        },
+        {
+          "name": "begin",
+          "line": 7,
+          "signature": "begin(label,time=0)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L7"
+        },
+        {
+          "name": "note",
+          "line": 8,
+          "signature": "note(text,time=0)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L8"
+        },
+        {
+          "name": "observe",
+          "line": 9,
+          "signature": "observe(model)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L9"
+        },
+        {
+          "name": "addSession",
+          "line": 14,
+          "signature": "addSession(text)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L14"
+        },
+        {
+          "name": "snapshot",
+          "line": 15,
+          "signature": "snapshot()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L15"
+        },
+        {
+          "name": "receive",
+          "line": 16,
+          "signature": "receive(data)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L16"
+        },
+        {
+          "name": "data",
+          "line": 17,
+          "signature": "data()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L17"
+        },
+        {
+          "name": "render",
+          "line": 19,
+          "signature": "render()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-logs.js#L19"
         }
       ]
     },
@@ -1072,623 +1176,639 @@
       "file": "simulateur/centurion-app.js",
       "title": "Application",
       "description": "Horloge, commandes, arbitrage CC et présentation.",
-      "sha256": "4e767fb79785e0e39a55a23350d675b64bb05a6d5e70dffc334a14811903d563",
+      "sha256": "c7e34fe0759a797ba38ea29e4bb2c8e7412971d27269a31b3e432425352a9182",
       "functions": [
         {
           "name": "activateView",
-          "line": 84,
+          "line": 85,
           "signature": "activateView(name)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L84"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L85"
+        },
+        {
+          "name": "updateEditAccess",
+          "line": 99,
+          "signature": "updateEditAccess(state=editAccess)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L99"
+        },
+        {
+          "name": "prepareEditorTransfer",
+          "line": 107,
+          "signature": "prepareEditorTransfer()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L107"
         },
         {
           "name": "autoValues",
-          "line": 98,
+          "line": 115,
           "signature": "autoValues()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L98"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L115"
         },
         {
           "name": "dispatchAuto",
-          "line": 104,
+          "line": 121,
           "signature": "dispatchAuto(data)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L104"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L121"
         },
         {
           "name": "publishAutoState",
-          "line": 109,
+          "line": 126,
           "signature": "publishAutoState(init=false)",
           "publicApi": false,
           "description": "Application : transmet les mesures courantes et la progression, par raccordement direct ou postMessage.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L109"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L126"
         },
         {
           "name": "handleAutoMessage",
-          "line": 116,
+          "line": 134,
           "signature": "handleAutoMessage(data,source)",
           "publicApi": false,
           "description": "Application : accepte seulement les messages de l’iframe de conduite ; valide le graphe et arbitre lancement, pause, reprise ou interruption.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L116"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L134"
         },
         {
           "name": "connectAuto",
-          "line": 152,
+          "line": 170,
           "signature": "connectAuto()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L152"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L170"
         },
         {
           "name": "advanceAutoStep",
-          "line": 156,
+          "line": 174,
           "signature": "advanceAutoStep()",
           "publicApi": false,
           "description": "Application : avance la séquence une fois avant chaque pas physique de 0,1 s ; utilise les mêmes commandes et priorités que le pupitre.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L156"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L174"
         },
         {
           "name": "renderInitiatorCountdown",
-          "line": 163,
+          "line": 181,
           "signature": "renderInitiatorCountdown(now=performance.now())",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L163"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L181"
         },
         {
           "name": "cancelInitiator",
-          "line": 178,
+          "line": 196,
           "signature": "cancelInitiator()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L178"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L196"
         },
         {
           "name": "scheduleInitiator",
-          "line": 183,
+          "line": 201,
           "signature": "scheduleInitiator(name,details,label)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L183"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L201"
         },
         {
           "name": "setDiagram",
-          "line": 199,
+          "line": 217,
           "signature": "setDiagram(name,gv=selectedGv)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L199"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L217"
         },
         {
           "name": "recolorArrow",
-          "line": 228,
-          "signature": "recolorArrow(group,disabled)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L228"
-        },
-        {
-          "name": "arrowAncestor",
-          "line": 238,
-          "signature": "arrowAncestor(text)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L238"
-        },
-        {
-          "name": "parseLinkLabel",
           "line": 246,
-          "signature": "parseLinkLabel(label)",
+          "signature": "recolorArrow(group,disabled)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L246"
         },
         {
+          "name": "arrowAncestor",
+          "line": 256,
+          "signature": "arrowAncestor(text)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L256"
+        },
+        {
+          "name": "parseLinkLabel",
+          "line": 264,
+          "signature": "parseLinkLabel(label)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L264"
+        },
+        {
           "name": "decorateSvg",
-          "line": 255,
+          "line": 273,
           "signature": "decorateSvg()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L255"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L273"
         },
         {
           "name": "updateSvg",
-          "line": 281,
+          "line": 299,
           "signature": "updateSvg()",
           "publicApi": false,
           "description": "Application : publie la projection instrumentale vers la vue SVG, avec ses éventuelles traces.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L281"
-        },
-        {
-          "name": "releasePtProbe",
-          "line": 299,
-          "signature": "releasePtProbe()",
-          "publicApi": false,
-          "description": "Réinitialise le bouton et la lecture P–T puis demande au SVG de libérer le réticule. Aucun effet sur les mesures ou les commandes physiques.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L299"
         },
         {
+          "name": "releasePtProbe",
+          "line": 317,
+          "signature": "releasePtProbe()",
+          "publicApi": false,
+          "description": "Réinitialise le bouton et la lecture P–T puis demande au SVG de libérer le réticule. Aucun effet sur les mesures ou les commandes physiques.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L317"
+        },
+        {
           "name": "renderInventoryBalance",
-          "line": 304,
+          "line": 322,
           "signature": "renderInventoryBalance()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L304"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L322"
         },
         {
           "name": "renderBoard",
-          "line": 340,
+          "line": 358,
           "signature": "renderBoard()",
           "publicApi": false,
           "description": "Application : affiche mesures réalisées, informations calculées, alarmes et positions.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L340"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L358"
         },
         {
           "name": "renderAlarms",
-          "line": 419,
-          "signature": "renderAlarms(s,g,l)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L419"
-        },
-        {
-          "name": "renderAlarmTable",
           "line": 437,
-          "signature": "renderAlarmTable()",
+          "signature": "renderAlarms(s,g,l)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L437"
         },
         {
+          "name": "renderAlarmTable",
+          "line": 455,
+          "signature": "renderAlarmTable()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L455"
+        },
+        {
           "name": "setModelPage",
-          "line": 441,
+          "line": 459,
           "signature": "setModelPage(page)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L441"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L459"
         },
         {
           "name": "setModelDetailPage",
-          "line": 446,
+          "line": 464,
           "signature": "setModelDetailPage(page)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L446"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L464"
         },
         {
           "name": "renderSignals",
-          "line": 454,
+          "line": 472,
           "signature": "renderSignals()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L454"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L472"
         },
         {
           "name": "renderAxial",
-          "line": 487,
+          "line": 505,
           "signature": "renderAxial()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L487"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L505"
         },
         {
           "name": "drawCoreCharts",
-          "line": 494,
+          "line": 512,
           "signature": "drawCoreCharts()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L494"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L512"
         },
         {
           "name": "drawHistory",
-          "line": 678,
+          "line": 696,
           "signature": "drawHistory()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L678"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L696"
         },
         {
           "name": "drawLoadProgramChart",
-          "line": 681,
+          "line": 699,
           "signature": "drawLoadProgramChart()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L681"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L699"
         },
         {
           "name": "renderTransientControls",
-          "line": 706,
+          "line": 724,
           "signature": "renderTransientControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L706"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L724"
         },
         {
           "name": "render",
-          "line": 733,
+          "line": 751,
           "signature": "render()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L733"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L751"
         },
         {
           "name": "faultValueLabel",
-          "line": 912,
+          "line": 931,
           "signature": "faultValueLabel(equipment,value)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L912"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L931"
         },
         {
           "name": "renderEquipmentFaults",
-          "line": 916,
+          "line": 935,
           "signature": "renderEquipmentFaults()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L916"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L935"
         },
         {
           "name": "bindEquipmentFaults",
-          "line": 938,
+          "line": 957,
           "signature": "bindEquipmentFaults()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L938"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L957"
         },
         {
           "name": "bindNumber",
-          "line": 976,
+          "line": 995,
           "signature": "bindNumber(id,callback)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L976"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L995"
         },
         {
           "name": "bindNumericInputs",
-          "line": 979,
+          "line": 998,
           "signature": "bindNumericInputs(target,callback,selector=null)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L979"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L998"
         },
         {
           "name": "bindModelParameters",
-          "line": 1007,
+          "line": 1026,
           "signature": "bindModelParameters()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1007"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1026"
         },
         {
           "name": "renderManualExtras",
-          "line": 1027,
+          "line": 1046,
           "signature": "renderManualExtras()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1027"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1046"
         },
         {
           "name": "changeManualROverride",
-          "line": 1051,
+          "line": 1070,
           "signature": "changeManualROverride(enabled)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1051"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1070"
         },
         {
           "name": "bindManualExtras",
-          "line": 1061,
+          "line": 1080,
           "signature": "bindManualExtras()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1061"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1080"
         },
         {
           "name": "editorSignals",
-          "line": 1088,
+          "line": 1107,
           "signature": "editorSignals()",
           "publicApi": false,
           "description": "Application : délègue la projection des sources à controlSignals, sans duplication des mesures.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1088"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1107"
         },
         {
           "name": "editorBridge",
-          "line": 1092,
+          "line": 1111,
           "signature": "editorBridge(mode)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1092"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1111"
         },
         {
           "name": "dispatchEditor",
-          "line": 1096,
-          "signature": "dispatchEditor(mode,payload)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1096"
-        },
-        {
-          "name": "sendEditorTick",
-          "line": 1102,
-          "signature": "sendEditorTick(dt=0)",
-          "publicApi": false,
-          "description": "Application : envoie dt et les signaux communs aux deux éditeurs prêts.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1102"
-        },
-        {
-          "name": "advanceControlledStep",
           "line": 1115,
-          "signature": "advanceControlledStep()",
+          "signature": "dispatchEditor(mode,payload)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1115"
         },
         {
-          "name": "finishCcStep",
+          "name": "sendEditorTick",
+          "line": 1121,
+          "signature": "sendEditorTick(dt=0)",
+          "publicApi": false,
+          "description": "Application : envoie dt et les signaux communs aux deux éditeurs prêts.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1121"
+        },
+        {
+          "name": "advanceControlledStep",
           "line": 1134,
-          "signature": "finishCcStep(tick)",
+          "signature": "advanceControlledStep()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1134"
         },
         {
+          "name": "finishCcStep",
+          "line": 1153,
+          "signature": "finishCcStep(tick)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1153"
+        },
+        {
           "name": "receiveCcStepOutput",
-          "line": 1141,
+          "line": 1160,
           "signature": "receiveCcStepOutput(message)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1141"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1160"
         },
         {
           "name": "advanceSimulationTime",
-          "line": 1152,
+          "line": 1171,
           "signature": "advanceSimulationTime()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1152"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1171"
         },
         {
           "name": "connectEditor",
-          "line": 1167,
+          "line": 1186,
           "signature": "connectEditor(mode,id)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1167"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1186"
         },
         {
           "name": "setRegulationActive",
-          "line": 1173,
+          "line": 1192,
           "signature": "setRegulationActive(enabled,notifyEditor=true)",
           "publicApi": false,
           "description": "Application : active/désactive la commande CC-RÉGUL ; synchronise le repli manuel sur les actionneurs réalisés.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1173"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1192"
         },
         {
           "name": "setProtectionActive",
-          "line": 1196,
+          "line": 1215,
           "signature": "setProtectionActive(enabled,notifyEditor=true)",
           "publicApi": false,
           "description": "Application : commande CC-PROTECT et fixe le mode de protection par graphe.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1196"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1215"
         },
         {
           "name": "applyEditorOutputs",
-          "line": 1207,
+          "line": 1226,
           "signature": "applyEditorOutputs(message)",
           "publicApi": false,
           "description": "Application : traduit les sorties finies des ateliers actifs en commandes du moteur ; AAR/IS/ASG sont mémorisés.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1207"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1226"
         },
         {
           "name": "handleEditorMessage",
-          "line": 1240,
+          "line": 1259,
           "signature": "handleEditorMessage(data)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1240"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1259"
         },
         {
           "name": "stateStatus",
-          "line": 1273,
+          "line": 1292,
           "signature": "stateStatus(text,error=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1273"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1292"
         },
         {
           "name": "editorStateCommand",
-          "line": 1276,
+          "line": 1295,
           "signature": "editorStateCommand(mode,type,saved)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1276"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1295"
         },
         {
           "name": "waitForCcIdle",
-          "line": 1290,
-          "signature": "waitForCcIdle()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1290"
-        },
-        {
-          "name": "saveEditors",
-          "line": 1298,
-          "signature": "saveEditors()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1298"
-        },
-        {
-          "name": "stateUi",
-          "line": 1302,
-          "signature": "stateUi()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1302"
-        },
-        {
-          "name": "saveSimulationState",
           "line": 1309,
-          "signature": "saveSimulationState()",
+          "signature": "waitForCcIdle()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1309"
         },
         {
-          "name": "loadSimulationState",
-          "line": 1329,
-          "signature": "loadSimulationState(file,{validated=null}={})",
+          "name": "saveEditors",
+          "line": 1317,
+          "signature": "saveEditors()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1329"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1317"
+        },
+        {
+          "name": "stateUi",
+          "line": 1321,
+          "signature": "stateUi()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1321"
+        },
+        {
+          "name": "saveSimulationState",
+          "line": 1328,
+          "signature": "saveSimulationState()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1328"
+        },
+        {
+          "name": "loadSimulationState",
+          "line": 1348,
+          "signature": "loadSimulationState(file,{validated=null,fromSession=false}={})",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1348"
         },
         {
           "name": "restoreStateUi",
-          "line": 1372,
+          "line": 1393,
           "signature": "restoreStateUi(ui)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1372"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1393"
         },
         {
           "name": "renderPzrLevelTrend",
-          "line": 1392,
+          "line": 1413,
           "signature": "renderPzrLevelTrend()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1392"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1413"
         },
         {
           "name": "renderSetpointControls",
-          "line": 1416,
+          "line": 1437,
           "signature": "renderSetpointControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1416"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1437"
         },
         {
           "name": "bindSetpointControls",
-          "line": 1433,
+          "line": 1454,
           "signature": "bindSetpointControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1433"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1454"
         },
         {
           "name": "bindControls",
-          "line": 1456,
+          "line": 1477,
           "signature": "bindControls()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1456"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1477"
         },
         {
           "name": "syncInputs",
-          "line": 1660,
+          "line": 1684,
           "signature": "syncInputs()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1660"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1684"
         },
         {
           "name": "sharedRequest",
-          "line": 1699,
+          "line": 1723,
           "signature": "sharedRequest(action)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1699"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1723"
         },
         {
           "name": "graphSignature",
-          "line": 1700,
+          "line": 1724,
           "signature": "graphSignature(graph)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1700"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1724"
         },
         {
           "name": "sessionContent",
-          "line": 1701,
+          "line": 1725,
           "signature": "sessionContent()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1701"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1725"
         },
         {
           "name": "applySharedDocument",
-          "line": 1717,
-          "signature": "applySharedDocument(packet)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1717"
-        },
-        {
-          "name": "mergeSharedHistory",
-          "line": 1726,
-          "signature": "mergeSharedHistory(points)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1726"
-        },
-        {
-          "name": "applySharedFrame",
-          "line": 1731,
-          "signature": "applySharedFrame(packet)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1731"
-        },
-        {
-          "name": "maybeLoadSharedHistory",
           "line": 1746,
-          "signature": "maybeLoadSharedHistory()",
+          "signature": "applySharedDocument(packet)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1746"
         },
         {
+          "name": "mergeSharedHistory",
+          "line": 1755,
+          "signature": "mergeSharedHistory(points)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1755"
+        },
+        {
+          "name": "applySharedFrame",
+          "line": 1760,
+          "signature": "applySharedFrame(packet)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1760"
+        },
+        {
+          "name": "maybeLoadSharedHistory",
+          "line": 1775,
+          "signature": "maybeLoadSharedHistory()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1775"
+        },
+        {
           "name": "conflict",
-          "line": 1763,
+          "line": 1792,
           "signature": "conflict(message)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1763"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1792"
         },
         {
           "name": "executeSharedAction",
-          "line": 1764,
+          "line": 1793,
           "signature": "executeSharedAction(action,context)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1764"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1793"
         },
         {
           "name": "stateTransfer",
-          "line": 1813,
+          "line": 1842,
           "signature": "stateTransfer(action,context)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1813"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1842"
         },
         {
           "name": "readSharedState",
-          "line": 1840,
+          "line": 1869,
           "signature": "readSharedState({identityOnly=false,historySince=null}={})",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1840"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1869"
         },
         {
           "name": "frame",
-          "line": 1853,
+          "line": 1882,
           "signature": "frame(now)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1853"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-app.js#L1882"
         }
       ]
     },
@@ -2408,7 +2528,7 @@
       "file": "simulateur/centurion-cc-regul.html",
       "title": "Ateliers CC",
       "description": "Édition, évaluation, stockage et code hérité inactif.",
-      "sha256": "f2d7a285552abb7f102b139921fc9f5169d7e501b4369badaafc7c8adc6f94c1",
+      "sha256": "3056e0ba5bd5a109238a64e321f8d5333f2c9c42463b621448dd149923919910",
       "functions": [
         {
           "name": "saturationPressureMPa",
@@ -2772,811 +2892,835 @@
         },
         {
           "name": "regStateSnapshot",
-          "line": 3574,
+          "line": 3577,
           "signature": "regStateSnapshot(includeViewport = true)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3574"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3577"
         },
         {
           "name": "regStateSignature",
-          "line": 3595,
+          "line": 3598,
           "signature": "regStateSignature(snapshot)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3595"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3598"
         },
         {
           "name": "setRegSaveStatus",
-          "line": 3599,
+          "line": 3602,
           "signature": "setRegSaveStatus(message, error = false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3599"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3602"
         },
         {
           "name": "updateRegHistoryButtons",
-          "line": 3606,
+          "line": 3609,
           "signature": "updateRegHistoryButtons()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3606"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3609"
         },
         {
           "name": "scheduleRegAutosave",
-          "line": 3612,
+          "line": 3615,
           "signature": "scheduleRegAutosave()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3612"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3615"
         },
         {
           "name": "currentRegModel",
-          "line": 3619,
+          "line": 3622,
           "signature": "currentRegModel()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3619"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3622"
         },
         {
           "name": "writeRegAutosave",
-          "line": 3629,
+          "line": 3632,
           "signature": "writeRegAutosave()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3629"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3632"
         },
         {
           "name": "normalizeRegModel",
-          "line": 3651,
+          "line": 3654,
           "signature": "normalizeRegModel(raw)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3651"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3654"
         },
         {
           "name": "migrateCenturionRegulation",
-          "line": 3715,
+          "line": 3718,
           "signature": "migrateCenturionRegulation(model)",
           "publicApi": false,
           "description": "Atelier : migration idempotente des anciennes chaînes standard en préservant les paramètres personnalisés.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3715"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3718"
         },
         {
           "name": "migrateCenturionTemperature",
-          "line": 3807,
+          "line": 3810,
           "signature": "migrateCenturionTemperature(model)",
           "publicApi": false,
           "description": "Atelier : migration de la chaîne de température vers pas/min et compensation/filtrage actuels.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3807"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3810"
         },
         {
           "name": "migrateCenturionProtection",
-          "line": 3894,
+          "line": 3897,
           "signature": "migrateCenturionProtection(model)",
           "publicApi": false,
           "description": "Atelier : migration des logigrammes de protection et ajout des fonctions prévues au graphe standard.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3894"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3897"
         },
         {
           "name": "applyRegState",
-          "line": 3965,
+          "line": 3968,
           "signature": "applyRegState(snapshot, options = {})",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3965"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L3968"
         },
         {
           "name": "openSolutionsDialog",
-          "line": 4012,
+          "line": 4015,
           "signature": "openSolutionsDialog()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4012"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4015"
         },
         {
           "name": "loadSelectedSolution",
-          "line": 4026,
+          "line": 4029,
           "signature": "loadSelectedSolution(event)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4026"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4029"
         },
         {
           "name": "recordRegMutation",
-          "line": 4066,
+          "line": 4069,
           "signature": "recordRegMutation(before, label = \"Modification\")",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4066"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4069"
         },
         {
           "name": "undoRegulationEdit",
-          "line": 4081,
+          "line": 4084,
           "signature": "undoRegulationEdit()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4081"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4084"
         },
         {
           "name": "redoRegulationEdit",
-          "line": 4091,
+          "line": 4094,
           "signature": "redoRegulationEdit()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4091"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4094"
         },
         {
           "name": "exportRegModel",
-          "line": 4101,
+          "line": 4104,
           "signature": "exportRegModel()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4101"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4104"
         },
         {
           "name": "importRegModelFile",
-          "line": 4143,
+          "line": 4146,
           "signature": "importRegModelFile(file)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4143"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4146"
         },
         {
           "name": "restoreRegAutosave",
-          "line": 4159,
+          "line": 4162,
           "signature": "restoreRegAutosave()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4159"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4162"
         },
         {
           "name": "affineCoefficients",
-          "line": 4178,
+          "line": 4181,
           "signature": "affineCoefficients(params)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4178"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4181"
         },
         {
           "name": "regNodeSymbol",
-          "line": 4184,
+          "line": 4187,
           "signature": "regNodeSymbol(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4184"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4187"
         },
         {
           "name": "regNodeHasInput",
-          "line": 4189,
+          "line": 4192,
           "signature": "regNodeHasInput(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4189"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4192"
         },
         {
           "name": "regNodeHasOutput",
-          "line": 4193,
+          "line": 4196,
           "signature": "regNodeHasOutput(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4193"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4196"
         },
         {
           "name": "regInputLabel",
-          "line": 4197,
+          "line": 4200,
           "signature": "regInputLabel(index)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4197"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4200"
         },
         {
           "name": "regInputKey",
-          "line": 4201,
+          "line": 4204,
           "signature": "regInputKey(index)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4201"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4204"
         },
         {
           "name": "regUsedInputIndices",
-          "line": 4205,
+          "line": 4208,
           "signature": "regUsedInputIndices(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4205"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4208"
         },
         {
           "name": "regInputPortCount",
-          "line": 4212,
+          "line": 4215,
           "signature": "regInputPortCount(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4212"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4215"
         },
         {
           "name": "ensureSumCoefficients",
-          "line": 4222,
+          "line": 4225,
           "signature": "ensureSumCoefficients(node, count = regInputPortCount(node))",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4222"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4225"
         },
         {
           "name": "regNodeMinHeight",
-          "line": 4230,
+          "line": 4233,
           "signature": "regNodeMinHeight(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4230"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4233"
         },
         {
           "name": "regNodeHeight",
-          "line": 4235,
+          "line": 4238,
           "signature": "regNodeHeight(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4235"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4238"
         },
         {
           "name": "regInputPortY",
-          "line": 4239,
+          "line": 4242,
           "signature": "regInputPortY(node, inputIndex)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4239"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4242"
         },
         {
           "name": "regFieldsForNode",
-          "line": 4244,
+          "line": 4247,
           "signature": "regFieldsForNode(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4244"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4247"
         },
         {
           "name": "regNodeSummary",
-          "line": 4255,
+          "line": 4258,
           "signature": "regNodeSummary(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4255"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4258"
         },
         {
           "name": "jsNumber",
-          "line": 4298,
+          "line": 4301,
           "signature": "jsNumber(value, digits = 4)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4298"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4301"
         },
         {
           "name": "normalizedOperatorInputs",
-          "line": 4308,
+          "line": 4311,
           "signature": "normalizedOperatorInputs(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4308"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4311"
         },
         {
           "name": "operatorDocumentation",
-          "line": 4314,
+          "line": 4317,
           "signature": "operatorDocumentation(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4314"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4317"
         },
         {
           "name": "operatorCurveDefinition",
-          "line": 4474,
+          "line": 4477,
           "signature": "operatorCurveDefinition(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4474"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4477"
         },
         {
           "name": "drawOperatorCurve",
-          "line": 4512,
+          "line": 4515,
           "signature": "drawOperatorCurve(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4512"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4515"
         },
         {
           "name": "updateOperatorInfo",
-          "line": 4542,
+          "line": 4545,
           "signature": "updateOperatorInfo(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4542"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4545"
         },
         {
           "name": "addRegNode",
-          "line": 4554,
+          "line": 4557,
           "signature": "addRegNode(type, x, y, options = {})",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4554"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4557"
         },
         {
           "name": "updateRegViewport",
-          "line": 4578,
+          "line": 4581,
           "signature": "updateRegViewport()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4578"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4581"
         },
         {
           "name": "screenToRegWorld",
-          "line": 4589,
+          "line": 4592,
           "signature": "screenToRegWorld(clientX, clientY)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4589"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4592"
         },
         {
           "name": "zoomRegulationAt",
-          "line": 4597,
+          "line": 4600,
           "signature": "zoomRegulationAt(nextZoom, clientX, clientY)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4597"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4600"
         },
         {
           "name": "fitRegulationView",
-          "line": 4609,
+          "line": 4612,
           "signature": "fitRegulationView()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4609"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4612"
         },
         {
           "name": "bindRegCanvasEvents",
-          "line": 4635,
+          "line": 4638,
           "signature": "bindRegCanvasEvents()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4635"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4638"
         },
         {
           "name": "measureRegNodeHeights",
-          "line": 4737,
+          "line": 4740,
           "signature": "measureRegNodeHeights()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4737"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4740"
         },
         {
           "name": "renderRegEditor",
-          "line": 4755,
+          "line": 4758,
           "signature": "renderRegEditor()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4755"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4758"
+        },
+        {
+          "name": "refreshRegPermission",
+          "line": 4804,
+          "signature": "refreshRegPermission()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4804"
+        },
+        {
+          "name": "guardRegEditing",
+          "line": 4812,
+          "signature": "guardRegEditing(event)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4812"
         },
         {
           "name": "requestRegLinks",
-          "line": 4801,
+          "line": 4823,
           "signature": "requestRegLinks()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4801"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4823"
+        },
+        {
+          "name": "renderRegDragLinks",
+          "line": 4828,
+          "signature": "renderRegDragLinks()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4828"
         },
         {
           "name": "renderRegLinks",
-          "line": 4806,
+          "line": 4845,
           "signature": "renderRegLinks()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4806"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4845"
         },
         {
           "name": "setRegSelection",
-          "line": 4862,
+          "line": 4902,
           "signature": "setRegSelection(nodeIds, primaryId = null)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4862"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4902"
         },
         {
           "name": "selectRegNode",
-          "line": 4875,
+          "line": 4915,
           "signature": "selectRegNode(nodeId, options = {})",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4875"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4915"
         },
         {
           "name": "regSignalDisplay",
-          "line": 4891,
+          "line": 4931,
           "signature": "regSignalDisplay(type)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4891"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4931"
         },
         {
           "name": "regSourceSignal",
-          "line": 4946,
+          "line": 4986,
           "signature": "regSourceSignal(type)",
           "publicApi": false,
           "description": "Atelier : lit d’abord les mesures Centurion ; repli hérité pour les usages isolés de la page.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4946"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4986"
         },
         {
           "name": "compareOperatorValue",
-          "line": 4968,
+          "line": 5008,
           "signature": "compareOperatorValue(params, value)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4968"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5008"
         },
         {
           "name": "resetRegRuntime",
-          "line": 4979,
+          "line": 5019,
           "signature": "resetRegRuntime()",
           "publicApi": false,
           "description": "Atelier : efface les mémoires dynamiques et dernières valeurs des blocs.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4979"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5019"
         },
         {
           "name": "initialIntegratorValue",
-          "line": 4985,
+          "line": 5025,
           "signature": "initialIntegratorValue(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4985"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5025"
         },
         {
           "name": "runtimeStateFor",
-          "line": 4997,
+          "line": 5037,
           "signature": "runtimeStateFor(node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L4997"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5037"
         },
         {
           "name": "productUnit",
-          "line": 5002,
+          "line": 5042,
           "signature": "productUnit(inputs)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5002"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5042"
         },
         {
           "name": "integratedUnit",
-          "line": 5009,
+          "line": 5049,
           "signature": "integratedUnit(inputUnit, configuredUnit)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5009"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5049"
         },
         {
           "name": "evaluateRegulationGraph",
-          "line": 5015,
+          "line": 5055,
           "signature": "evaluateRegulationGraph(dt = 0, advanceDynamicStates = false)",
           "publicApi": false,
           "description": "Atelier : évalue les blocs reliés, mémorise les états dynamiques et détecte les cycles algébriques ; retourne signaux, sorties et diagnostics.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5015"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5055"
         },
         {
           "name": "regNodeSignalValue",
-          "line": 5217,
+          "line": 5257,
           "signature": "regNodeSignalValue(node, memo = null)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5217"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5257"
         },
         {
           "name": "formatRegLinkSignal",
-          "line": 5222,
+          "line": 5262,
           "signature": "formatRegLinkSignal(signal)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5222"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5262"
         },
         {
           "name": "updateRegLinkLabels",
-          "line": 5234,
+          "line": 5274,
           "signature": "updateRegLinkLabels()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5234"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5274"
         },
         {
           "name": "updateRegLinkLabelScale",
-          "line": 5243,
+          "line": 5283,
           "signature": "updateRegLinkLabelScale()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5243"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5283"
         },
         {
           "name": "renderRegProperties",
-          "line": 5255,
+          "line": 5295,
           "signature": "renderRegProperties()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5255"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5295"
         },
         {
           "name": "copySelectedRegNode",
-          "line": 5412,
+          "line": 5452,
           "signature": "copySelectedRegNode()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5412"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5452"
         },
         {
           "name": "pasteRegNode",
-          "line": 5431,
+          "line": 5471,
           "signature": "pasteRegNode()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5431"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5471"
         },
         {
           "name": "duplicateSelectedRegNode",
-          "line": 5461,
+          "line": 5501,
           "signature": "duplicateSelectedRegNode()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5461"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5501"
         },
         {
           "name": "deleteSelectedRegNode",
-          "line": 5466,
+          "line": 5506,
           "signature": "deleteSelectedRegNode()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5466"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5506"
         },
         {
           "name": "bindRegNodeEvents",
-          "line": 5486,
+          "line": 5526,
           "signature": "bindRegNodeEvents()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5486"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5526"
         },
         {
           "name": "hasRegPath",
-          "line": 5572,
+          "line": 5613,
           "signature": "hasRegPath(fromId, toId)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5572"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5613"
         },
         {
           "name": "hasDirectRegLink",
-          "line": 5585,
+          "line": 5626,
           "signature": "hasDirectRegLink(fromId, toId, toPort = null)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5585"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5626"
         },
         {
           "name": "regOutputConnected",
-          "line": 5590,
+          "line": 5631,
           "signature": "regOutputConnected(type)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5590"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5631"
         },
         {
           "name": "temperatureChainReady",
-          "line": 5594,
+          "line": 5635,
           "signature": "temperatureChainReady()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5594"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5635"
         },
         {
           "name": "levelChainReady",
-          "line": 5656,
+          "line": 5697,
           "signature": "levelChainReady()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5656"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5697"
         },
         {
           "name": "pressureChainReady",
-          "line": 5679,
+          "line": 5720,
           "signature": "pressureChainReady()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5679"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5720"
         },
         {
           "name": "rodSpeedLaw",
-          "line": 5698,
+          "line": 5739,
           "signature": "rodSpeedLaw(error)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5698"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5739"
         },
         {
           "name": "applyG1Curve",
-          "line": 5707,
+          "line": 5748,
           "signature": "applyG1Curve(params, value)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5707"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5748"
         },
         {
           "name": "applyG2Curve",
-          "line": 5723,
+          "line": 5764,
           "signature": "applyG2Curve(params, loadPct)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5723"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5764"
         },
         {
           "name": "calculateRegulationCommand",
-          "line": 5731,
+          "line": 5772,
           "signature": "calculateRegulationCommand(dt = 0, advanceDynamicStates = false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5731"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5772"
         },
         {
           "name": "applyRegulationCommand",
-          "line": 5829,
+          "line": 5870,
           "signature": "applyRegulationCommand(dt)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5829"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5870"
         },
         {
           "name": "sumInputCoefficient",
-          "line": 5836,
+          "line": 5877,
           "signature": "sumInputCoefficient(sumNode, sourceNode, fallback)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5836"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5877"
         },
         {
           "name": "calculateLevelRegulationCommand",
-          "line": 5844,
+          "line": 5885,
           "signature": "calculateLevelRegulationCommand(dt = 0, integrate = false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5844"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5885"
         },
         {
           "name": "applyLevelRegulationCommand",
-          "line": 5881,
+          "line": 5922,
           "signature": "applyLevelRegulationCommand(dt)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5881"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5922"
         },
         {
           "name": "calculatePressureRegulationCommand",
-          "line": 5888,
+          "line": 5929,
           "signature": "calculatePressureRegulationCommand(dt = 0, integrate = false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5888"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5929"
         },
         {
           "name": "applyPressureRegulationCommand",
-          "line": 5946,
+          "line": 5987,
           "signature": "applyPressureRegulationCommand(dt)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5946"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5987"
         },
         {
           "name": "graphSignal",
-          "line": 5956,
+          "line": 5997,
           "signature": "graphSignal(evaluation, node)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5956"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5997"
         },
         {
           "name": "firstGraphNode",
-          "line": 5960,
+          "line": 6001,
           "signature": "firstGraphNode(type, predicate = null)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5960"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6001"
         },
         {
           "name": "firstCommonDownstream",
-          "line": 5964,
+          "line": 6005,
           "signature": "firstCommonDownstream(type, sources)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5964"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6005"
         },
         {
           "name": "summarizeRegulationGraph",
-          "line": 5969,
+          "line": 6010,
           "signature": "summarizeRegulationGraph(evaluation)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L5969"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6010"
         },
         {
           "name": "applyRegulationGraph",
-          "line": 6024,
+          "line": 6065,
           "signature": "applyRegulationGraph(dt)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6024"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6065"
         },
         {
           "name": "updateRegulationModeUI",
-          "line": 6038,
+          "line": 6079,
           "signature": "updateRegulationModeUI()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6038"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6079"
         },
         {
           "name": "setRegulationEnabled",
-          "line": 6072,
+          "line": 6113,
           "signature": "setRegulationEnabled(enabled, notifyParent = true)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6072"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6113"
         },
         {
           "name": "formatRegLive",
-          "line": 6103,
+          "line": 6144,
           "signature": "formatRegLive(value, digits, unit = \"\")",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6103"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6144"
         },
         {
           "name": "updateRegulationLive",
-          "line": 6107,
+          "line": 6148,
           "signature": "updateRegulationLive()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6107"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6148"
         },
         {
           "name": "drawRodLawChart",
-          "line": 6147,
+          "line": 6188,
           "signature": "drawRodLawChart()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6147"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6188"
         },
         {
           "name": "reset",
-          "line": 6180,
+          "line": 6221,
           "signature": "reset()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6180"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6221"
         },
         {
           "name": "frame",
-          "line": 6211,
+          "line": 6252,
           "signature": "frame(now)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6211"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6252"
         },
         {
           "name": "centurionDefaultModel",
-          "line": 6457,
+          "line": 6498,
           "signature": "centurionDefaultModel()",
           "publicApi": false,
           "description": "Atelier : construit un canevas étudiant vide, propre au mode regul/protect ; aucune correction automatique.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6457"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6498"
         },
         {
           "name": "receiveCenturionCommand",
-          "line": 6473,
+          "line": 6514,
           "signature": "receiveCenturionCommand(data)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6473"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-cc-regul.html#L6514"
         }
       ]
     },
@@ -3904,327 +4048,327 @@
       "file": "simulateur/centurion-conduite-auto.js",
       "title": "Canevas de conduite",
       "description": "Édition, connecteurs, plages, propriétés, import/export et suivi de la boîte active.",
-      "sha256": "24786be6c73bd228958238b41f286460af03942725b0761ed68679284228b6d4",
+      "sha256": "692ff65ab3913437f2d6ecdea8beccf3592072aaaea3d948aff984e1b8d85d0c",
       "functions": [
         {
           "name": "status",
-          "line": 19,
-          "signature": "status(message,error=false)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L19"
-        },
-        {
-          "name": "persist",
           "line": 20,
-          "signature": "persist()",
+          "signature": "status(message,error=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L20"
         },
         {
+          "name": "persist",
+          "line": 21,
+          "signature": "persist()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L21"
+        },
+        {
           "name": "sendSharedGraph",
-          "line": 25,
+          "line": 26,
           "signature": "sendSharedGraph()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L25"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L26"
         },
         {
           "name": "remember",
-          "line": 30,
-          "signature": "remember(before)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L30"
-        },
-        {
-          "name": "syncDocument",
           "line": 31,
-          "signature": "syncDocument()",
+          "signature": "remember(before)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L31"
         },
         {
+          "name": "syncDocument",
+          "line": 32,
+          "signature": "syncDocument()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L32"
+        },
+        {
           "name": "history",
-          "line": 37,
+          "line": 38,
           "signature": "history(backward)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L37"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L38"
         },
         {
           "name": "edit",
-          "line": 44,
+          "line": 45,
           "signature": "edit(fn,redrawProperties=true)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L44"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L45"
         },
         {
           "name": "requestDraw",
-          "line": 60,
-          "signature": "requestDraw()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L60"
-        },
-        {
-          "name": "short",
           "line": 61,
-          "signature": "short(value,max=33)",
+          "signature": "requestDraw()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L61"
         },
         {
-          "name": "rangeDrawing",
+          "name": "short",
           "line": 62,
-          "signature": "rangeDrawing(n)",
+          "signature": "short(value,max=33)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L62"
         },
         {
+          "name": "rangeDrawing",
+          "line": 63,
+          "signature": "rangeDrawing(n)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L63"
+        },
+        {
           "name": "draw",
-          "line": 75,
+          "line": 76,
           "signature": "draw()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L75"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L76"
         },
         {
           "name": "select",
-          "line": 118,
+          "line": 119,
           "signature": "select(value,additive=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L118"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L119"
         },
         {
           "name": "refreshSequences",
-          "line": 128,
+          "line": 129,
           "signature": "refreshSequences()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L128"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L129"
         },
         {
           "name": "options",
-          "line": 138,
-          "signature": "options(list,value)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L138"
-        },
-        {
-          "name": "pickerOptions",
           "line": 139,
-          "signature": "pickerOptions(list,value,field)",
+          "signature": "options(list,value)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L139"
         },
         {
+          "name": "pickerOptions",
+          "line": 140,
+          "signature": "pickerOptions(list,value,field)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L140"
+        },
+        {
           "name": "picker",
-          "line": 145,
+          "line": 146,
           "signature": "picker(list,value,field,label,index='')",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L145"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L146"
         },
         {
           "name": "actionFields",
-          "line": 149,
+          "line": 150,
           "signature": "actionFields(p,index='')",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L149"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L150"
         },
         {
           "name": "waitFields",
-          "line": 155,
+          "line": 156,
           "signature": "waitFields(p,index='')",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L155"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L156"
         },
         {
           "name": "properties",
-          "line": 158,
+          "line": 159,
           "signature": "properties()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L158"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L159"
         },
         {
           "name": "rangeSummary",
-          "line": 193,
-          "signature": "rangeSummary(p,i)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L193"
-        },
-        {
-          "name": "commitRuleField",
           "line": 194,
-          "signature": "commitRuleField(el)",
+          "signature": "rangeSummary(p,i)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L194"
         },
         {
+          "name": "commitRuleField",
+          "line": 195,
+          "signature": "commitRuleField(el)",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L195"
+        },
+        {
           "name": "updateReading",
-          "line": 208,
+          "line": 209,
           "signature": "updateReading()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L208"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L209"
         },
         {
           "name": "setEditingLock",
-          "line": 210,
+          "line": 211,
           "signature": "setEditingLock()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L210"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L211"
         },
         {
           "name": "refreshRuntime",
-          "line": 217,
+          "line": 218,
           "signature": "refreshRuntime()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L217"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L218"
         },
         {
           "name": "receive",
-          "line": 235,
+          "line": 236,
           "signature": "receive(data)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L235"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L236"
         },
         {
           "name": "eventField",
-          "line": 271,
+          "line": 278,
           "signature": "eventField(e)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L271"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L278"
         },
         {
           "name": "coordinate",
-          "line": 295,
+          "line": 302,
           "signature": "coordinate(e,matrix=null)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L295"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L302"
         },
         {
           "name": "fit",
-          "line": 296,
+          "line": 303,
           "signature": "fit()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L296"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L303"
         },
         {
           "name": "zoom",
-          "line": 304,
+          "line": 311,
           "signature": "zoom(factor)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L304"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L311"
         },
         {
           "name": "connectInput",
-          "line": 306,
+          "line": 313,
           "signature": "connectInput(target)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L306"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L313"
         },
         {
           "name": "canvasClick",
-          "line": 315,
+          "line": 322,
           "signature": "canvasClick(e)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L315"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L322"
         },
         {
           "name": "remove",
-          "line": 323,
+          "line": 330,
           "signature": "remove()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L323"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L330"
         },
         {
           "name": "insertBox",
-          "line": 332,
+          "line": 339,
           "signature": "insertBox(n)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L332"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L339"
         },
         {
           "name": "copy",
-          "line": 337,
+          "line": 344,
           "signature": "copy()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L337"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L344"
         },
         {
           "name": "append",
-          "line": 341,
-          "signature": "append(source,preserveDelay=false)",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L341"
-        },
-        {
-          "name": "paste",
-          "line": 347,
-          "signature": "paste()",
-          "publicApi": false,
-          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L347"
-        },
-        {
-          "name": "duplicate",
           "line": 348,
-          "signature": "duplicate()",
+          "signature": "append(source,preserveDelay=false)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
           "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L348"
         },
         {
+          "name": "paste",
+          "line": 354,
+          "signature": "paste()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L354"
+        },
+        {
+          "name": "duplicate",
+          "line": 355,
+          "signature": "duplicate()",
+          "publicApi": false,
+          "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L355"
+        },
+        {
           "name": "finishDrag",
-          "line": 428,
+          "line": 435,
           "signature": "finishDrag()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L428"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L435"
         },
         {
           "name": "refreshImport",
-          "line": 466,
+          "line": 473,
           "signature": "refreshImport()",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L466"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L473"
         },
         {
           "name": "showImport",
-          "line": 472,
+          "line": 479,
           "signature": "showImport(loaded)",
           "publicApi": false,
           "description": "Fonction interne. Voir le corps et les appels dans le fichier source.",
-          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L472"
+          "url": "https://github.com/vcnamgn/centurionmulti/blob/codex/prepare-multi-session/simulateur/centurion-conduite-auto.js#L479"
         }
       ]
     },
@@ -5003,7 +5147,7 @@
       "source": "simulateur/README.md",
       "output": "simulateur/README.html",
       "title": "Mode d’emploi",
-      "sha256": "636ab03c8b004751c7b1c624e2f9c20422d394d7726b12783a65e6ea8f2fb22c"
+      "sha256": "72e5fb535229fa4f3e6bf808e456be1738a5c7ea20cd54e758a90e3a3152c458"
     },
     {
       "source": "simulateur/METHODE-CENTURION.md",
@@ -5033,7 +5177,7 @@
       "source": "docs/CONCEPTION.md",
       "output": "docs/index.html",
       "title": "Conception et API",
-      "sha256": "a08e7da2ba0e353426b85be2fb21854eca141c561ebabc497641644b858180c9"
+      "sha256": "f48ab0478253d3ef9a70232aab86eb40096be210fbdf62cdf094e4bf75f86ea7"
     }
   ]
 }

@@ -28,18 +28,33 @@ test('auxiliaire Conduite Auto : le diagramme reçu laisse la bibliothèque pers
   const common=A.emptyGraph();common.name='Commun';common.nodes=[A.node('start','common',100,100)];
   ui.receive({type:'centurion-auto-init',graph:common,sharedRevision:2,measurements:[],commands:A.actionCatalog(),runtime:A.idle(),values:{},simulationRunning:false});
   assert.equal(ui.get('graphName').value,'Commun');assert.equal(ui.storage.get('centurion.conduite-auto.v1'),personal);
-  ui.get('graphName').value='Partagé modifié';ui.event('graphName','input',ui.get('graphName'));ui.flushTimers();
+  ui.receive({type:'centurion-auto-permission',allowed:true});ui.get('graphName').value='Partagé modifié';ui.event('graphName','input',ui.get('graphName'));ui.flushTimers();
   assert.ok(ui.messages.some(m=>m.type==='centurion-auto-graph'&&m.revision===2));assert.equal(ui.storage.get('centurion.conduite-auto.v1'),personal);
 });
 
 test('conflit Auto : conserver le brouillon et proposer la version partagée sans autosauvegarde personnelle',()=>{
   const ui=editorSurface('auto',{saved:A.emptyGraph(),shared:true}),graph=A.emptyGraph();
   graph.name='Commun';const init={type:'centurion-auto-init',graph,sharedRevision:2,measurements:[],commands:A.actionCatalog(),runtime:A.idle(),values:{},simulationRunning:false};
-  ui.receive(init);ui.get('graphName').value='Mon brouillon';ui.event('graphName','input',ui.get('graphName'));ui.flushTimers();
+  ui.receive(init);ui.receive({type:'centurion-auto-permission',allowed:true});ui.get('graphName').value='Mon brouillon';ui.event('graphName','input',ui.get('graphName'));ui.flushTimers();
   const sent=ui.messages.findLast(m=>m.type==='centurion-auto-graph');assert.ok(sent);
   const updated=structuredClone(graph);updated.name='Autre participant';ui.receive({...init,graph:updated,sharedRevision:3});
   ui.receive({type:'centurion-auto-edit-result',serial:sent.serial,result:{ok:false,error:'schema_conflict',message:'Édition concurrente'}});
   assert.equal(ui.get('graphName').value,'Mon brouillon');assert.equal(ui.get('sharedReloadAuto').hidden,false);
   assert.match(ui.get('editStatus').textContent,/brouillon reste exportable/);
   ui.get('sharedReloadAuto').click();assert.equal(ui.get('graphName').value,'Autre participant');
+});
+
+test('visualisation CC : ajout et déplacement refusés, export disponible puis édition après transfert',()=>{
+  const ui=editorSurface('regul',{saved:reference('regul')});ui.bridge.receive({type:'centurion-editor-permission',allowed:false});
+  const count=ui.state().nodes.length,el=ui.query('[data-node-id="'+ui.state().nodes[0].id+'"]'),before=ui.state().nodes[0].x;
+  ui.query('[data-block-type="pow1"]').click();assert.equal(ui.state().nodes.length,count);
+  el.fire('pointerdown',{button:0,clientX:100,clientY:100,pointerId:1});el.fire('pointermove',{clientX:200,clientY:200});el.fire('pointerup',{pointerId:1});assert.equal(ui.state().nodes[0].x,before);
+  assert.equal(ui.get('saveRegModel').disabled,false);ui.bridge.receive({type:'centurion-editor-permission',allowed:true});ui.query('[data-block-type="pow1"]').click();assert.equal(ui.state().nodes.length,count+1);
+});
+test('visualisation Auto : édition bloquée mais choix et lancement d’une séquence restent disponibles',()=>{
+  const ui=editorSurface('auto',{shared:true}),graph=A.emptyGraph();graph.nodes=[A.node('start','start',0,0)];
+  ui.receive({type:'centurion-auto-init',graph,sharedRevision:1,measurements:[],commands:A.actionCatalog(),runtime:A.idle(),values:{},simulationRunning:false});
+  ui.get('graphName').value='Interdit';ui.event('graphName','input',ui.get('graphName'));ui.flushTimers();assert.ok(!ui.messages.some(m=>m.type==='centurion-auto-graph'));
+  assert.equal(ui.get('startSequence').disabled,false);assert.equal(ui.get('openGraph').disabled,true);
+  ui.receive({type:'centurion-auto-permission',allowed:true});assert.equal(ui.get('openGraph').disabled,false);
 });
