@@ -193,7 +193,7 @@ input[type=number],select{background:#fff;border:1px solid #b8d1df;border-radius
 .sources{padding-left:18px;color:#526e80;font-size:13px;line-height:1.55}
 .sources li{margin-bottom:7px}
 .archive-link{display:inline-block;margin-top:7px;font-size:12px;font-weight:700}
-@media(max-width:1350px){.topbar{flex-wrap:wrap;gap:8px}.tabs{order:3;width:100%;height:40px}.runbar{margin-left:auto}.status-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1350px){.topbar{flex-wrap:wrap;gap:8px}.tabs{order:3;width:100%;height:40px}.runbar{margin-left:auto;max-width:100%;flex-wrap:wrap;justify-content:flex-end}.status-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:850px){main{padding:12px}.status-row{grid-template-columns:repeat(2,1fr)}.live-panels,.control-grid,.scenario-grid{grid-template-columns:1fr}.signal-grid{grid-template-columns:repeat(2,1fr)}.loop-grid{grid-template-columns:repeat(2,1fr)}.feed-controls{grid-template-columns:repeat(2,1fr)}.panel-head{align-items:flex-start}.badge{white-space:normal}.diagram-frame object{height:60vh}}
 @media(max-width:550px){.topbar{padding:10px}.brand small{display:none}.runbar{width:100%;justify-content:flex-end}.status-tile{padding:9px}.status-tile strong{font-size:16px}.signal-grid{grid-template-columns:1fr}.diagram-tab{padding:7px 10px;font-size:12px}.panel-head h1{font-size:21px}.panel-head .badge{display:none}.worth-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:550px){.diagram-live{max-width:65%;grid-template-columns:1fr}.diagram-live div:nth-child(n+4){display:none}}
@@ -430,6 +430,18 @@ input[type=number],select{background:#fff;border:1px solid #b8d1df;border-radius
 .state-menu>div{position:absolute;right:0;top:calc(100% + 9px);z-index:65;width:270px;padding:12px;border:1px solid #c8dfea;border-radius:9px;background:#fff;box-shadow:0 8px 25px #17324d33;display:grid;gap:8px}
 .state-menu small{font-size:12px;line-height:1.45;color:#355c72}
 .state-menu small[data-error=true]{color:#b22d35}
+.reactor-menu[hidden],.reactor-menu [hidden]{display:none}
+.reactor-button{background:#d8f2ed;border-color:#84c8b9;color:#164b47;font-variant-numeric:tabular-nums;letter-spacing:.025em}
+.reactor-button[data-online=false]{background:#e6edf3;border-color:#b8cbd7;color:#35536a}
+.reactor-menu>div{width:min(340px,calc(100vw - 24px));color:#17324d;max-height:calc(100vh - 100px);overflow:auto}
+.reactor-menu a.button{text-decoration:none;text-align:center}
+.reactor-menu strong{font-size:15px}
+.reactor-menu button:disabled{cursor:wait;opacity:.6;transform:none}
+.reactor-join{display:grid;gap:8px;padding-top:12px;border-top:1px solid #d5e3eb}
+.reactor-join label{font-weight:700;font-size:13px}
+.reactor-join>div{display:flex;gap:8px}
+.reactor-join input{width:100%;min-width:0;padding:9px;border:1px solid #a9c4d6;border-radius:8px;font:700 20px Consolas,monospace;letter-spacing:.12em;color:#17324d}
+@media(max-width:550px){.runbar{flex-wrap:wrap}.reactor-menu>div{position:fixed;right:12px;top:115px}}
 @media(max-width:550px){.certificate-name{flex-direction:column;align-items:stretch}}
 #inventoryBalance[hidden],#instrumentBoard[hidden]{display:none!important}
 .inventory-balance{background:#fff;border:1px solid #c8e0ec;border-radius:12px;overflow:hidden;font-variant-numeric:tabular-nums;font-size:12px}
@@ -475,3 +487,7 @@ input[type=number],select{background:#fff;border:1px solid #b8d1df;border-radius
 .equipment-fault-row output{font-weight:700;font-variant-numeric:tabular-nums}
 @media(max-width:1050px){.equipment-fault-form{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.equipment-fault-form{grid-template-columns:1fr}.equipment-fault-row{grid-template-columns:1fr auto}.equipment-fault-row>div{grid-column:1/-1}}
+
+[data-session-role="auxiliary"] .reactor-button{background:#e8e4fa;border-color:#b7a8e2;color:#4b3577}
+
+.diagram-edit-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:8px 12px;background:#edf5ff;border:1px solid #b9cfe6;border-radius:8px;font-size:13px}.diagram-edit-bar[hidden]{display:none}.diagram-edit-bar button{padding:6px 10px}#editorTransferDialog{max-width:480px;border:1px solid #a8c5d8;border-radius:12px;color:#17324d;padding:22px}#editorTransferDialog::backdrop{background:#142a4070}.dialog-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.logs-layout{display:grid;grid-template-columns:3fr 2fr;gap:14px}.logs-layout ol{padding-left:24px;font-size:13px;line-height:1.5}.logs-layout details{border-bottom:1px solid #d4e2ec;padding:10px 0}.logs-layout summary{cursor:pointer;font-weight:700;font-size:13px}#editorTransferError{color:#a53629}@media(max-width:900px){.logs-layout{grid-template-columns:1fr}}

@@ -9,7 +9,7 @@ const app=fs.readFileSync(path.join(__dirname,'../centurion-app.js'),'utf8');
 
 // Exécution de l'application entière : vrais événements et vrais pas physiques.
 // Seule la surface DOM/Canvas est remplacée ; aucune fonction applicative n'est extraite.
-function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {svgUpdates=true,autoModule=null}={}){
+function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {svgUpdates=true,autoModule=null,sharingModule=null}={}){
   const ids=new Map(),nodes=[],frames=[],windowEvents={},messages=[],downloads=[],intervals=new Map();let timerId=0;
   let now=0,currentSvg=svgSurface('synoptique-RCP-1300.svg');
   const attributes=tag=>Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(([,k,v])=>[k,v]));
@@ -60,14 +60,17 @@ function application(source=app,onPostMessage=null,engine=E,editorBridges={}, {s
   const document={getElementById:id=>ids.get(id)||null,activeElement:null,createElement:()=>({click(){}}),
     querySelectorAll:selector=>nodes.filter(n=>matches(n,selector)),
     querySelector(selector){return this.querySelectorAll(selector)[0]||null;}};
-  const context=vm.createContext({window:{CenturionEngine:engine,CenturionHistory:H,CenturionState:State,CenturionAuto:autoModule,devicePixelRatio:1,
+  const context=vm.createContext({window:{CenturionEngine:engine,CenturionHistory:H,CenturionState:State,CenturionAuto:autoModule,CenturionShare:sharingModule,devicePixelRatio:1,
     addEventListener:(name,fn)=>(windowEvents[name]??=[]).push(fn)},document,
     performance:{now:()=>now},requestAnimationFrame:fn=>frames.push(fn),
     setInterval(fn){const id=++timerId;intervals.set(id,fn);return id;},clearInterval(id){intervals.delete(id);},setTimeout:()=>1,clearTimeout(){},Blob,
     URL:{createObjectURL(blob){downloads.push(blob);return 'blob:test';},revokeObjectURL(){}},console});
   vm.runInContext(source,context,{filename:'centurion-app.js'});
   return {get:id=>ids.get(id),query:selector=>document.querySelector(selector),messages,downloads,get pendingFrames(){return frames.length;},
-    receive(data,source){for(const fn of windowEvents.message||[])fn({data,source});},
+    receive(data,source){
+      if(source===undefined&&data?.type?.startsWith('centurion-editor-'))source=ids.get(data.mode==='protect'?'protectionEditor':'regulationEditor')?.contentWindow;
+      for(const fn of windowEvents.message||[])fn({data,source});
+    },
     key(event){for(const fn of windowEvents.keydown||[])fn(event);},
     click:id=>ids.get(id).fire('click'),consumeCpu:milliseconds=>{now+=milliseconds;},
     elapseReal(milliseconds){now+=milliseconds;for(const fn of [...intervals.values()])fn();},
@@ -137,6 +140,44 @@ test('pupitre PTUR : pente par défaut, cible maintenue, rampe physique et Insta
   assert.equal(model.controls.manualTurbineTargetPct,null);
   page.click('interruptTransient');assert.equal(page.get('turbineRateInput').disabled,false);
   page.click('resetButton');assert.equal(page.get('turbineRateInput').value,'5');
+});
+
+test('auxiliaire complet : les mesures du maître alimentent les vues sans aucun pas physique local',()=>{
+  let callbacks,steps=0;const sharingModule={isAuxiliary:()=>true,attach(options){callbacks=options;return {request:async()=>({ok:false}),setStatus(){}};}};
+  const page=application(app,null,{...E,step(){steps++;throw Error('Un auxiliaire ne calcule pas la physique.');}},{},{sharingModule});
+  const source=E.make();source.state.time=20;
+  callbacks.applyState({protocol:3,epoch:'master-generation',seq:1,time:20,model:source,history:[],historyStart:0,simulation:{running:true,speed:200,regulationActive:false,protectionActive:false}});
+  for(let i=0;i<10;i++)page.frame(100);
+  assert.equal(steps,0);assert.equal(page.get('simClock').textContent,'00:00:20');assert.equal(page.get('runButton').textContent,'Pause');
+});
+
+test('un message CC étranger ne modifie pas les modes du maître',()=>{
+  const page=application();page.receive({type:'centurion-editor-enabled',mode:'regul',enabled:true},{postMessage(){}});
+  assert.equal(page.get('toggleRegulationSynoptic').checked,false);
+});
+
+test('projection réseau complète : conduite auto et interfaces restent utilisables après sérialisation',()=>{
+  const Auto=require('../centurion-auto');let master,aux;
+  application(app,null,E,{}, {autoModule:Auto,sharingModule:{isAuxiliary:()=>false,attach(o){master=o;return {};}}});
+  const page=application(app,null,E,{}, {autoModule:Auto,sharingModule:{isAuxiliary:()=>true,attach(o){aux=o;return {request:async()=>({ok:false}),setStatus(){}};}}});
+  page.receive({type:'centurion-auto-ready'},page.get('autoEditor').contentWindow);
+  const payload=JSON.parse(JSON.stringify(master.readState()));
+  aux.applyDocument({...payload.document,protocol:3,epoch:'network-generation'});
+  aux.applyState({...payload.frame,protocol:3,epoch:'network-generation',seq:1});
+  page.frame();
+  assert.equal(page.get('simClock').textContent,'00:00:00');
+});
+
+test('révisions partagées : une édition concurrente périmée ne remplace pas le schéma maître',async()=>{
+  let callbacks;const model=E.make(),regul=editorSurface('regul',{saved:referenceModel('regul')});
+  application(app,null,{...E,make:()=>model},{regulationEditor:regul.bridge}, {sharingModule:{isAuxiliary:()=>false,attach(o){callbacks=o;return {};}}});
+  const initial=callbacks.readState().document.editors.regul;
+  const graph=structuredClone(initial.graph);graph.name='Édition acceptée';
+  const context={identity:model,actor:'participant-a',id:'first'};
+  assert.equal((await callbacks.execute({kind:'cc-edit',mode:'regul',revision:initial.revision,graph},context)).ok,true);
+  const stale=structuredClone(initial.graph);stale.name='Édition périmée';
+  await assert.rejects(callbacks.execute({kind:'cc-edit',mode:'regul',revision:initial.revision,graph:stale},context),error=>error.code==='schema_conflict');
+  assert.equal(regul.bridge.receive({type:'centurion-editor-session'}).graph.name,'Édition acceptée');
 });
 
 test('démarrage complet : initialisation, Démarrer, horloge et publication des mesures',()=>{

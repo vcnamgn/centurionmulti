@@ -686,6 +686,9 @@
     .logic-links > path { fill: none; stroke: #4e80b4; stroke-width: 2; stroke-linejoin: round; marker-end: url(#regArrow); }
     .logic-links > path.selected-link { stroke: #c84f2e; stroke-width: 3; marker-end: url(#regArrowSelected); }
     .logic-links > path.blocked { stroke: #c83949; stroke-dasharray: 5 4; marker-end: none; }
+    .reg-crossing-clearance { fill:none; stroke:#f9fbfc; stroke-width:7; stroke-linecap:round; }
+    .reg-crossing-bridge { fill:none; stroke:#4e80b4; stroke-width:2; }
+    .reg-crossing-bridge.selected-link { stroke:#c84f2e; stroke-width:3; }
     #regRoutingStatus { color: #b93645; font-size: 11px; }
     .logic-links marker path { fill: #4e80b4; stroke: none; }
     .logic-links #regArrowSelected path { fill: #c84f2e; }
@@ -1644,7 +1647,7 @@
               <span class="reg-mode-state" id="regModeState">INACTIVE · commandes manuelles</span>
               <span class="status" id="regStatus" aria-live="polite">Maj+glisser : sélection · Maj+clic : ajouter/retirer · Ctrl+C/V/Z/Y · molette : zoom.</span>
             </div>
-            <div class="reg-save-row"><span class="reg-save-state" id="regSaveStatus" aria-live="polite">Sauvegarde locale prête</span></div>
+            <div class="reg-save-row"><span class="reg-save-state" id="regSaveStatus" aria-live="polite">Sauvegarde locale prête</span><button id="sharedRetryReg" class="button" type="button" hidden>Envoyer les modifications</button><button id="sharedReloadReg" class="button" type="button" hidden>Reprendre le schéma partagé</button></div>
             <output id="regRoutingStatus" role="status"></output>
             <div class="logic-canvas" id="logicCanvas">
               <div class="logic-selection-rect" id="logicSelectionRect" aria-hidden="true"></div>
@@ -3526,6 +3529,10 @@
     const REG_MODEL_FORMAT = "SimuREP-Regulation";
     const REG_MODEL_VERSION = 1;
     const CENTURION_EDITOR_MODE = new URLSearchParams(location.search).get("mode") === "protect" ? "protect" : "regul";
+    const CENTURION_EMBEDDED_EDITOR = new URLSearchParams(location.search).has("mode");
+    const REG_SHARED_AUX = new URLSearchParams(location.search).get("shared") === "1";
+    let regEditAllowed=!REG_SHARED_AUX;const regPermissionDisabled=new WeakMap();
+    let regSharedRevision=0,regSharedSerial=0,regSharedSending=0,regSharedReplace=false,regSharedSignature=null,regSharedPending=null;
     const REG_AUTOSAVE_KEY = `centurion-${CENTURION_EDITOR_MODE}-autosave-v1`;
     // Les codes sont volontairement inversés ici comme dans l'aide-mémoire :
     // ce verrou est un encouragement à chercher, pas une mesure de sécurité.
@@ -3559,6 +3566,7 @@
     let regViewInitialized = false;
     const regConnectorRouter = window.CenturionOrthogonalRouting.createRouter({ padding: 4, stub: 32 });
     let regLinkFrame = null;
+    let regDragPreview = null, regLinkPaths=[], regLinkLabels=[], regCrossingElements=[];
 
     const escapeHtml = value => String(value)
       .replaceAll("&", "&amp;")
@@ -3624,6 +3632,13 @@
     function writeRegAutosave() {
       clearTimeout(regAutosaveTimer);
       regAutosaveTimer = null;
+      if(REG_SHARED_AUX){
+        const graph=currentRegModel(),signature=regStateSignature(graph);
+        if(regSharedSending||signature===regSharedSignature&&!regSharedReplace)return true;
+        regSharedSending=++regSharedSerial;
+        window.parent.postMessage({type:"centurion-editor-shared-edit",mode:CENTURION_EDITOR_MODE,graph,replace:regSharedReplace,revision:regSharedRevision,serial:regSharedSending},"*");
+        setRegSaveStatus("Transmission au maître…");return true;
+      }
       try {
         const model = currentRegModel();
         localStorage.setItem(REG_AUTOSAVE_KEY, JSON.stringify(model));
@@ -3990,7 +4005,7 @@
       renderRegEditor();
       updateRegulationLive();
       regHistorySuspended = false;
-      if (wasEnabled && options.notifyParent !== false && window.parent !== window)
+      if (wasEnabled && !REG_SHARED_AUX && options.notifyParent !== false && window.parent !== window)
         window.parent.postMessage({type:"centurion-editor-enabled",mode:CENTURION_EDITOR_MODE,enabled:false},"*");
       if (options.autosave !== false) scheduleRegAutosave();
     }
@@ -4055,6 +4070,7 @@
       if (regHistorySuspended || !before) return;
       const after = regStateSnapshot(true);
       if (regStateSignature(before) === regStateSignature(after)) return;
+      if(REG_SHARED_AUX){regSharedSerial++;if(["Modèle importé","Solution chargée","Canevas effacé"].includes(label))regSharedReplace=true;}
       regLastSignals = new Map();
       regLastDiagnostics = [];
       regUndoStack.push(before);
@@ -4782,22 +4798,64 @@
       bindRegNodeEvents();
       renderRegLinks();
       renderRegProperties();
-      updateRegViewport();
+      refreshRegPermission();updateRegViewport();
     }
+
+    function refreshRegPermission(){
+      const safe=new Set(['saveRegModel','copyRegNode','zoomOutReg','zoomInReg','zoomResetReg','fitReg','toggleRegulation']);
+      for(const el of document.querySelectorAll('#view-regulation button,#regPropertiesBody input,#regPropertiesBody select,#regPropertiesBody textarea')){
+        if(safe.has(el.id))continue;
+        if(!regEditAllowed){if(!regPermissionDisabled.has(el))regPermissionDisabled.set(el,el.disabled);el.disabled=true;}
+        else if(regPermissionDisabled.has(el)){el.disabled=regPermissionDisabled.get(el);regPermissionDisabled.delete(el);}
+      }
+    }
+    function guardRegEditing(event){
+      if(regEditAllowed)return;
+      const target=event.target,button=target.closest?.('button'),node=target.closest?.('.logic-node');
+      const safe=new Set(['saveRegModel','copyRegNode','zoomOutReg','zoomInReg','zoomResetReg','fitReg','toggleRegulation']);
+      let block=Boolean(button&&!safe.has(button.id)||target.closest?.('#regPropertiesBody'));
+      if(event.type==='pointerdown'&&node){block=true;if(!target.closest?.('.logic-port')){selectRegNode(node.dataset.nodeId);refreshRegPermission();}}
+      if(event.type==='keydown')block=['Delete','Backspace'].includes(event.key)||(event.ctrlKey||event.metaKey)&&['v','x','z','y'].includes(event.key?.toLowerCase());
+      if(block){event.preventDefault();event.stopImmediatePropagation();}
+    }
+    for(const type of ['click','pointerdown','input','change','keydown'])document.addEventListener(type,guardRegEditing,true);
 
     function requestRegLinks() {
       if (regLinkFrame !== null) return;
-      regLinkFrame = requestAnimationFrame(() => { regLinkFrame = null; renderRegLinks(); });
+      regLinkFrame = requestAnimationFrame(() => { regLinkFrame = null; if(regDragPreview)renderRegDragLinks();else renderRegLinks(); });
+    }
+
+    function renderRegDragLinks() {
+      // Pendant le geste, seuls les connecteurs attachés suivent les boîtes.
+      // La recherche des couloirs et des croisements attend le relâchement.
+      const nodes=new Map(regNodes.map(node=>[node.id,node]));
+      regLinks.forEach((link,index)=>{
+        if(!regDragPreview.has(link.from)&&!regDragPreview.has(link.to))return;
+        const from=nodes.get(link.from),to=nodes.get(link.to);if(!from||!to)return;
+        const start={x:from.x+REG_NODE_W,y:from.y+regNodeHeight(from)/2},end={x:to.x,y:to.y+regInputPortY(to,link.toPort||0)};
+        const x=(start.x+end.x)/2;
+        const points=[start,{x,y:start.y},{x,y:end.y},end];
+        regLinkPaths[index]?.setAttribute('d',window.CenturionOrthogonalRouting.path(points));
+        const label=regLinkLabels[index];if(label)label.style.visibility='hidden';
+      });
+      regCrossingElements.forEach(el=>el.style.display='none');
     }
 
     function renderRegLinks() {
       if (regLinkFrame !== null) { cancelAnimationFrame(regLinkFrame); regLinkFrame = null; }
+      regLinkPaths=[];regLinkLabels=[];regCrossingElements=[];
       const svg = $("logicLinks");
       svg.setAttribute("width", "1");
       svg.setAttribute("height", "1");
       svg.innerHTML = `<defs><marker id="regArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z"></path></marker><marker id="regArrowSelected" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path fill="#c84f2e" d="M0 0 L8 4 L0 8 Z"></path></marker></defs>`;
       const nodesById = new Map(regNodes.map(node => [node.id, node]));
       const scene = regConnectorRouter.prepare(regNodes.map(node => ({ id: node.id, x: node.x, y: node.y, w: REG_NODE_W, h: regNodeHeight(node) })));
+      const requests = regLinks.map(link => {
+        const from=nodesById.get(link.from),to=nodesById.get(link.to);
+        return {from:from.id,to:to.id,net:REG_SOURCE_TYPES.has(from.type)?from.type+JSON.stringify(from.params):from.id,
+          start:{x:from.x+REG_NODE_W,y:from.y+regNodeHeight(from)/2},end:{x:to.x,y:to.y+regInputPortY(to,Number.isInteger(link.toPort)?link.toPort:0)},startDirection:"right",endDirection:"left"};
+      });
+      const routes=scene.plan(requests),bridges=window.CenturionOrthogonalRouting.crossingBridges(routes,requests.map(r=>r.net),{radius:5,rects:scene.rects}),labels=[];
       let blocked = 0;
       regLinks.forEach((link, linkIndex) => {
         const from = nodesById.get(link.from);
@@ -4808,12 +4866,13 @@
         const x2 = to.x, y2 = to.y + regInputPortY(to, toPort);
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         if (selectedRegNodeIds.has(from.id) && selectedRegNodeIds.has(to.id)) path.classList.add("selected-link");
-        const route = scene.route({ from: from.id, to: to.id, start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, startDirection: "right", endDirection: "left" });
+        const route = routes[linkIndex];
         if (route.blocked) { blocked++; path.classList.add("blocked"); }
-        path.dataset.regRouteIndex = String(linkIndex);
-        path.setAttribute("d", window.CenturionOrthogonalRouting.path(route.points));
+        path.dataset.regRouteIndex = String(linkIndex);regLinkPaths[linkIndex]=path;
+        path.setAttribute("d", window.CenturionOrthogonalRouting.bridgedPath(route.points,bridges[linkIndex]));
         svg.appendChild(path);
-        const anchor = window.CenturionOrthogonalRouting.labelAnchor(route.points, scene.rects, { width: 74 / regViewport.zoom, height: 12 / regViewport.zoom, offset: 7 / regViewport.zoom, belowOffset: 13 / regViewport.zoom });
+        const crossingBounds=bridges.flat().map(p=>({left:p.x-12,right:p.x+12,top:p.y-18,bottom:p.y+18}));
+        const anchor = window.CenturionOrthogonalRouting.labelAnchor(route.points, [...scene.rects,...crossingBounds], { width: 74 / regViewport.zoom, height: 12 / regViewport.zoom, offset: 7 / regViewport.zoom, belowOffset: 13 / regViewport.zoom });
         const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
         label.dataset.regLinkIndex = String(linkIndex);
         label.dataset.regLabelBaseY = String(anchor.baseY);
@@ -4822,8 +4881,18 @@
         label.setAttribute("y", String(anchor.baseY));
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("dominant-baseline", "auto");
-        svg.appendChild(label);
+        labels.push(label);regLinkLabels[linkIndex]=label;
       });
+      bridges.forEach((list,index)=>list.forEach(bridge=>{
+        const group=document.createElementNS("http://www.w3.org/2000/svg","g"),link=regLinks[index];
+        group.setAttribute("aria-label","Croisement sans connexion");group.dataset.regCrossing=String(index);regCrossingElements.push(group);
+        const d=`M${bridge.x-bridge.radius} ${bridge.y}Q${bridge.x} ${bridge.y+bridge.sign*2*bridge.radius} ${bridge.x+bridge.radius} ${bridge.y}`;
+        for(const name of ["reg-crossing-clearance","reg-crossing-bridge"]){
+          const arc=document.createElementNS("http://www.w3.org/2000/svg","path");arc.setAttribute("d",d);arc.classList.add(name);
+          if(name==="reg-crossing-bridge"&&selectedRegNodeIds.has(link.from)&&selectedRegNodeIds.has(link.to))arc.classList.add("selected-link");group.appendChild(arc);
+        }svg.appendChild(group);
+      }));
+      labels.forEach(label=>svg.appendChild(label));
       $("regRoutingStatus").textContent = blocked ? `${blocked} liaison(s) sans passage libre : écartez les boîtes.` : "";
       updateRegLinkLabels();
       updateRegLinkLabelScale();
@@ -4983,6 +5052,8 @@
     }
 
     function evaluateRegulationGraph(dt = 0, advanceDynamicStates = false) {
+      if(typeof REG_SHARED_AUX!=='undefined'&&REG_SHARED_AUX)return {signals:new Map(regLastSignals),outputs:Object.fromEntries([...REG_MANUAL_OUTPUT_TYPES].map(type=>{
+        const output=regNodes.find(n=>n.type===type&&regLinks.some(link=>link.to===n.id));return [type,output?regLastSignals.get(output.id)||null:null];})),diagnostics:regLastDiagnostics};
       const memo = new Map();
       const visiting = new Set();
       const diagnostics = [];
@@ -5503,9 +5574,10 @@
           }
           const before = regStateSnapshot(true);
           const startX = event.clientX, startY = event.clientY;
+          regDragPreview = new Set(selectedRegNodeIds);
           const origins = new Map(regNodes
             .filter(item => selectedRegNodeIds.has(item.id))
-            .map(item => [item.id, { x: item.x, y: item.y }]));
+            .map(item => [item.id, { x: item.x, y: item.y, element:document.querySelector(`.logic-node[data-node-id="${item.id}"]`) }]));
           let moved = false;
           el.setPointerCapture(event.pointerId);
           const move = moveEvent => {
@@ -5514,7 +5586,7 @@
             moved ||= Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5;
             origins.forEach((origin, id) => {
               const item = regNodes.find(candidate => candidate.id === id);
-              const itemElement = document.querySelector(`.logic-node[data-node-id="${id}"]`);
+              const itemElement = origin.element;
               if (!item || !itemElement) return;
               item.x = origin.x + dx;
               item.y = origin.y + dy;
@@ -5527,7 +5599,7 @@
             el.removeEventListener("pointermove", move);
             el.removeEventListener("pointerup", up);
             el.removeEventListener("pointercancel", up);
-            renderRegLinks();
+            regDragPreview=null;renderRegLinks();
             if (moved) recordRegMutation(before, "Sélection déplacée");
           };
           el.addEventListener("pointermove", move);
@@ -6038,6 +6110,10 @@
     }
 
     function setRegulationEnabled(enabled, notifyParent = true) {
+      if(REG_SHARED_AUX){
+        if(notifyParent){updateRegulationModeUI();window.parent.postMessage({type:"centurion-editor-enabled",mode:CENTURION_EDITOR_MODE,enabled:Boolean(enabled)},"*");return true;}
+        regulationEnabled=Boolean(enabled);updateRegulationModeUI();return true;
+      }
       if (enabled) {
         resetRegRuntime();
         const preview = evaluateRegulationGraph(0, false);
@@ -6173,6 +6249,7 @@
     }
 
     function frame(now) {
+      if(REG_SHARED_AUX||CENTURION_EMBEDDED_EDITOR){requestAnimationFrame(frame);return;}
       const realDt = Math.min(0.25, (now - lastFrame) / 1000);
       lastFrame = now;
       if (running) {
@@ -6402,7 +6479,7 @@
     renderAlarmModelTable();
     renderRegEditor();
     updateRegulationLive();
-    const regAutosaveRestored = restoreRegAutosave();
+    const regAutosaveRestored = !REG_SHARED_AUX && restoreRegAutosave();
     regUndoStack = [];
     regRedoStack = [];
     updateRegHistoryButtons();
@@ -6435,6 +6512,61 @@
     // (nécessaire aux fichiers locaux dont les iframes ont une origine opaque).
     function receiveCenturionCommand(data) {
       if(!data)return;
+      if(data.type==='centurion-editor-permission'){if(regEditAllowed!==Boolean(data.allowed)){regEditAllowed=Boolean(data.allowed);refreshRegPermission();}return;}
+      if(data.type==='centurion-editor-flush'){
+        if(regDragPreview)return {idle:false};
+        if(REG_SHARED_AUX&&regEditAllowed&&regSharedSignature!==regStateSignature(currentRegModel()))writeRegAutosave();
+        return {idle:!regSharedSending&&(!REG_SHARED_AUX||regSharedSignature===regStateSignature(currentRegModel()))};
+      }
+      if(data.type==="centurion-editor-session")return {dragging:Boolean(regDragPreview),graph:currentRegModel(),display:{enabled:regulationEnabled,lastSignals:cloneRegParams([...regLastSignals]),diagnostics:[...regLastDiagnostics],input:centurionInput,local:{rods:s.rods,letdown:s.letdown,heater:s.heater,spray:s.spray}}};
+      if(data.type==="centurion-editor-apply-graph"){
+        try{
+          const graph=normalizeRegModel(data.graph),before=regStateSnapshot(true);
+          if(data.replace){applyRegState(graph,{name:graph.name,migrate:false,notifyParent:false});}
+          else{
+            regNodes=graph.nodes;regLinks=graph.links;regNodeCounter=graph.nodeCounter;regModelName=graph.name;
+            const ids=new Set(regNodes.map(n=>n.id));regRuntimeStates=new Map([...regRuntimeStates].filter(([id])=>ids.has(id)));
+            selectedRegNodeIds=new Set([...selectedRegNodeIds].filter(id=>ids.has(id)));if(!ids.has(selectedRegNodeId))selectedRegNodeId=null;
+            recordRegMutation(before,"Modification partagée");renderRegEditor();
+          }
+          writeRegAutosave();return {ok:true,enabled:regulationEnabled};
+        }catch(error){return {ok:false,message:error.message};}
+      }
+      if(data.type==="centurion-editor-shared-graph"){
+        regSharedPending=data;
+        const dirty=regSharedSignature!==null&&regStateSignature(currentRegModel())!==regSharedSignature;
+        if(!regSharedSending&&!dirty){
+          if(regSharedSignature!==null&&regStateSignature(data.graph)===regStateSignature(currentRegModel())&&data.graph.name===regModelName){
+            regSharedRevision=data.revision;regSharedSignature=regStateSignature(currentRegModel());return;
+          }
+          const viewport={...regViewport},first=regSharedSignature===null;
+          const selected=[...selectedRegNodeIds],primary=selectedRegNodeId;
+          applyRegState(data.graph,{name:data.graph.name,migrate:false,autosave:false,notifyParent:false});
+          if(first)fitRegulationView();else{regViewport=viewport;updateRegViewport();}
+          regUndoStack=[];regRedoStack=[];updateRegHistoryButtons();
+          if(!first)setRegSelection(selected,primary);
+          regSharedRevision=data.revision;regSharedSignature=regStateSignature(currentRegModel());
+          setRegSaveStatus("Schéma de la séance · autosauvegarde personnelle préservée");
+        }return;
+      }
+      if(data.type==="centurion-editor-shared-display"){
+        const state=data.display;regulationEnabled=state.enabled;centurionInput=state.input;Object.assign(s,state.local||{});
+        regLastSignals=new Map(state.lastSignals||[]);regLastDiagnostics=state.diagnostics||[];
+        updateRegulationModeUI();updateRegulationLive();return;
+      }
+      if(data.type==="centurion-editor-edit-result"){
+        const changedAgain=regSharedSerial>data.serial;regSharedSending=0;
+        if(data.result.ok){
+          regSharedRevision=data.result.revision;regSharedReplace=false;
+          if(changedAgain){scheduleRegAutosave();return;}
+          regSharedSignature=regStateSignature(currentRegModel());
+          if(regSharedPending&&regSharedPending.revision>=regSharedRevision)receiveCenturionCommand(regSharedPending);
+          $("sharedRetryReg").hidden=true;$("sharedReloadReg").hidden=true;setRegSaveStatus("Modifications appliquées par le maître");
+        }else{
+          $("sharedRetryReg").hidden=data.result.error==="schema_conflict";$("sharedReloadReg").hidden=false;
+          setRegSaveStatus((data.result.message||"Modification refusée")+" Votre brouillon reste exportable avec Enregistrer.",true);
+        }return;
+      }
       if(["centurion-editor-save","centurion-editor-validate","centurion-editor-restore"].includes(data.type)){
         try{
           let saved;
@@ -6463,7 +6595,7 @@
               regLastSignals=new Map(cloneRegParams(saved.lastSignals));
               regLastDiagnostics=[...saved.diagnostics];
               regUndoStack=[];regRedoStack=[];updateRegHistoryButtons();
-              updateRegulationModeUI();updateRegulationLive();writeRegAutosave();
+              updateRegulationModeUI();updateRegulationLive();if(!REG_SHARED_AUX)writeRegAutosave();
             }
           }
           return {type:"centurion-editor-state-result",mode:CENTURION_EDITOR_MODE,requestId:data.requestId,
@@ -6484,6 +6616,7 @@
         setRegulationEnabled(Boolean(data.enabled), false);return;
       }
       if(data.type!=="centurion-editor-tick")return;
+      if(REG_SHARED_AUX)return;
       centurionInput=data;
       if(data.signals?.posgInternalPct) s.rods=Number(data.signals.posgInternalPct[0]);
       if(data.signals?.qdecSignal) s.letdown=Number(data.signals.qdecSignal[0]);
@@ -6512,6 +6645,15 @@
         tickId:data.tickId};
     }
     window.CenturionCC=Object.freeze({receive:receiveCenturionCommand});
+    if(REG_SHARED_AUX){
+      $("sharedRetryReg").addEventListener("click",()=>writeRegAutosave());
+      $("sharedReloadReg").addEventListener("click",()=>{
+        if(!regSharedPending)return;
+        regUndoStack.push(regStateSnapshot(true));regSharedSignature=null;regSharedSending=0;regSharedReplace=false;
+        receiveCenturionCommand(regSharedPending);$("sharedRetryReg").hidden=true;$("sharedReloadReg").hidden=true;
+      });
+      setRegSaveStatus("En attente du schéma du maître · autosauvegarde personnelle préservée");
+    }
     window.addEventListener("message", event => {
       if(event.source&&event.source!==window.parent)return;
       const response=receiveCenturionCommand(event.data);

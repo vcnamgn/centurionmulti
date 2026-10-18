@@ -1,6 +1,9 @@
 (function(){
   'use strict';
   const A=window.CenturionAuto,R=window.CenturionAutoRouting,B=window.CenturionAutoEditing,$=id=>document.getElementById(id),STORAGE='centurion.conduite-auto.v1';
+  const sharedAux=new URLSearchParams(location.search).get('shared')==='1';
+  let editAllowed=!sharedAux;
+  let sharedRevision=0,sharedSerial=0,sharedSending=0,sharedAccepted=null,sharedPending=null,sharedTimer=null;
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const fmt=v=>Number.isFinite(v)?v.toLocaleString('fr-FR',{maximumFractionDigits:3}):'—';
@@ -9,15 +12,20 @@
   let selected=null,selection=new Set(),pending=null,drag=null,undo=[],redo=[],clipboard=null,importGraph=null,view={x:0,y:0,w:1200,h:700},suppressClick=false;
   let sequenceListSignature=null,runtimeDrawingSignature=null,seenSerial=0;
   const recent=new Map(),layoutCache=new Map();let dragFrame=null;
-  const locked=()=>['running','paused'].includes(runtime.status);
+  const locked=()=>!editAllowed||['running','paused'].includes(runtime.status);
   const post=data=>parent.postMessage(data,'*');
   const current=()=>selection.size<=1?graph.nodes.find(n=>n.id===selected):null;
   const id=prefix=>prefix+'-'+(window.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
   const known=()=>new Set(measurements.map(d=>d.id));
   function status(message,error=false){$('editStatus').textContent=message;$('editStatus').dataset.error=String(error);}
   function persist(){
+    if(sharedAux){sharedSerial++;clearTimeout(sharedTimer);sharedTimer=setTimeout(sendSharedGraph,200);return;}
     try{localStorage.setItem(STORAGE,JSON.stringify(graph));}catch(_){status('Le stockage du navigateur est indisponible. Utilisez Enregistrer sous…',true);}
     post({type:'centurion-auto-graph',graph});
+  }
+  function sendSharedGraph(){
+    if(sharedSending||JSON.stringify(graph)===sharedAccepted)return;
+    sharedSending=++sharedSerial;post({type:'centurion-auto-graph',graph,revision:sharedRevision,serial:sharedSending});status('Transmission du diagramme au maître…');
   }
   const snapshot=()=>({graph:JSON.stringify(graph),selected,selection:[...selection],view:{...view}});
   function remember(before){undo.push(before);if(undo.length>50)undo.shift();redo=[];}
@@ -38,7 +46,7 @@
     if(locked())return false;const before=snapshot();
     try{fn();graph=A.validate(graph,measurements.length?known():null);
       if(JSON.stringify(graph)!==before.graph)remember(before);persist();draw();refreshSequences();
-      if(redrawProperties)properties();status('Diagramme enregistré dans ce navigateur.');return true;
+      if(redrawProperties)properties();status(sharedAux?'Modification de la séance · transmission au maître…':'Diagramme enregistré dans ce navigateur.');return true;
     }catch(error){graph=JSON.parse(before.graph);view=before.view;status(error.message,true);return false;}
   }
   const textCanvas=document.createElement('canvas').getContext('2d');
@@ -126,7 +134,7 @@
       if(list.some(s=>s.id===previous))$('sequenceSelect').value=previous;
       sequenceListSignature=signature;
     }
-    $('startSequence').disabled=!connected||locked()||!list.length;
+    $('startSequence').disabled=!connected||['running','paused'].includes(runtime.status)||!list.length;
   }
   function options(list,value){return list.map(([v,t])=>`<option value="${esc(JSON.stringify(v))}"${v===value?' selected':''}>${esc(t)}</option>`).join('');}
   function pickerOptions(list,value,field){
@@ -226,14 +234,38 @@
     updateReading();
   }
   function receive(data){
+    if(data?.type==='centurion-auto-permission'){if(editAllowed!==Boolean(data.allowed)){editAllowed=Boolean(data.allowed);refreshRuntime();draw();}return;}
+    if(data?.type==='centurion-auto-flush'){
+      if(drag)return {idle:false};
+      if(sharedAux&&editAllowed&&!sharedSending&&JSON.stringify(graph)!==sharedAccepted)sendSharedGraph();
+      return {idle:!sharedSending&&(!sharedAux||JSON.stringify(graph)===sharedAccepted)};
+    }
+    if(data?.type==='centurion-auto-edit-result'){
+      const changedAgain=sharedSerial>data.serial;sharedSending=0;
+      if(data.result.ok){sharedRevision=data.result.revision;
+        if(changedAgain){sharedTimer=setTimeout(sendSharedGraph,0);return;}
+        sharedAccepted=JSON.stringify(graph);if(sharedPending&&sharedPending.sharedRevision>=sharedRevision)receive(sharedPending);
+        $('sharedRetryAuto').hidden=true;$('sharedReloadAuto').hidden=true;status('Diagramme appliqué par le maître.');
+      }else{$('sharedRetryAuto').hidden=data.result.error==='schema_conflict';$('sharedReloadAuto').hidden=false;status((data.result.message||'Modification refusée')+' Votre brouillon reste exportable avec Enregistrer sous…',true);}return;
+    }
     if(data?.type==='centurion-auto-init'){
+      if(sharedAux){
+        sharedPending=data;
+        if(sharedSending||sharedAccepted!==null&&JSON.stringify(graph)!==sharedAccepted){
+          measurements=data.measurements;commands=data.commands;runtime=data.runtime;values=data.values||{};simulationRunning=data.simulationRunning;connected=true;refreshRuntime();return;
+        }
+        if(sharedAccepted!==null&&JSON.stringify(graph)===JSON.stringify(data.graph)){
+          sharedRevision=data.sharedRevision;runtime=data.runtime;values=data.values||{};simulationRunning=data.simulationRunning;refreshRuntime();return;
+        }
+      }
       try{graph=A.validate(data.graph,new Set(data.measurements.map(d=>d.id)));measurements=data.measurements;commands=data.commands;
         R.configure({measurements,commands});layoutCache.clear();
         runtime=data.runtime;values=data.values||{};connected=true;simulationRunning=data.simulationRunning;
         $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);pending=null;undo=[];redo=[];
         if(!graph.nodes.some(n=>n.id===selected))selected=null;
         selection=new Set([...selection].filter(id=>graph.nodes.some(n=>n.id===id)));
-        try{localStorage.setItem(STORAGE,JSON.stringify(graph));}catch(_error){}
+        if(!sharedAux){try{localStorage.setItem(STORAGE,JSON.stringify(graph));}catch(_error){}}
+        else{sharedAccepted=JSON.stringify(graph);sharedRevision=data.sharedRevision;status('Diagramme de la séance · autosauvegarde personnelle préservée.');}
         draw();properties();refreshRuntime();
       }catch(error){status(error.message,true);}return;
     }
@@ -487,7 +519,12 @@
     $(button).addEventListener('click',()=>post({type:'centurion-auto-command',action,sequence:$('sequenceSelect').value}));
   window.addEventListener('message',e=>{if(e.source===parent)receive(e.data);});
   window.CenturionAutoEditor={receive};
-  try{const saved=localStorage.getItem(STORAGE);if(saved)graph=A.validate(saved);}catch(error){status('Conduite locale non chargée : '+error.message,true);}
+  if(!sharedAux){try{const saved=localStorage.getItem(STORAGE);if(saved)graph=A.validate(saved);}catch(error){status('Conduite locale non chargée : '+error.message,true);}}
+  if(sharedAux){
+    $('sharedRetryAuto').addEventListener('click',sendSharedGraph);
+    $('sharedReloadAuto').addEventListener('click',()=>{if(!sharedPending)return;undo.push(snapshot());sharedAccepted=null;sharedSending=0;receive(sharedPending);$('sharedRetryAuto').hidden=true;$('sharedReloadAuto').hidden=true;});
+    status('En attente du diagramme du maître · autosauvegarde personnelle préservée.');
+  }
   $('graphName').value=graph.name;$('stepDelay').value=String(graph.stepDelayS);draw();properties();refreshSequences();
   setInterval(()=>{if(recent.size)refreshRuntime();},100);
   post({type:'centurion-auto-ready',graph});

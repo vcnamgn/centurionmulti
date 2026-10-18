@@ -1,12 +1,12 @@
 # Centurion — note de conception
 
-Version documentaire du 16 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
+Version documentaire du 18 octobre 2026. Cette note décrit le code présent dans le dépôt ; les numéros de ligne et le catalogue des interfaces sont régénérés par `node scripts/generate-docs.mjs`.
 
 ## 1. Objet et périmètre
 
 Centurion est un simulateur pédagogique interactif de REP 1300 à quatre boucles. Une seule instance du moteur alimente les synoptiques, les historiques, les instruments et les deux ateliers de contrôle-commande. L'élève peut modifier les paramètres physiques, construire des régulations, provoquer des événements et observer leurs conséquences.
 
-Le logiciel est une application statique : HTML, CSS, JavaScript, SVG et Canvas. Il fonctionne depuis un dossier local ou un hébergement statique. Il ne possède ni serveur de calcul, ni compte utilisateur, ni service de stockage distant. GitHub Pages publie les mêmes fichiers que ceux utilisés localement.
+Le logiciel est une application statique : HTML, CSS, JavaScript, SVG et Canvas. Il fonctionne depuis un dossier local ou un hébergement statique. Le mode individuel ne possède ni serveur de calcul, ni compte utilisateur, ni stockage distant. Un relais optionnel permet les séances partagées décrites ci-dessous. GitHub Pages publie les mêmes fichiers que ceux utilisés localement.
 
 La simulation combine une cinétique neutronique globale, une forme axiale à 32 mailles, des bilans thermiques et des capacités hydrauliques équivalentes. Les transitoires accidentels, le DNBR et les critères de fin de partie sont des modèles d'exercice. Ils ne constituent pas un calcul de sûreté qualifié.
 
@@ -50,12 +50,13 @@ flowchart TD
 | --- | --- | --- |
 | `centurion-engine.js` | État physique, commandes, évolution, instruments, événements et historiques | JavaScript seul ; export CommonJS ou `window.CenturionEngine` |
 | `centurion-app.js` | Horloge navigateur, conduite manuelle, arbitrage des sorties CC, navigation et dessins Canvas | Moteur, DOM, Canvas, fenêtres des éditeurs et SVG |
+| `centurion-share.js` / `centurion-session-controls.js` | Transport maître–auxiliaires, documents, reçus et catalogue des gestes partagés | Relais optionnel, DOM et callbacks de l’application |
 | `centurion-history.js` | Catalogue des mesures, courbes libres, axes, sélection temporelle et lectures figées | Moteur en lecture seule, DOM et Canvas ; fonctions pures exportées pour les tests |
 | `centurion-cc-regul.html` | Palette de blocs, graphes, évaluation, édition et sauvegarde | DOM, stockage local, messages du parent ; deux instances selon `mode` |
 | `centurion-cc-pzr.js` | Relais de consigne RCI et extension des chaînes PZR reconnues | Partagé entre l'éditeur, la migration JSON et l'assemblage des corrections |
 | `centurion-auto.js` | Validation des diagrammes, catalogue des commandes, exécution des séquences et adaptateur du pupitre | JavaScript seul ; moteur en paramètre pour les actions ; export CommonJS ou `window.CenturionAuto` |
 | `centurion-conduite-auto.html` / `.css` / `.js` | Canevas de conduite, bibliothèque, propriétés, liaisons, imports et suivi d'exécution | DOM SVG, stockage local et raccordement au parent |
-| `centurion-orthogonal-routing.js` | Tracé commun des connecteurs de conduite et des deux ateliers CC, avec évitement des rectangles | Module pur ; aucun accès aux commandes ni à l'évaluation des signaux |
+| `centurion-orthogonal-routing.js` | Tracé commun des connecteurs de conduite et des deux ateliers CC, avec évitement des rectangles, séparation des signaux et ponts de croisement | Module pur ; aucun accès aux commandes ni à l'évaluation des signaux |
 | `centurion-auto-routing.js` | Dimensions des boîtes de conduite et adaptation de leurs ports au tracé commun | Catalogue de conduite, mesure des textes et routeur commun |
 | `centurion-svg-bridge.js` | Application des mesures aux objets SVG, animations et renvois | DOM SVG et messages du parent |
 | `centurion.html` / `centurion.css` | Structure des onglets, pupitre commun et présentation adaptative | Les trois scripts applicatifs et les fichiers SVG |
@@ -73,7 +74,37 @@ Les deux éditeurs sont des iframes de la même page, respectivement `?mode=regu
 
 L'atelier Conduite Auto est une troisième iframe. Il édite le graphe et reçoit les mesures, mais son exécution se déroule dans l'application, avant chaque pas physique de 0,1 s. Changer d'onglet ne suspend donc pas une séquence. Aucun diagramme de conduite n'est fourni au démarrage.
 
-Au départ, l'horloge est en pause, CC-RÉGUL est désactivé et CC-PROTECT est activé. L'absence de régulation ne coupe pas la physique des équipements ni les manœuvres explicitement automatiques de l'exercice.
+Au départ, l'horloge est en pause, CC-RÉGUL est désactivé et CC-PROTECT est désactivé. L'absence de régulation ne coupe pas la physique des équipements ni les manœuvres explicitement automatiques de l'exercice.
+
+### Séance partagée : maître et auxiliaires
+
+Une application de relais optionnelle, dans `partage/relay`, sert les fichiers statiques et transmet les mesures entre navigateurs. Elle n’importe aucun moteur Centurion. Son accueil redirige directement vers `/simulateur/centurion.html`. Chaque ouverture de cette page sur le relais crée automatiquement une séance maître et affiche un numéro de quatre chiffres à droite du menu **Fichier**.
+
+Le serveur active la balise `centurion-relay` de la page qu’il sert. Sur un site statique ou depuis un fichier, sa valeur reste `off` et `centurion-share.js` n’ouvre aucune connexion. Sur le relais, il crée la séance puis publie une projection courante à 5 Hz réels ; il ne lit pas l’historique complet et n’attend pas le réseau entre les pas. La projection est ignorée pendant une sauvegarde ou un pas CC incomplet. Le remplacement du modèle renouvelle sa génération de publication.
+
+Le menu du réacteur copie l’invitation, ouvre un auxiliaire, renouvelle ou arrête le partage. **Nouvelle séance** renouvelle les capacités et le numéro, termine les anciennes invitations et conserve le modèle, les CC, leurs mémoires et la conduite auto dans la page maître. **Rejoindre** soumet les quatre chiffres et ouvre un auxiliaire dans un autre onglet ; le maître recherché doit être connecté. La saisie est bornée et les recherches sont limitées. Le numéro est un moyen de rejoindre une séance avec pilotage et édition partagés, pas un mot de passe ni une identité permanente. La capacité maître longue et distincte reste nécessaire pour publier ou fermer la séance.
+
+Les schémas CC, la conduite auto et les réglages appartiennent au projet du maître, indépendamment du numéro de partage. Les autosauvegardes existantes restent dans le navigateur et sont communes aux onglets de la même adresse ; elles ne sont pas des archives par réacteur. Le relais ne conserve ni projet ni état physique. **Fichier → Sauvegarder l’état** produit un fichier portable avec la physique, les historiques, les CC et la conduite auto ; les exports propres aux ateliers restent utiles pour leurs bibliothèques de schémas. Le changement d’adresse de `sockets.vcnam.fr` à `s.vcnam.fr` ne transfère pas automatiquement le stockage du navigateur : l’ancienne adresse reste donc un alias actif pour rouvrir ses autosauvegardes, exporter un fichier et l’importer sur la nouvelle adresse. Une bibliothèque durable de projets pourrait ensuite utiliser des identifiants permanents et une sauvegarde serveur ; elle ne devra jamais utiliser ces quatre chiffres temporaires comme clé d’archive.
+
+Depuis la version 0.3.0, les auxiliaires ouvrent la même page et les mêmes ateliers : synoptiques, graphiques, initiateurs, transitoires, réglages, CC et conduite auto. Le bouton existant affiche **M · numéro** ou **A · numéro** ; son menu et son infobulle développent le rôle et la connexion, sans ligne de bandeau supplémentaire. La navigation, les zooms et le choix des courbes restent propres à chaque participant.
+
+Seul le maître avance la physique, les mémoires CC et les séquences. Les auxiliaires chargent les modules nécessaires au rendu, mais leurs boucles de calcul sont désactivées. Leurs gestes passent par un catalogue explicite de contrôles dans `centurion-session-controls.js` et réutilisent les gestionnaires du pupitre maître. Le relais vérifie rôle, génération, taille, cadence et identifiant de commande ; le maître vérifie disponibilité, bornes et règles métier avant de répondre. Une demande incertaine n’est pas rejouée automatiquement.
+
+Le maître restaure normalement ses autosauvegardes. Un auxiliaire n’en lit et n’en écrit aucune : les iframes sont servies avec `shared=1` avant leur démarrage. **Ouvrir** un JSON reste une action explicite qui modifie le schéma commun après validation. Chaque document possède une révision ; une édition concurrente périmée est refusée, le brouillon reste visible et exportable et le participant peut reprendre la version partagée. Il n’y a pas de fusion automatique. La conduite auto doit être interrompue avant édition. Déplacer un bloc CC conserve les mémoires et l’activation ; remplacer explicitement son schéma reprend la règle habituelle de désactivation.
+
+Le protocole 3 sépare les mesures remplaçables (5 Hz) des documents confirmés et des commandes. Les historiques plus anciens se chargent par pages à l’ouverture d’une vue concernée ; les sauvegardes complètes transitent en fragments de 64 K caractères. **Fichier** permet à un auxiliaire de sauvegarder l’état du maître ou de proposer un chargement validé, appliqué en pause. Aucun projet durable n’est stocké sur le relais.
+
+Une coupure fige les dernières valeurs et suspend les commandes ; aucun auxiliaire ne devient maître automatiquement. Garder le maître visible : l’extraction conjointe physique/CC/conduite dans un Worker reste à réaliser. La veille ou la fermeture du navigateur interrompt la séance.
+
+
+
+### Édition exclusive et journaux (0.4.0)
+
+Un seul participant édite les trois ateliers de la séance ; le maître possède ce droit au départ. Les autres restent en visualisation, tout en conservant le pilotage, le choix des vues et les exports. **Demander à éditer** ouvre un popup chez l’éditeur courant : garder la main ou transférer. Les modifications attendent leur confirmation avant transfert. Le relais refuse les imports et éditions provenant d’un autre participant ou d’une ancienne révision de droit. À la déconnexion d’un éditeur auxiliaire, le droit retourne au maître. Une demande expire après une minute. Le protocole 3 impose de recharger les anciennes pages.
+
+L’onglet **Logs** sépare les événements physiques par démarrage, réinitialisation et chargement d’état. Le journal de séance garde les connexions, demandes/transferts, imports et interventions marquantes ; aucun échantillon physique périodique n’y est copié. Mémoire bornée à 12 essais de 300 événements et 160 événements de séance ; export JSON disponible. Les auxiliaires reçoivent les essais du maître avec les documents, et peuvent voir leurs propres événements de connexion. Ces journaux ne sont pas une archive persistante et disparaissent au rechargement sans export.
+
+Pendant le déplacement d’une boîte CC, un aperçu met à jour seulement les liens attachés ; l’évitement complet et les ponts sont recalculés au relâchement. Les éléments SVG sont réutilisés. Le rafraîchissement de l’ancien simulateur masqué est désactivé dans les iframes Centurion ; le vrai calcul reste commandé par le parent. Banc VM sur 92 blocs/88 liens, 12 mouvements : environ 457 ms par image avant correction, 2,5 ms après, et environ 117 ms au relâchement dans cet essai. Ces chiffres comparent une surface DOM simulée et ne prédisent pas la durée sur chaque navigateur. Un test vérifie structurellement qu’aucun nouveau routage global n’est lancé pendant le glissement.
 
 ## 3. Modèle de données et conventions
 
@@ -646,7 +677,7 @@ Le navigateur conserve les modèles CC dans `localStorage`, sous `centurion-regu
 
 ### État complet au format JSON
 
-Le menu **État JSON** de la barre supérieure permet de **Sauvegarder l’état** ou **Charger un état**. Ce fichier est distinct de l'export d'un graphe CC : son format est `Centurion-State`, version 1, avec une révision du moteur. `centurion-state.js` vérifie format, révision, types, tailles des tableaux, nombres finis, chronologie et cohérence de la brèche avant tout remplacement.
+Le menu **Fichier** de la barre supérieure permet de **Sauvegarder l’état** ou **Charger un état**. Ce fichier est distinct de l'export d'un graphe CC : son format est `Centurion-State`, version 1, avec une révision du moteur. `centurion-state.js` vérifie format, révision, types, tailles des tableaux, nombres finis, chronologie et cohérence de la brèche avant tout remplacement.
 
 Les instantanés du certificat contiennent aussi les conditions empêchant une connexion RRA. Cette liste de diagnostics a une longueur variable (zéro à cinq chaînes) : elle ne doit pas être comparée au nombre de conditions présentes au démarrage. Les tailles des tableaux physiques restent imposées, notamment les quatre boucles/GV et les 32 mailles axiales. Sauvegarder et charger conservent les diagnostics de chaque instantané.
 
